@@ -74,15 +74,37 @@ document.addEventListener('DOMContentLoaded', function() {
     // Fetch available locations from the server
     function fetchLocations() {
         console.log('Fetching locations...');
+        
+        // Show loading state
+        locationSelect.innerHTML = '<option value="">Loading locations...</option>';
+        
         fetch('/get-locations')
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`API returned status code ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
                 console.log('Locations fetched:', data);
+                
+                // Validate location data format
+                if (!Array.isArray(data)) {
+                    throw new Error("Locations data is not an array");
+                }
+                
+                // Store location data globally
                 locationData = data;
+                
+                // Populate dropdown
                 populateLocations(data);
             })
             .catch(error => {
                 console.error('Error fetching locations:', error);
+                
+                // Show error in dropdown
+                locationSelect.innerHTML = '<option value="">Failed to load locations</option>';
+                
                 // Show error notification
                 showNotification('Failed to load locations. Please try refreshing the page.', 'error');
             });
@@ -90,20 +112,40 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Populate the location dropdown
     function populateLocations(locations) {
-        console.log('Populating location dropdown...');
-        // Clear existing options except the first one
-        while (locationSelect.options.length > 1) {
-            locationSelect.remove(1);
-        }
+        console.log('Populating location dropdown with', locations.length, 'locations');
         
-        // Add new options
-        locations.forEach(location => {
-            const option = document.createElement('option');
-            option.value = location.id;
-            option.textContent = location.name;
-            locationSelect.appendChild(option);
-        });
-        console.log('Location dropdown populated');
+        // Clear existing options
+        locationSelect.innerHTML = '';
+        
+        // Add default option
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = '-- Select Location --';
+        locationSelect.appendChild(defaultOption);
+        
+        // Add location options
+        if (locations && locations.length > 0) {
+            locations.forEach(location => {
+                // Make sure location has required properties
+                if (location && location.id && location.name) {
+                    const option = document.createElement('option');
+                    option.value = location.id;
+                    option.textContent = location.name;
+                    locationSelect.appendChild(option);
+                } else {
+                    console.warn('Invalid location data:', location);
+                }
+            });
+            console.log('Added', locations.length, 'locations to dropdown');
+        } else {
+            console.warn('No locations available to populate dropdown');
+            // Add a message if no locations
+            const noLocationsOption = document.createElement('option');
+            noLocationsOption.value = '';
+            noLocationsOption.textContent = 'No locations available';
+            noLocationsOption.disabled = true;
+            locationSelect.appendChild(noLocationsOption);
+        }
     }
     
     // Handle location change
@@ -112,9 +154,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const selectedLocationId = locationSelect.value;
         
         // Clear sublocation dropdown
-        while (sublocationSelect.options.length > 1) {
-            sublocationSelect.remove(1);
-        }
+        sublocationSelect.innerHTML = '';
+        const defaultSubOption = document.createElement('option');
+        defaultSubOption.value = '';
+        defaultSubOption.textContent = '-- Select Sublocation --';
+        sublocationSelect.appendChild(defaultSubOption);
         
         // Disable sublocation dropdown if no location selected
         if (!selectedLocationId) {
@@ -124,17 +168,30 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Find selected location
         const selectedLocation = locationData.find(loc => loc.id === selectedLocationId);
+        console.log('Selected location:', selectedLocation);
         
         // If location has sublocations, populate and enable the dropdown
-        if (selectedLocation && selectedLocation.sublocations && selectedLocation.sublocations.length > 0) {
+        if (selectedLocation && selectedLocation.sublocations && Array.isArray(selectedLocation.sublocations) && selectedLocation.sublocations.length > 0) {
+            console.log('Populating', selectedLocation.sublocations.length, 'sublocations');
+            
             selectedLocation.sublocations.forEach(sublocation => {
-                const option = document.createElement('option');
-                option.value = sublocation.id;
-                option.textContent = sublocation.name;
-                sublocationSelect.appendChild(option);
+                if (sublocation && sublocation.id && sublocation.name) {
+                    const option = document.createElement('option');
+                    option.value = sublocation.id;
+                    option.textContent = sublocation.name;
+                    sublocationSelect.appendChild(option);
+                } else {
+                    console.warn('Invalid sublocation data:', sublocation);
+                }
             });
             sublocationSelect.disabled = false;
         } else {
+            console.log('No sublocations available for this location');
+            const noSublocationsOption = document.createElement('option');
+            noSublocationsOption.value = '';
+            noSublocationsOption.textContent = 'No sublocations available';
+            noSublocationsOption.disabled = true;
+            sublocationSelect.appendChild(noSublocationsOption);
             sublocationSelect.disabled = true;
         }
         
@@ -264,6 +321,7 @@ document.addEventListener('DOMContentLoaded', function() {
         updateButton.classList.add('disabled');
         processingStatus.style.display = 'block';
         progressBar.style.width = '50%';
+        statusText.textContent = 'Processing update...';
         
         // Prepare data for the API
         const data = {
@@ -271,6 +329,8 @@ document.addEventListener('DOMContentLoaded', function() {
             locationId: locationId,
             sublocationId: sublocationId
         };
+        
+        console.log('Sending update data:', data);
         
         // Send update request to server
         fetch('/update-location', {
@@ -280,7 +340,12 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             body: JSON.stringify(data)
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`API returned status code ${response.status}`);
+            }
+            return response.json();
+        })
         .then(result => {
             console.log('Update result:', result);
             // Complete progress bar
@@ -305,7 +370,7 @@ document.addEventListener('DOMContentLoaded', function() {
             processingStatus.style.display = 'none';
             
             // Show error notification
-            showNotification('An error occurred while updating records.', 'error');
+            showNotification(`An error occurred while updating records: ${error.message}`, 'error');
             
             // Re-enable update button
             updateButton.disabled = false;
@@ -354,7 +419,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             html = `
                 <div class="alert alert-danger">
-                    <strong>Error!</strong> ${result.message}
+                    <strong>Error!</strong> ${result.message || 'An unknown error occurred'}
                 </div>
             `;
         }
@@ -374,7 +439,13 @@ document.addEventListener('DOMContentLoaded', function() {
         scannedItems.innerHTML = '';
         barcodeInput.value = '';
         locationSelect.selectedIndex = 0;
-        sublocationSelect.selectedIndex = 0;
+        sublocationSelect.innerHTML = '';
+        
+        // Add default option to sublocation
+        const defaultSubOption = document.createElement('option');
+        defaultSubOption.value = '';
+        defaultSubOption.textContent = '-- Select Sublocation --';
+        sublocationSelect.appendChild(defaultSubOption);
         sublocationSelect.disabled = true;
         
         // Hide results
