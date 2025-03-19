@@ -32,6 +32,8 @@ document.addEventListener('DOMContentLoaded', function() {
     init();
     
     function init() {
+        console.log('Initializing application...');
+        
         // Load locations
         fetchLocations();
         
@@ -65,13 +67,17 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Update UI based on initial state
         updateUI();
+        
+        console.log('Application initialized');
     }
     
     // Fetch available locations from the server
     function fetchLocations() {
+        console.log('Fetching locations...');
         fetch('/get-locations')
             .then(response => response.json())
             .then(data => {
+                console.log('Locations fetched:', data);
                 locationData = data;
                 populateLocations(data);
             })
@@ -84,6 +90,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Populate the location dropdown
     function populateLocations(locations) {
+        console.log('Populating location dropdown...');
         // Clear existing options except the first one
         while (locationSelect.options.length > 1) {
             locationSelect.remove(1);
@@ -96,10 +103,12 @@ document.addEventListener('DOMContentLoaded', function() {
             option.textContent = location.name;
             locationSelect.appendChild(option);
         });
+        console.log('Location dropdown populated');
     }
     
     // Handle location change
     function handleLocationChange() {
+        console.log('Location changed to:', locationSelect.value);
         const selectedLocationId = locationSelect.value;
         
         // Clear sublocation dropdown
@@ -136,6 +145,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add a barcode to the list
     function addBarcode() {
         const code = barcodeInput.value.trim();
+        console.log('Adding barcode:', code);
         
         if (!code) {
             showNotification('Please scan or enter a record ID.', 'warning');
@@ -195,6 +205,8 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Focus back on input for next scan
         barcodeInput.focus();
+        
+        console.log('Barcode added. Current record IDs:', recordIds);
     }
     
     // Check if a string looks like a valid record ID
@@ -205,6 +217,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Remove a record ID from the list
     function removeRecordId(id) {
+        console.log('Removing record ID:', id);
         // Find index of the ID in the array
         const index = recordIds.indexOf(id);
         
@@ -225,11 +238,14 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Focus back on input field
             barcodeInput.focus();
+            
+            console.log('Record ID removed. Current record IDs:', recordIds);
         }
     }
     
     // Update locations for scanned records
     function updateRecordLocations() {
+        console.log('Updating record locations...');
         const locationId = locationSelect.value;
         const sublocationId = sublocationSelect.value;
         
@@ -266,6 +282,7 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(response => response.json())
         .then(result => {
+            console.log('Update result:', result);
             // Complete progress bar
             progressBar.style.width = '100%';
             
@@ -349,6 +366,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Reset the application
     function resetApp() {
+        console.log('Resetting application...');
         // Clear record IDs
         recordIds = [];
         
@@ -367,6 +385,8 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Focus on input
         barcodeInput.focus();
+        
+        console.log('Application reset');
     }
     
     // Update UI based on current state
@@ -390,6 +410,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Show notification message
     function showNotification(message, type) {
+        console.log(`Notification (${type}):`, message);
         // Create notification element
         const notification = document.createElement('div');
         notification.className = `alert alert-${type === 'error' ? 'danger' : type === 'warning' ? 'warning' : 'success'} notification`;
@@ -417,8 +438,12 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Play beep sound when barcode is successfully scanned
     function playBeepSound() {
-        const audio = new Audio('data:audio/mp3;base64,SUQzAwAAAAAAJlRQRTEAAAAcAAAAU291bmRKYXkuY29tIFNvdW5kIEVmZmVjdHMA//uSwAAAAAABLBQAAAMBUVTEFDQABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/7ksH/g8AAAaQcAAAgAAA0gAAABFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV');
-        audio.volume = 0.5;
-        audio.play().catch(e => console.log('Audio play failed:', e));
+        try {
+            const audio = new Audio('data:audio/mp3;base64,SUQzAwAAAAAAJlRQRTEAAAAcAAAAU291bmRKYXkuY29tIFNvdW5kIEVmZmVjdHMA//uSwAAAAAABLBQAAAMBUVTEFDQABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/7ksH/g8AAAaQcAAAgAAA0gAAABFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV');
+            audio.volume = 0.5;
+            audio.play().catch(e => console.log('Audio play failed:', e));
+        } catch (e) {
+            console.warn('Unable to play beep sound:', e);
+        }
     }
 });
