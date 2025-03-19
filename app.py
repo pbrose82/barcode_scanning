@@ -15,6 +15,7 @@ app = Flask(__name__, static_folder='static', template_folder='templates')
 ALCHEMY_REFRESH_TOKEN = os.getenv('ALCHEMY_REFRESH_TOKEN')
 ALCHEMY_REFRESH_URL = os.getenv('ALCHEMY_REFRESH_URL', 'https://core-production.alchemy.cloud/core/api/v2/refresh-token')
 ALCHEMY_API_URL = os.getenv('ALCHEMY_API_URL', 'https://core-production.alchemy.cloud/core/api/v2/update-record')
+ALCHEMY_FILTER_URL = os.getenv('ALCHEMY_FILTER_URL', 'https://core-production.alchemy.cloud/core/api/v2/filter-records')
 ALCHEMY_BASE_URL = os.getenv('ALCHEMY_BASE_URL', 'https://app.alchemy.cloud/productcaseelnlims4uat/record/')
 ALCHEMY_TENANT_NAME = os.getenv('ALCHEMY_TENANT_NAME', 'productcaseelnlims4uat')
 
@@ -86,32 +87,104 @@ def refresh_alchemy_token():
         logging.error(f"Error refreshing Alchemy token: {str(e)}")
         return None
 
-# Route for getting locations (simulated for now)
+# Route for getting locations from Alchemy API
 @app.route('/get-locations', methods=['GET'])
 def get_locations():
-    # Simulated list of locations - in a real app, this would come from an API or database
-    locations = [
-        {"id": "LOC001", "name": "Warehouse A", "sublocations": [
-            {"id": "SUB001", "name": "Section A1"},
-            {"id": "SUB002", "name": "Section A2"},
-            {"id": "SUB003", "name": "Section A3"}
-        ]},
-        {"id": "LOC002", "name": "Warehouse B", "sublocations": [
-            {"id": "SUB004", "name": "Section B1"},
-            {"id": "SUB005", "name": "Section B2"}
-        ]},
-        {"id": "LOC003", "name": "Laboratory", "sublocations": [
-            {"id": "SUB006", "name": "Lab Storage 1"},
-            {"id": "SUB007", "name": "Lab Storage 2"},
-            {"id": "SUB008", "name": "Cold Room"}
-        ]},
-        {"id": "LOC004", "name": "Office Building", "sublocations": [
-            {"id": "SUB009", "name": "Front Desk"},
-            {"id": "SUB010", "name": "Mail Room"}
-        ]}
-    ]
+    try:
+        # Get access token
+        access_token = refresh_alchemy_token()
+        
+        if not access_token:
+            return jsonify({
+                "status": "error", 
+                "message": "Failed to authenticate with Alchemy API"
+            }), 500
+        
+        # Prepare filter request for locations
+        filter_payload = {
+            "queryTerm": "Result.Status == 'Valid'",
+            "recordTemplateIdentifier": "AC_Location",
+            "drop": 0,
+            "take": 100,  # Fetch up to 100 locations
+            "lastChangedOnFrom": "2018-03-03T00:00:00Z",
+            "lastChangedOnTo": "2028-03-04T00:00:00Z"
+        }
+        
+        # Send request to Alchemy API
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
+        
+        logging.info(f"Fetching locations from Alchemy API: {json.dumps(filter_payload)}")
+        response = requests.put(ALCHEMY_FILTER_URL, headers=headers, json=filter_payload)
+        
+        # Log response for debugging
+        logging.info(f"Alchemy API response status code: {response.status_code}")
+        
+        if not response.ok:
+            logging.error(f"Error fetching locations: {response.text}")
+            return jsonify({
+                "status": "error",
+                "message": "Failed to fetch locations from Alchemy API"
+            }), response.status_code
+        
+        # Process the response
+        locations_data = response.json()
+        logging.info(f"Received {len(locations_data)} locations from API")
+        
+        # Transform the data into the format needed by the frontend
+        formatted_locations = []
+        
+        for location in locations_data:
+            try:
+                location_info = {
+                    "id": str(location.get("id")),
+                    "name": extract_location_name(location),
+                    "sublocations": extract_sublocations(location)
+                }
+                formatted_locations.append(location_info)
+            except Exception as e:
+                logging.error(f"Error processing location {location.get('id')}: {str(e)}")
+        
+        return jsonify(formatted_locations)
+        
+    except Exception as e:
+        logging.error(f"Error fetching locations: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": f"Failed to fetch locations: {str(e)}"
+        }), 500
+
+def extract_location_name(location):
+    """Extract location name from Alchemy API response"""
+    # First try to get the name from a standard field (customize this based on actual API response)
+    if location.get("properties"):
+        for prop in location["properties"]:
+            if prop.get("identifier") == "RecordName" and prop.get("rows") and prop["rows"][0].get("values"):
+                return prop["rows"][0]["values"][0].get("value", "Unknown Location")
     
-    return jsonify(locations)
+    # Fallback to record ID if name not found
+    return f"Location {location.get('id', 'Unknown')}"
+
+def extract_sublocations(location):
+    """Extract sublocations from Alchemy API response"""
+    sublocations = []
+    
+    # Look for a sublocations field (customize this based on actual API response)
+    if location.get("properties"):
+        for prop in location["properties"]:
+            if prop.get("identifier") == "Sublocations" and prop.get("rows"):
+                for row in prop["rows"]:
+                    if row.get("values") and row["values"][0].get("value"):
+                        sublocation_value = row["values"][0]["value"]
+                        sublocation_id = row.get("id") or f"sub_{len(sublocations)}"
+                        sublocations.append({
+                            "id": str(sublocation_id),
+                            "name": sublocation_value
+                        })
+    
+    return sublocations
 
 # Route for updating record location in Alchemy
 @app.route('/update-location', methods=['POST'])
