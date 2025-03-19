@@ -78,7 +78,15 @@ document.addEventListener('DOMContentLoaded', function() {
         // Show loading state
         locationSelect.innerHTML = '<option value="">Loading locations...</option>';
         
-        fetch('/get-locations')
+        // Try the test endpoint first, then fall back to the real endpoint
+        fetch('/get-test-locations')
+            .then(response => {
+                if (!response.ok) {
+                    console.log('Test endpoint not available, trying real endpoint');
+                    return fetch('/get-locations');
+                }
+                return response;
+            })
             .then(response => {
                 if (!response.ok) {
                     throw new Error(`API returned status code ${response.status}`);
@@ -90,6 +98,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Validate location data format
                 if (!Array.isArray(data)) {
+                    console.error("Locations data is not an array:", data);
                     throw new Error("Locations data is not an array");
                 }
                 
@@ -395,20 +404,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 html += `<li class="list-group-item">Record ID: ${id}</li>`;
             });
             
-            html += '</ul>';
-        } else if (result.status === 'partial') {
-            html = `
-                <div class="alert alert-warning">
-                    <strong>Partial Success.</strong> ${result.message}
-                </div>
-                <p>Successfully updated the following records:</p>
-                <ul class="list-group mb-3">
-            `;
-            
-            result.successful.forEach(id => {
-                html += `<li class="list-group-item">Record ID: ${id}</li>`;
-            });
-            
             html += '</ul><p>Failed to update the following records:</p><ul class="list-group">';
             
             result.failed.forEach(item => {
@@ -517,4 +512,18 @@ document.addEventListener('DOMContentLoaded', function() {
             console.warn('Unable to play beep sound:', e);
         }
     }
-});
+});Record ID: ${id}</li>`;
+            });
+            
+            html += '</ul>';
+        } else if (result.status === 'partial') {
+            html = `
+                <div class="alert alert-warning">
+                    <strong>Partial Success.</strong> ${result.message}
+                </div>
+                <p>Successfully updated the following records:</p>
+                <ul class="list-group mb-3">
+            `;
+            
+            result.successful.forEach(id => {
+                html += `<li class="list-group-item">
