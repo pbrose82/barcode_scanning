@@ -88,6 +88,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 return response;
             })
             .then(response => {
+                console.log('Fetch response:', response);
                 if (!response.ok) {
                     throw new Error(`API returned status code ${response.status}`);
                 }
@@ -411,7 +412,29 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             
             html += '</ul>';
+        } else if (result.status === 'partial') {
+            html = `
+                <div class="alert alert-warning">
+                    <strong>Partial Success.</strong> ${result.message}
+                </div>
+                <p>Successfully updated the following records:</p>
+                <ul class="list-group mb-3">
+            `;
+            
+            result.successful.forEach(id => {
+                html += `<li class="list-group-item">Record ID: ${id}</li>`;
+            });
+            
+            html += '</ul><p>Failed to update the following records:</p><ul class="list-group">';
+            
+            result.failed.forEach(item => {
+                html += `<li class="list-group-item">Record ID: ${item.id} - Error: ${item.error}</li>`;
+            });
+            
+            html += '</ul>';
         } else {
+            html = `
+                <div class} else {
             html = `
                 <div class="alert alert-danger">
                     <strong>Error!</strong> ${result.message || 'An unknown error occurred'}
@@ -422,56 +445,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // Update results content and show results section
         resultsContent.innerHTML = html;
         updateResults.style.display = 'block';
-    }
-    
-    // Reset the application
-    function resetApp() {
-        console.log('Resetting application...');
-        // Clear record IDs
-        recordIds = [];
-        
-        // Clear UI elements
-        scannedItems.innerHTML = '';
-        barcodeInput.value = '';
-        locationSelect.selectedIndex = 0;
-        sublocationSelect.innerHTML = '';
-        
-        // Add default option to sublocation
-        const defaultSubOption = document.createElement('option');
-        defaultSubOption.value = '';
-        defaultSubOption.textContent = '-- Select Sublocation --';
-        sublocationSelect.appendChild(defaultSubOption);
-        sublocationSelect.disabled = true;
-        
-        // Hide results
-        updateResults.style.display = 'none';
-        
-        // Update UI
-        updateUI();
-        
-        // Focus on input
-        barcodeInput.focus();
-        
-        console.log('Application reset');
-    }
-    
-    // Update UI based on current state
-    function updateUI() {
-        // Update the record counter
-        const recordCount = recordIds.length;
-        
-        // Enable/disable update button based on conditions
-        const enableUpdate = recordCount > 0 && locationSelect.value !== '';
-        
-        if (enableUpdate) {
-            updateButton.disabled = false;
-            updateButton.classList.remove('disabled');
-            updateButton.classList.add('active');
-        } else {
-            updateButton.disabled = true;
-            updateButton.classList.add('disabled');
-            updateButton.classList.remove('active');
-        }
     }
     
     // Show notification message
@@ -512,18 +485,4 @@ document.addEventListener('DOMContentLoaded', function() {
             console.warn('Unable to play beep sound:', e);
         }
     }
-});Record ID: ${id}</li>`;
-            });
-            
-            html += '</ul>';
-        } else if (result.status === 'partial') {
-            html = `
-                <div class="alert alert-warning">
-                    <strong>Partial Success.</strong> ${result.message}
-                </div>
-                <p>Successfully updated the following records:</p>
-                <ul class="list-group mb-3">
-            `;
-            
-            result.successful.forEach(id => {
-                html += `<li class="list-group-item">
+});
