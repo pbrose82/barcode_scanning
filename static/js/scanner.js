@@ -1,17 +1,14 @@
 /**
  * Main script for Alchemy Barcode Scanner application
- * This script handles barcode scanning, location selection, and record updates
+ * This script handles handheld barcode scanner input, location selection, and record updates
  */
 
 // Wait for the DOM to be fully loaded before executing
 document.addEventListener('DOMContentLoaded', function() {
     // Define variables for various HTML elements
-    const startScannerBtn = document.getElementById('start-scanner');
-    const stopScannerBtn = document.getElementById('stop-scanner');
-    const scannerContainer = document.getElementById('scanner-container');
+    const barcodeInput = document.getElementById('barcode-input');
+    const addBarcodeBtn = document.getElementById('add-barcode');
     const scannedItems = document.getElementById('scanned-items');
-    const manualBarcodeInput = document.getElementById('manual-barcode');
-    const addManualBtn = document.getElementById('add-manual');
     const locationSelect = document.getElementById('location-select');
     const sublocationSelect = document.getElementById('sublocation-select');
     const updateButton = document.getElementById('update-button');
@@ -39,18 +36,31 @@ document.addEventListener('DOMContentLoaded', function() {
         fetchLocations();
         
         // Add event listeners
-        startScannerBtn.addEventListener('click', startScanner);
-        stopScannerBtn.addEventListener('click', stopScanner);
-        addManualBtn.addEventListener('click', addManualBarcode);
+        addBarcodeBtn.addEventListener('click', addBarcode);
         locationSelect.addEventListener('change', handleLocationChange);
         updateButton.addEventListener('click', updateRecordLocations);
         resetButton.addEventListener('click', resetApp);
         
-        // Handle manual barcode entry with Enter key
-        manualBarcodeInput.addEventListener('keypress', function(e) {
+        // Handle barcode input with Enter key (common for barcode scanners)
+        barcodeInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
-                addManualBarcode();
+                e.preventDefault(); // Prevent form submission
+                addBarcode();
             }
+        });
+        
+        // Automatically focus the input field for scanner
+        barcodeInput.focus();
+        
+        // When input field loses focus, focus it again (helps with scanning multiple barcodes)
+        barcodeInput.addEventListener('blur', function() {
+            // Short timeout to allow for button clicks
+            setTimeout(() => {
+                // Only re-focus if we're not at max barcodes
+                if (recordIds.length < MAX_BARCODES) {
+                    barcodeInput.focus();
+                }
+            }, 100);
         });
         
         // Update UI based on initial state
@@ -123,128 +133,43 @@ document.addEventListener('DOMContentLoaded', function() {
         updateUI();
     }
     
-    // Start the barcode scanner
-    function startScanner() {
-        // Only start scanner if we haven't reached the maximum number of barcodes
-        if (recordIds.length >= MAX_BARCODES) {
-            showNotification(`Maximum of ${MAX_BARCODES} barcodes reached. Remove some to scan more.`, 'error');
+    // Add a barcode to the list
+    function addBarcode() {
+        const code = barcodeInput.value.trim();
+        
+        if (!code) {
+            showNotification('Please scan or enter a record ID.', 'warning');
             return;
         }
         
-        // Show stop button and hide start button
-        startScannerBtn.style.display = 'none';
-        stopScannerBtn.style.display = 'block';
-        
-        // Initialize Quagga
-        Quagga.init({
-            inputStream: {
-                name: "Live",
-                type: "LiveStream",
-                target: document.querySelector("#interactive"),
-                constraints: {
-                    width: 640,
-                    height: 480,
-                    facingMode: "environment" // Use the rear camera on mobile devices
-                },
-            },
-            locator: {
-                patchSize: "medium",
-                halfSample: true
-            },
-            numOfWorkers: 4,
-            decoder: {
-                readers: [
-                    "code_128_reader",
-                    "ean_reader",
-                    "ean_8_reader",
-                    "code_39_reader",
-                    "code_39_vin_reader",
-                    "codabar_reader",
-                    "upc_reader",
-                    "upc_e_reader",
-                    "i2of5_reader",
-                    "2of5_reader",
-                    "code_93_reader"
-                ]
-            },
-            locate: true
-        }, function(err) {
-            if (err) {
-                console.error(err);
-                showNotification('Failed to initialize the barcode scanner. Please check your camera permissions.', 'error');
-                
-                // Reset button states
-                startScannerBtn.style.display = 'block';
-                stopScannerBtn.style.display = 'none';
-                return;
-            }
-            
-            Quagga.start();
-            
-            // Set up a listener for when a barcode is detected
-            Quagga.onDetected(function(result) {
-                const code = result.codeResult.code;
-                
-                // Validate that the barcode looks like a record ID (e.g., numeric)
-                if (isValidRecordId(code)) {
-                    // Add the scanned code if it's not already in the list
-                    if (!recordIds.includes(code)) {
-                        addRecordId(code);
-                        
-                        // Play success sound
-                        playBeepSound();
-                        
-                        // Stop scanner if we've reached the maximum
-                        if (recordIds.length >= MAX_BARCODES) {
-                            stopScanner();
-                            showNotification(`Maximum of ${MAX_BARCODES} barcodes reached.`, 'warning');
-                        }
-                    }
-                }
-            });
-        });
-    }
-    
-    // Stop the barcode scanner
-    function stopScanner() {
-        if (Quagga) {
-            Quagga.stop();
-        }
-        
-        // Reset button states
-        startScannerBtn.style.display = 'block';
-        stopScannerBtn.style.display = 'none';
-    }
-    
-    // Check if a string looks like a valid record ID
-    function isValidRecordId(id) {
-        // Basic validation - could be enhanced based on your record ID format
-        return /^\d+$/.test(id) && id.length > 0;
-    }
-    
-    // Add a record ID to the list
-    function addRecordId(id) {
-        // Don't add duplicates
-        if (recordIds.includes(id)) {
-            showNotification('This record ID has already been scanned.', 'warning');
+        if (!isValidRecordId(code)) {
+            showNotification('Please enter a valid record ID.', 'error');
             return;
         }
         
         // Check if we've reached the maximum
         if (recordIds.length >= MAX_BARCODES) {
-            showNotification(`Maximum of ${MAX_BARCODES} barcodes reached.`, 'error');
+            showNotification(`Maximum of ${MAX_BARCODES} barcodes reached. Remove some to scan more.`, 'error');
+            return;
+        }
+        
+        // Check for duplicates
+        if (recordIds.includes(code)) {
+            showNotification('This record ID has already been scanned.', 'warning');
+            barcodeInput.value = '';
+            barcodeInput.focus();
             return;
         }
         
         // Add to array
-        recordIds.push(id);
+        recordIds.push(code);
         
         // Add to UI
         const li = document.createElement('li');
         li.className = 'list-group-item d-flex justify-content-between align-items-center';
         li.innerHTML = `
-            <span>Record ID: <span class="record-badge">${id}</span></span>
-            <button class="remove-item" data-id="${id}">
+            <span>Record ID: <span class="record-badge">${code}</span></span>
+            <button class="remove-item" data-id="${code}">
                 <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                     <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
                 </svg>
@@ -259,8 +184,23 @@ document.addEventListener('DOMContentLoaded', function() {
         
         scannedItems.appendChild(li);
         
+        // Clear input field
+        barcodeInput.value = '';
+        
+        // Play success sound
+        playBeepSound();
+        
         // Update UI
         updateUI();
+        
+        // Focus back on input for next scan
+        barcodeInput.focus();
+    }
+    
+    // Check if a string looks like a valid record ID
+    function isValidRecordId(id) {
+        // Basic validation - could be enhanced based on your record ID format
+        return /^\d+$/.test(id) && id.length > 0;
     }
     
     // Remove a record ID from the list
@@ -282,20 +222,9 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Update UI
             updateUI();
-        }
-    }
-    
-    // Handle manual barcode entry
-    function addManualBarcode() {
-        const code = manualBarcodeInput.value.trim();
-        
-        if (code) {
-            if (isValidRecordId(code)) {
-                addRecordId(code);
-                manualBarcodeInput.value = '';
-            } else {
-                showNotification('Please enter a valid record ID.', 'error');
-            }
+            
+            // Focus back on input field
+            barcodeInput.focus();
         }
     }
     
@@ -420,15 +349,12 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Reset the application
     function resetApp() {
-        // Stop scanner if running
-        stopScanner();
-        
         // Clear record IDs
         recordIds = [];
         
         // Clear UI elements
         scannedItems.innerHTML = '';
-        manualBarcodeInput.value = '';
+        barcodeInput.value = '';
         locationSelect.selectedIndex = 0;
         sublocationSelect.selectedIndex = 0;
         sublocationSelect.disabled = true;
@@ -438,6 +364,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Update UI
         updateUI();
+        
+        // Focus on input
+        barcodeInput.focus();
     }
     
     // Update UI based on current state
@@ -456,15 +385,6 @@ document.addEventListener('DOMContentLoaded', function() {
             updateButton.disabled = true;
             updateButton.classList.add('disabled');
             updateButton.classList.remove('active');
-        }
-        
-        // Enable/disable scanner button based on record count
-        if (recordCount >= MAX_BARCODES) {
-            startScannerBtn.disabled = true;
-            startScannerBtn.classList.add('disabled');
-        } else {
-            startScannerBtn.disabled = false;
-            startScannerBtn.classList.remove('disabled');
         }
     }
     
@@ -497,7 +417,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Play beep sound when barcode is successfully scanned
     function playBeepSound() {
-        const audio = new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU...'); // Base64 encoded short beep sound
+        const audio = new Audio('data:audio/mp3;base64,SUQzAwAAAAAAJlRQRTEAAAAcAAAAU291bmRKYXkuY29tIFNvdW5kIEVmZmVjdHMA//uSwAAAAAABLBQAAAMBUVTEFDQABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/7ksH/g8AAAaQcAAAgAAA0gAAABFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV');
         audio.volume = 0.5;
         audio.play().catch(e => console.log('Audio play failed:', e));
     }
