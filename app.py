@@ -259,23 +259,34 @@ def debug_api_response(response_data):
                 if isinstance(first_item, dict):
                     logging.info(f"First item keys: {list(first_item.keys())}")
                     
-                    # Look for properties array
-                    if "properties" in first_item and isinstance(first_item["properties"], list):
-                        logging.info(f"Properties count: {len(first_item['properties'])}")
+                    # Look at the top-level name
+                    if "name" in first_item:
+                        logging.info(f"Top-level name: {first_item['name']}")
+                    
+                    # Look at fields array
+                    if "fields" in first_item and isinstance(first_item["fields"], list):
+                        logging.info(f"Fields count: {len(first_item['fields'])}")
                         
-                        # Log property identifiers
-                        identifiers = [prop.get("identifier") for prop in first_item["properties"] if "identifier" in prop]
-                        logging.info(f"Property identifiers: {identifiers}")
+                        # Log field identifiers
+                        identifiers = [field.get("identifier") for field in first_item["fields"] if "identifier" in field]
+                        logging.info(f"Field identifiers: {identifiers}")
                         
-                        # Check the structure of each property to find potential location name
-                        for prop in first_item["properties"]:
-                            prop_id = prop.get("identifier", "")
-                            logging.info(f"Property: {prop_id}")
-                            if "rows" in prop and prop["rows"]:
-                                for row_idx, row in enumerate(prop["rows"]):
+                        # Check the structure of fields to find potential location name
+                        for field in first_item["fields"]:
+                            field_id = field.get("identifier", "")
+                            logging.info(f"Field: {field_id}")
+                            if "rows" in field and field["rows"]:
+                                for row_idx, row in enumerate(field["rows"]):
                                     if "values" in row and row["values"]:
                                         for val_idx, val in enumerate(row["values"]):
-                                            logging.info(f"  {prop_id} Value at [{row_idx}][{val_idx}]: {val.get('value')}")
+                                            logging.info(f"  {field_id} Value at [{row_idx}][{val_idx}]: {val.get('value')}")
+                    
+                    # Look at fieldGroups array
+                    if "fieldGroups" in first_item and isinstance(first_item["fieldGroups"], list):
+                        logging.info(f"FieldGroups count: {len(first_item['fieldGroups'])}")
+                        # Log the first fieldGroup for reference
+                        if first_item["fieldGroups"]:
+                            logging.info(f"First fieldGroup: {json.dumps(first_item['fieldGroups'][0])}")
         else:
             logging.info(f"Response is not an array, type: {type(response_data).__name__}")
             
@@ -357,7 +368,7 @@ def get_locations():
         for location in locations_data:
             try:
                 # Extract location ID
-                location_id = str(location.get("id", "unknown"))
+                location_id = str(location.get("recordId", "unknown"))
                 
                 # Extract location name using improved method
                 location_name = extract_location_name_improved(location)
@@ -376,7 +387,7 @@ def get_locations():
                 logging.info(f"Added location: {location_name} (ID: {location_id}) with {len(sublocations)} sublocations")
                 
             except Exception as e:
-                logging.error(f"Error processing location {location.get('id')}: {str(e)}")
+                logging.error(f"Error processing location {location.get('recordId')}: {str(e)}")
         
         # If no locations were found, add fallback locations
         if not formatted_locations:
@@ -391,54 +402,26 @@ def get_locations():
 
 def extract_location_name_improved(location):
     """Improved function to extract location name from Alchemy API response"""
-    # Start with a default name
-    default_name = f"Location {location.get('id', 'unknown')}"
+    # First, try to use the top-level name field which is most reliable
+    if "name" in location and location["name"]:
+        return location["name"]
     
-    # Look for any fields that might contain the location name
-    potential_name_fields = [
-        "Name", "RecordName", "Title", "LocationName", "Location", "SiteName", "Site", 
-        "Building", "BuildingName", "Area", "AreaName", "Room", "RoomName"
-    ]
+    # Fallback to a default name if top-level name isn't available
+    default_name = f"Location {location.get('recordId', 'unknown')}"
     
-    # Check if properties exist
-    if not location.get("properties"):
-        return default_name
-    
-    # First, try to find an exact match in the property identifiers
-    for prop in location["properties"]:
-        prop_id = prop.get("identifier", "")
-        
-        if prop_id in potential_name_fields and prop.get("rows") and len(prop["rows"]) > 0:
-            # Found a property with a potential name identifier
-            if prop["rows"][0].get("values") and len(prop["rows"][0]["values"]) > 0:
-                value = prop["rows"][0]["values"][0].get("value")
-                if value and isinstance(value, str) and value.strip():
-                    # Log what we found
-                    logging.info(f"Found name in field '{prop_id}': {value}")
-                    return value
-    
-    # If no exact match, try a contains approach
-    for prop in location["properties"]:
-        prop_id = prop.get("identifier", "")
-        
-        # Check if the property identifier contains any of our key words
-        if any(field.lower() in prop_id.lower() for field in potential_name_fields) and prop.get("rows") and len(prop["rows"]) > 0:
-            if prop["rows"][0].get("values") and len(prop["rows"][0]["values"]) > 0:
-                value = prop["rows"][0]["values"][0].get("value")
-                if value and isinstance(value, str) and value.strip():
-                    # Log what we found
-                    logging.info(f"Found name-like field '{prop_id}': {value}")
-                    return value
-    
-    # If still no match, try any non-empty string property
-    for prop in location["properties"]:
-        if prop.get("rows") and len(prop["rows"]) > 0:
-            if prop["rows"][0].get("values") and len(prop["rows"][0]["values"]) > 0:
-                value = prop["rows"][0]["values"][0].get("value")
-                if value and isinstance(value, str) and value.strip():
-                    # Log what we found
-                    logging.info(f"Using first non-empty string field '{prop.get('identifier')}': {value}")
-                    return value
+    # Check for name in fields array if top-level name isn't available
+    if "fields" in location:
+        # Look for fields with identifiers that might contain location name
+        name_field_identifiers = ["LocationName", "RecordName", "Name"]
+        for field in location["fields"]:
+            identifier = field.get("identifier", "")
+            if identifier in name_field_identifiers:
+                if field.get("rows") and len(field["rows"]) > 0:
+                    row = field["rows"][0]
+                    if row.get("values") and len(row["values"]) > 0:
+                        value = row["values"][0].get("value")
+                        if value and isinstance(value, str) and value.strip():
+                            return value
     
     # If no suitable name found, return the default
     return default_name
@@ -447,68 +430,20 @@ def extract_sublocations_improved(location):
     """Improved function to extract sublocations from Alchemy API response"""
     sublocations = []
     
-    # Check if properties exist
-    if not location.get("properties"):
-        return sublocations
-    
-    # List of potential sublocation field names
-    potential_sublocation_fields = [
-        "Sublocations", "SubLocations", "SubLocation", "Sublocation", 
-        "Areas", "Rooms", "Sections", "SubAreas", "SubSections"
-    ]
-    
-    # First pass: Look for exact property identifier matches
-    for prop in location["properties"]:
-        prop_id = prop.get("identifier", "")
-        
-        if prop_id in potential_sublocation_fields and prop.get("rows"):
-            for idx, row in enumerate(prop["rows"]):
-                if row.get("values") and len(row["values"]) > 0:
-                    value = row["values"][0].get("value")
-                    if value and isinstance(value, str) and value.strip():
-                        sublocations.append({
-                            "id": f"sub_{location.get('id')}_{idx}",
-                            "name": value
-                        })
-            
-            # If we found sublocations, return them
-            if sublocations:
-                return sublocations
-    
-    # Second pass: Look for property identifiers containing sublocation keywords
-    for prop in location["properties"]:
-        prop_id = prop.get("identifier", "")
-        
-        if any(field.lower() in prop_id.lower() for field in potential_sublocation_fields) and prop.get("rows"):
-            for idx, row in enumerate(prop["rows"]):
-                if row.get("values") and len(row["values"]) > 0:
-                    value = row["values"][0].get("value")
-                    if value and isinstance(value, str) and value.strip():
-                        sublocations.append({
-                            "id": f"sub_{location.get('id')}_{idx}",
-                            "name": value
-                        })
-            
-            # If we found sublocations, return them
-            if sublocations:
-                return sublocations
-    
-    # If we still haven't found sublocations, look for array-like properties
-    for prop in location["properties"]:
-        if prop.get("rows") and len(prop["rows"]) > 2:  # More than 2 rows might be a list
-            list_values = []
-            for idx, row in enumerate(prop["rows"]):
-                if row.get("values") and len(row["values"]) > 0:
-                    value = row["values"][0].get("value")
-                    if value and isinstance(value, str) and value.strip():
-                        list_values.append({
-                            "id": f"sub_{location.get('id')}_{idx}",
-                            "name": value
-                        })
-            
-            # If we found enough values, this might be a list of sublocations
-            if len(list_values) > 1:
-                return list_values
+    # Check for sublocations in fieldGroups
+    if "fieldGroups" in location:
+        for group in location["fieldGroups"]:
+            if group.get("identifier") == "LocationList":
+                for field in group.get("fields", []):
+                    if field.get("identifier") == "SubLocations":
+                        for row in field.get("rows", []):
+                            if row.get("values") and len(row["values"]) > 0:
+                                value = row["values"][0].get("value")
+                                if value and isinstance(value, dict) and "name" in value:
+                                    sublocations.append({
+                                        "id": str(value.get("recordId", "")),
+                                        "name": value.get("name", "Unnamed Sublocation")
+                                    })
     
     return sublocations
 
