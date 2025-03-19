@@ -11,10 +11,6 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # Flask Application Setup
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
-# Configuration Constants
-UPLOAD_FOLDER = '/tmp'
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-
 # Alchemy API Configuration
 ALCHEMY_REFRESH_TOKEN = os.getenv('ALCHEMY_REFRESH_TOKEN')
 ALCHEMY_REFRESH_URL = os.getenv('ALCHEMY_REFRESH_URL', 'https://core-production.alchemy.cloud/core/api/v2/refresh-token')
@@ -31,6 +27,7 @@ alchemy_token_cache = {
 # Route Handlers
 @app.route('/')
 def index():
+    app.logger.info("Rendering index.html")
     return render_template('index.html')
 
 @app.route('/static/<path:filename>')
@@ -151,7 +148,7 @@ def update_location():
             try:
                 # Format data for Alchemy API
                 alchemy_payload = {
-                    "recordId": record_id,
+                    "recordId": int(record_id),
                     "fields": [
                         {
                             "identifier": "Location",
@@ -193,11 +190,13 @@ def update_location():
                     "Content-Type": "application/json"
                 }
                 
-                logging.info(f"Sending update for record {record_id} to Alchemy")
+                logging.info(f"Sending update for record {record_id} to Alchemy: {json.dumps(alchemy_payload)}")
                 response = requests.post(ALCHEMY_API_URL, headers=headers, json=alchemy_payload)
                 
                 # Log response for debugging
                 logging.info(f"Alchemy API response status code: {response.status_code}")
+                if response.text:
+                    logging.info(f"Alchemy API response: {response.text}")
                 
                 # Check if the request was successful
                 if response.ok:
