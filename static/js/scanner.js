@@ -157,7 +157,6 @@ document.addEventListener('DOMContentLoaded', function() {
             locationSelect.appendChild(noLocationsOption);
         }
     }
-    
     // Handle location change
     function handleLocationChange() {
         console.log('Location changed to:', locationSelect.value);
@@ -434,8 +433,6 @@ document.addEventListener('DOMContentLoaded', function() {
             html += '</ul>';
         } else {
             html = `
-                <div class} else {
-            html = `
                 <div class="alert alert-danger">
                     <strong>Error!</strong> ${result.message || 'An unknown error occurred'}
                 </div>
@@ -445,6 +442,56 @@ document.addEventListener('DOMContentLoaded', function() {
         // Update results content and show results section
         resultsContent.innerHTML = html;
         updateResults.style.display = 'block';
+    }
+    
+    // Reset the application
+    function resetApp() {
+        console.log('Resetting application...');
+        // Clear record IDs
+        recordIds = [];
+        
+        // Clear UI elements
+        scannedItems.innerHTML = '';
+        barcodeInput.value = '';
+        locationSelect.selectedIndex = 0;
+        sublocationSelect.innerHTML = '';
+        
+        // Add default option to sublocation
+        const defaultSubOption = document.createElement('option');
+        defaultSubOption.value = '';
+        defaultSubOption.textContent = '-- Select Sublocation --';
+        sublocationSelect.appendChild(defaultSubOption);
+        sublocationSelect.disabled = true;
+        
+        // Hide results
+        updateResults.style.display = 'none';
+        
+        // Update UI
+        updateUI();
+        
+        // Focus on input
+        barcodeInput.focus();
+        
+        console.log('Application reset');
+    }
+    
+    // Update UI based on current state
+    function updateUI() {
+        // Update the record counter
+        const recordCount = recordIds.length;
+        
+        // Enable/disable update button based on conditions
+        const enableUpdate = recordCount > 0 && locationSelect.value !== '';
+        
+        if (enableUpdate) {
+            updateButton.disabled = false;
+            updateButton.classList.remove('disabled');
+            updateButton.classList.add('active');
+        } else {
+            updateButton.disabled = true;
+            updateButton.classList.add('disabled');
+            updateButton.classList.remove('active');
+        }
     }
     
     // Show notification message
@@ -478,11 +525,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Play beep sound when barcode is successfully scanned
     function playBeepSound() {
         try {
-            const audio = new Audio('data:audio/mp3;base64,SUQzAwAAAAAAJlRQRTEAAAAcAAAAU291bmRKYXkuY29tIFNvdW5kIEVmZmVjdHMA//uSwAAAAAABLBQAAAMBUVTEFDQABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/7ksH/g8AAAaQcAAAgAAA0gAAABFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV');
-            audio.volume = 0.5;
+            const audio = new Audio('data:audio/mp3;base64,SUQzAwAAAAAAJlRQRTEAAAAcAAAAU291bmRKYXkuY29tIFNvdW5kIEVmZmVjdHMA//uSwAAAAAABLBQAAAMBUVTEFDQABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/7ksH/g8AAAaQcAAAgAAA0gAAABFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
+                                    audio.volume = 0.5;
             audio.play().catch(e => console.log('Audio play failed:', e));
         } catch (e) {
             console.warn('Unable to play beep sound:', e);
         }
     }
 });
+
+        
