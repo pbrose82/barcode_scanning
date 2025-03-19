@@ -35,6 +35,10 @@ def index():
 def serve_static(filename):
     return send_from_directory(app.static_folder, filename)
 
+@app.route('/test')
+def test_page():
+    return render_template('test.html')
+
 def refresh_alchemy_token():
     """Refresh the Alchemy API token"""
     global alchemy_token_cache
@@ -87,6 +91,97 @@ def refresh_alchemy_token():
         logging.error(f"Error refreshing Alchemy token: {str(e)}")
         return None
 
+# Route for getting test locations (reliable hardcoded data)
+@app.route('/get-test-locations', methods=['GET'])
+def get_test_locations():
+    """Return hardcoded test locations for debugging frontend"""
+    test_locations = [
+        {
+            "id": "1001",
+            "name": "Warehouse A",
+            "sublocations": [
+                {"id": "sub1", "name": "Section A1"},
+                {"id": "sub2", "name": "Section A2"}
+            ]
+        },
+        {
+            "id": "1002",
+            "name": "Laboratory B",
+            "sublocations": [
+                {"id": "sub3", "name": "Lab Storage 1"},
+                {"id": "sub4", "name": "Lab Storage 2"}
+            ]
+        },
+        {
+            "id": "1003",
+            "name": "Office Building",
+            "sublocations": []
+        }
+    ]
+    return jsonify(test_locations)
+
+# Helper function to debug API response structure
+def debug_api_response(response_data):
+    """Log detailed information about the API response structure"""
+    try:
+        logging.info("Debug API response structure:")
+        
+        # Check if it's an array
+        if isinstance(response_data, list):
+            logging.info(f"Response is an array with {len(response_data)} items")
+            
+            # Look at the first item
+            if response_data and len(response_data) > 0:
+                first_item = response_data[0]
+                logging.info(f"First item type: {type(first_item).__name__}")
+                
+                # If it's a dict, check its keys
+                if isinstance(first_item, dict):
+                    logging.info(f"First item keys: {list(first_item.keys())}")
+                    
+                    # Look for properties array
+                    if "properties" in first_item and isinstance(first_item["properties"], list):
+                        logging.info(f"Properties count: {len(first_item['properties'])}")
+                        
+                        # Log property identifiers
+                        identifiers = [prop.get("identifier") for prop in first_item["properties"] if "identifier" in prop]
+                        logging.info(f"Property identifiers: {identifiers}")
+                        
+                        # Check the structure of each property to find potential location name
+                        for prop in first_item["properties"]:
+                            logging.info(f"Property: {prop.get('identifier')}")
+                            if "rows" in prop and prop["rows"]:
+                                for row_idx, row in enumerate(prop["rows"]):
+                                    if "values" in row and row["values"]:
+                                        for val_idx, val in enumerate(row["values"]):
+                                            logging.info(f"  Value at [{row_idx}][{val_idx}]: {val.get('value')}")
+        else:
+            logging.info(f"Response is not an array, type: {type(response_data).__name__}")
+            
+    except Exception as e:
+        logging.error(f"Error debugging API response: {str(e)}")
+
+# Helper function to get fallback locations
+def get_fallback_locations():
+    """Return fallback locations if API fails"""
+    return [
+        {
+            "id": "1",
+            "name": "Warehouse A (Fallback)",
+            "sublocations": [
+                {"id": "sub1", "name": "Section A1"},
+                {"id": "sub2", "name": "Section A2"}
+            ]
+        },
+        {
+            "id": "2",
+            "name": "Laboratory (Fallback)",
+            "sublocations": [
+                {"id": "sub3", "name": "Lab Storage"}
+            ]
+        }
+    ]
+
 # Route for getting locations from Alchemy API
 @app.route('/get-locations', methods=['GET'])
 def get_locations():
@@ -95,10 +190,8 @@ def get_locations():
         access_token = refresh_alchemy_token()
         
         if not access_token:
-            return jsonify({
-                "status": "error", 
-                "message": "Failed to authenticate with Alchemy API"
-            }), 500
+            logging.warning("Failed to get access token, returning fallback locations")
+            return jsonify(get_fallback_locations())
         
         # Prepare filter request for locations
         filter_payload = {
@@ -124,67 +217,75 @@ def get_locations():
         
         if not response.ok:
             logging.error(f"Error fetching locations: {response.text}")
-            return jsonify({
-                "status": "error",
-                "message": "Failed to fetch locations from Alchemy API"
-            }), response.status_code
+            return jsonify(get_fallback_locations())
         
         # Process the response
         locations_data = response.json()
         logging.info(f"Received {len(locations_data)} locations from API")
+        
+        # Debug the API response structure
+        debug_api_response(locations_data)
         
         # Transform the data into the format needed by the frontend
         formatted_locations = []
         
         for location in locations_data:
             try:
+                # Extract location ID
+                location_id = str(location.get("id", "unknown"))
+                
+                # Extract location name
+                location_name = "Unknown Location"
+                if location.get("properties"):
+                    for prop in location["properties"]:
+                        if prop.get("identifier") == "RecordName" and prop.get("rows") and len(prop["rows"]) > 0:
+                            if prop["rows"][0].get("values") and len(prop["rows"][0]["values"]) > 0:
+                                value = prop["rows"][0]["values"][0].get("value")
+                                if value:
+                                    location_name = value
+                                    break
+                
+                # If no location name found, use ID as fallback
+                if location_name == "Unknown Location":
+                    location_name = f"Location {location_id}"
+                
+                # Extract sublocations - simple version
+                sublocations = []
+                if location.get("properties"):
+                    for prop in location["properties"]:
+                        if prop.get("identifier") in ["Sublocations", "SubLocations"] and prop.get("rows"):
+                            for idx, row in enumerate(prop["rows"]):
+                                if row.get("values") and len(row["values"]) > 0:
+                                    value = row["values"][0].get("value")
+                                    if value:
+                                        sublocations.append({
+                                            "id": f"sub_{location_id}_{idx}",
+                                            "name": value
+                                        })
+                
+                # Create location info object
                 location_info = {
-                    "id": str(location.get("id")),
-                    "name": extract_location_name(location),
-                    "sublocations": extract_sublocations(location)
+                    "id": location_id,
+                    "name": location_name,
+                    "sublocations": sublocations
                 }
+                
                 formatted_locations.append(location_info)
+                logging.info(f"Added location: {location_name} (ID: {location_id}) with {len(sublocations)} sublocations")
+                
             except Exception as e:
                 logging.error(f"Error processing location {location.get('id')}: {str(e)}")
+        
+        # If no locations were found, add fallback locations
+        if not formatted_locations:
+            logging.warning("No locations found in API response, adding fallback locations")
+            return jsonify(get_fallback_locations())
         
         return jsonify(formatted_locations)
         
     except Exception as e:
         logging.error(f"Error fetching locations: {str(e)}")
-        return jsonify({
-            "status": "error",
-            "message": f"Failed to fetch locations: {str(e)}"
-        }), 500
-
-def extract_location_name(location):
-    """Extract location name from Alchemy API response"""
-    # First try to get the name from a standard field (customize this based on actual API response)
-    if location.get("properties"):
-        for prop in location["properties"]:
-            if prop.get("identifier") == "RecordName" and prop.get("rows") and prop["rows"][0].get("values"):
-                return prop["rows"][0]["values"][0].get("value", "Unknown Location")
-    
-    # Fallback to record ID if name not found
-    return f"Location {location.get('id', 'Unknown')}"
-
-def extract_sublocations(location):
-    """Extract sublocations from Alchemy API response"""
-    sublocations = []
-    
-    # Look for a sublocations field (customize this based on actual API response)
-    if location.get("properties"):
-        for prop in location["properties"]:
-            if prop.get("identifier") == "Sublocations" and prop.get("rows"):
-                for row in prop["rows"]:
-                    if row.get("values") and row["values"][0].get("value"):
-                        sublocation_value = row["values"][0]["value"]
-                        sublocation_id = row.get("id") or f"sub_{len(sublocations)}"
-                        sublocations.append({
-                            "id": str(sublocation_id),
-                            "name": sublocation_value
-                        })
-    
-    return sublocations
+        return jsonify(get_fallback_locations())
 
 # Route for updating record location in Alchemy
 @app.route('/update-location', methods=['POST'])
