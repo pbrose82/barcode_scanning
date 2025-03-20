@@ -39,28 +39,65 @@ def load_config():
     except Exception as e:
         logging.error(f"Error loading configuration: {str(e)}")
         return create_default_config()
-def create_default_config():
-    """Create a default configuration if the config file is not found"""
-    return {
-        "default_tenant": "default",
-        "default_urls": {
-            "refresh_url": "https://core-production.alchemy.cloud/core/api/v2/refresh-token",
-            "api_url": "https://core-production.alchemy.cloud/core/api/v2/update-record",
-            "filter_url": "https://core-production.alchemy.cloud/core/api/v2/filter-records",
-            "find_records_url": "https://core-production.alchemy.cloud/core/api/v2/find-records",
-            "base_url": "https://app.alchemy.cloud/"
-        },
-        "tenants": {
-            "default": {
-                "tenant_name": "productcaseelnlims4uat",
-                "display_name": "Default Tenant",
-                "description": "Primary Alchemy environment",
-                "button_class": "primary",
-                "env_token_var": "ALCHEMY_REFRESH_TOKEN",
-                "use_custom_urls": False
+def ensure_config_file():
+    """Create config.json if it doesn't exist"""
+    config_path = os.path.join(os.path.dirname(__file__), 'config.json')
+    if not os.path.exists(config_path):
+        logging.info(f"Creating config file at {config_path}")
+        config = {
+            "default_tenant": "default",
+            "default_urls": {
+                "refresh_url": "https://core-production.alchemy.cloud/core/api/v2/refresh-token",
+                "api_url": "https://core-production.alchemy.cloud/core/api/v2/update-record",
+                "filter_url": "https://core-production.alchemy.cloud/core/api/v2/filter-records",
+                "find_records_url": "https://core-production.alchemy.cloud/core/api/v2/find-records",
+                "base_url": "https://app.alchemy.cloud/"
+            },
+            "tenants": {
+                "default": {
+                    "tenant_name": "productcaseelnlims4uat",
+                    "display_name": "Product Case ELN LIMS UAT",
+                    "description": "Primary Alchemy environment",
+                    "button_class": "primary",
+                    "env_token_var": "DEFAULT_REFRESH_TOKEN",
+                    "use_custom_urls": False
+                },
+                "tenant1": {
+                    "tenant_name": "caseelnlims4uat",
+                    "display_name": "CASE UAT",
+                    "description": "Test environment",
+                    "button_class": "secondary",
+                    "env_token_var": "TENANT1_REFRESH_TOKEN",
+                    "use_custom_urls": False
+                },
+                "custom": {
+                    "tenant_name": "custom",
+                    "display_name": "Custom Tenant",
+                    "description": "Custom Alchemy environment",
+                    "button_class": "warning",
+                    "env_token_var": "CUSTOM_REFRESH_TOKEN",
+                    "use_custom_urls": True,
+                    "custom_urls": {
+                        "refresh_url": "https://custom-instance.alchemy.cloud/core/api/v2/refresh-token",
+                        "api_url": "https://custom-instance.alchemy.cloud/core/api/v2/update-record", 
+                        "filter_url": "https://custom-instance.alchemy.cloud/core/api/v2/filter-records",
+                        "find_records_url": "https://custom-instance.alchemy.cloud/core/api/v2/find-records",
+                        "base_url": "https://custom-instance.alchemy.cloud/"
+                    }
+                }
             }
         }
-    }
+        try:
+            with open(config_path, 'w') as f:
+                json.dump(config, f, indent=2)
+            return True
+        except Exception as e:
+            logging.error(f"Error creating config file: {str(e)}")
+            return False
+    return True
+
+# Call this function before loading config
+ensure_config_file()
 
 # Load configuration
 CONFIG = load_config()
