@@ -440,7 +440,7 @@ def get_fallback_locations():
     ]
 
 # Configuration Management Routes
-@app.route('/admin/update-tenant-token', methods=['POST'])
+@app.route('/api/update-tenant-token', methods=['POST'])
 def update_tenant_token():
     """Update refresh token for a tenant directly in the config"""
     try:
