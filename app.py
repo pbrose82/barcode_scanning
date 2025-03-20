@@ -46,6 +46,63 @@ def ensure_config_directory():
     except Exception as e:
         logging.error(f"Error creating config directory: {str(e)}")
 
+def ensure_config_file():
+    """Create config.json if it doesn't exist"""
+    config_path = os.path.join(os.path.dirname(__file__), 'config.json')
+    if not os.path.exists(config_path):
+        logging.info(f"Creating config file at {config_path}")
+        config = {
+            "default_tenant": "default",
+            "default_urls": {
+                "refresh_url": "https://core-production.alchemy.cloud/core/api/v2/refresh-token",
+                "api_url": "https://core-production.alchemy.cloud/core/api/v2/update-record",
+                "filter_url": "https://core-production.alchemy.cloud/core/api/v2/filter-records",
+                "find_records_url": "https://core-production.alchemy.cloud/core/api/v2/find-records",
+                "base_url": "https://app.alchemy.cloud/"
+            },
+            "tenants": {
+                "default": {
+                    "tenant_name": "productcaseelnlims4uat",
+                    "display_name": "Product Case ELN&LIMS UAT",
+                    "description": "Primary Alchemy environment",
+                    "button_class": "primary",
+                    "env_token_var": "DEFAULT_REFRESH_TOKEN",
+                    "use_custom_urls": False
+                },
+                "tenant1": {
+                    "tenant_name": "caseelnlims4uat",
+                    "display_name": "CASE ELN&LIMS UAT",
+                    "description": "Test environment",
+                    "button_class": "primary",
+                    "env_token_var": "TENANT1_REFRESH_TOKEN",
+                    "use_custom_urls": False
+                },
+                "custom": {
+                    "tenant_name": "custom",
+                    "display_name": "Custom Tenant",
+                    "description": "Custom Alchemy environment",
+                    "button_class": "warning",
+                    "env_token_var": "CUSTOM_REFRESH_TOKEN",
+                    "use_custom_urls": True,
+                    "custom_urls": {
+                        "refresh_url": "https://custom-instance.alchemy.cloud/core/api/v2/refresh-token",
+                        "api_url": "https://custom-instance.alchemy.cloud/core/api/v2/update-record", 
+                        "filter_url": "https://custom-instance.alchemy.cloud/core/api/v2/filter-records",
+                        "find_records_url": "https://custom-instance.alchemy.cloud/core/api/v2/find-records",
+                        "base_url": "https://custom-instance.alchemy.cloud/"
+                    }
+                }
+            }
+        }
+        try:
+            with open(config_path, 'w') as f:
+                json.dump(config, f, indent=2)
+            return True
+        except Exception as e:
+            logging.error(f"Error creating config file: {str(e)}")
+            return False
+    return True
+
 def load_config():
     """
     Load configuration with extensive diagnostics
@@ -101,7 +158,7 @@ def load_config():
         default_config = create_default_config()
         save_config(default_config)
         return default_config
-        
+
 def save_config(config):
     """Save configuration ONLY to Render persistent storage"""
     try:
@@ -128,8 +185,6 @@ def save_config(config):
         logging.error(f"Current directory structure: {os.listdir(os.path.dirname(RENDER_CONFIG_PATH))}")
         return False
 
-
-
 def create_default_config():
     """Create a default configuration if the config file is not found"""
     return {
@@ -152,6 +207,12 @@ def create_default_config():
             }
         }
     }
+
+# Load configuration
+ensure_config_file()
+CONFIG = load_config()
+DEFAULT_URLS = CONFIG["default_urls"]
+DEFAULT_TENANT = CONFIG["default_tenant"]
 
 # Global Token Cache
 token_cache = {}
@@ -282,6 +343,80 @@ def refresh_alchemy_token(tenant):
     except Exception as e:
         logging.error(f"Error refreshing Alchemy token for tenant {tenant}: {str(e)}")
         return None
+
+# Helper function to debug API response structure
+def debug_api_response(response_data):
+    """Log detailed information about the API response structure"""
+    try:
+        logging.info("Debug API response structure:")
+        
+        # Check if it's an array
+        if isinstance(response_data, list):
+            logging.info(f"Response is an array with {len(response_data)} items")
+            
+            # Look at the first item
+            if response_data and len(response_data) > 0:
+                first_item = response_data[0]
+                logging.info(f"First item type: {type(first_item).__name__}")
+                
+                # If it's a dict, check its keys
+                if isinstance(first_item, dict):
+                    logging.info(f"First item keys: {list(first_item.keys())}")
+                    
+                    # Look at the top-level name
+                    if "name" in first_item:
+                        logging.info(f"Top-level name: {first_item['name']}")
+                    
+                    # Look at fields array
+                    if "fields" in first_item and isinstance(first_item["fields"], list):
+                        logging.info(f"Fields count: {len(first_item['fields'])}")
+                        
+                        # Log field identifiers
+                        identifiers = [field.get("identifier") for field in first_item["fields"] if "identifier" in field]
+                        logging.info(f"Field identifiers: {identifiers}")
+                        
+                        # Check the structure of fields to find potential location name
+                        for field in first_item["fields"]:
+                            field_id = field.get("identifier", "")
+                            logging.info(f"Field: {field_id}")
+                            if "rows" in field and field["rows"]:
+                                for row_idx, row in enumerate(field["rows"]):
+                                    if "values" in row and row["values"]:
+                                        for val_idx, val in enumerate(row["values"]):
+                                            logging.info(f"  {field_id} Value at [{row_idx}][{val_idx}]: {val.get('value')}")
+                    
+                    # Look at fieldGroups array
+                    if "fieldGroups" in first_item and isinstance(first_item["fieldGroups"], list):
+                        logging.info(f"FieldGroups count: {len(first_item['fieldGroups'])}")
+                        # Log the first fieldGroup for reference
+                        if first_item["fieldGroups"]:
+                            logging.info(f"First fieldGroup: {json.dumps(first_item['fieldGroups'][0])}")
+        else:
+            logging.info(f"Response is not an array, type: {type(response_data).__name__}")
+            
+    except Exception as e:
+        logging.error(f"Error debugging API response: {str(e)}")
+
+# Helper function to get fallback locations
+def get_fallback_locations():
+    """Return fallback locations if API fails"""
+    return [
+        {
+            "id": "1",
+            "name": "Warehouse A (Fallback)",
+            "sublocations": [
+                {"id": "sub1", "name": "Section A1"},
+                {"id": "sub2", "name": "Section A2"}
+            ]
+        },
+        {
+            "id": "2",
+            "name": "Laboratory (Fallback)",
+            "sublocations": [
+                {"id": "sub3", "name": "Lab Storage"}
+            ]
+        }
+    ]
 
 # Configuration Management Routes
 @app.route('/admin/update-tenant-token', methods=['POST'])
@@ -493,60 +628,227 @@ def reload_config_route():
         logging.error(f"Error reloading configuration: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route('/api/get-refresh-token', methods=['POST'])
-def get_refresh_token():
-    """Proxy for Alchemy sign-in API to get refresh tokens"""
+# Create a simple error.html template
+@app.route('/create-error-template')
+def create_error_template():
+    """Create error.html template if it doesn't exist"""
     try:
-        # Get credentials from request
-        data = request.json
-        if not data or 'email' not in data or 'password' not in data:
-            return jsonify({"status": "error", "message": "Missing email or password"}), 400
-            
-        # Forward the request to Alchemy API
-        alchemy_response = requests.post(
-            'https://core-production.alchemy.cloud/core/api/v2/sign-in',
-            json={
-                "email": data['email'],
-                "password": data['password']
-            },
-            headers={"Content-Type": "application/json"}
-        )
+        template_path = os.path.join(app.template_folder, 'error.html')
         
-        # Return the response directly
-        return alchemy_response.json(), alchemy_response.status_code
+        # Check if template already exists
+        if os.path.exists(template_path):
+            return "Error template already exists."
+        
+        # Create templates directory if it doesn't exist
+        if not os.path.exists(app.template_folder):
+            os.makedirs(app.template_folder)
+        
+        # Write error template
+        error_html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error - Alchemy Barcode Scanner</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            padding: 30px;
+        }
+        .error-container {
+            max-width: 600px;
+            margin: 50px auto;
+            text-align: center;
+        }
+        .error-icon {
+            font-size: 64px;
+            color: #dc3545;
+            margin-bottom: 20px;
+        }
+        .btn-home {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-icon">⚠️</div>
+        <h1 class="mb-3">Error</h1>
+        <div class="alert alert-danger">
+            {{ message }}
+        </div>
+        <a href="/" class="btn btn-primary btn-home">Go to Homepage</a>
+    </div>
+</body>
+</html>"""
+        
+        with open(template_path, 'w') as f:
+            f.write(error_html)
             
+        return "Error template created successfully."
     except Exception as e:
-        logging.error(f"Error getting refresh token: {str(e)}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return f"Error creating template: {str(e)}"
 
-# Main Route Handlers
-@app.route('/')
-def root():
-    # Show tenant selector page
-    return render_template('tenant_selector.html', tenants=CONFIG["tenants"])
-
-@app.route('/tenant/<tenant>')
-def index(tenant):
-    # Validate tenant
-    if tenant not in CONFIG["tenants"]:
-        return render_template('error.html', message=f"Unknown tenant: {tenant}"), 404
-    
+# Route for getting test locations (reliable hardcoded data)
+@app.route('/get-test-locations/<tenant>', methods=['GET'])
+def get_test_locations(tenant):
+    """Return hardcoded test locations for debugging frontend"""
+    # Get tenant configuration
     tenant_config = get_tenant_config(tenant)
+    tenant_display_name = tenant_config.get('display_name')
     
-    app.logger.info(f"Rendering index.html for tenant: {tenant} ({tenant_config['tenant_name']})")
-    return render_template('index.html', tenant=tenant, tenant_name=tenant_config['display_name'])
+    test_locations = [
+        {
+            "id": "1001",
+            "name": f"Warehouse A ({tenant_display_name})",
+            "sublocations": [
+                {"id": "sub1", "name": "Section A1"},
+                {"id": "sub2", "name": "Section A2"}
+            ]
+        },
+        {
+            "id": "1002",
+            "name": f"Laboratory B ({tenant_display_name})",
+            "sublocations": [
+                {"id": "sub3", "name": "Lab Storage 1"},
+                {"id": "sub4", "name": "Lab Storage 2"}
+            ]
+        },
+        {
+            "id": "1003",
+            "name": f"Office Building ({tenant_display_name})",
+            "sublocations": []
+        }
+    ]
+    return jsonify(test_locations)
 
-@app.route('/static/<path:filename>')
-def serve_static(filename):
-    return send_from_directory(app.static_folder, filename)
+# Function to find record ID by scanned barcode
+def find_record_id_by_barcode(barcode, access_token, tenant):
+    """Find Alchemy record ID using barcode as the Result.Code"""
+    try:
+        tenant_config = get_tenant_config(tenant)
+        find_records_url = tenant_config.get('find_records_url')
+        
+        # Prepare find request payload
+        find_payload = {
+            "queryTerm": f"Result.Code == '{barcode}'",
+            "recordTemplateIdentifier": "AC_Study_LabTrial",
+            "lastChangedOnFrom": "2022-03-03T00:00:00Z",
+            "lastChangedOnTo": "2025-12-31T23:59:59Z"  # Extended date range to future
+        }
+        
+        # Send request to Alchemy API
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
+        
+        logging.info(f"Finding record for barcode '{barcode}' in tenant {tenant}: {json.dumps(find_payload)}")
+        response = requests.put(find_records_url, headers=headers, json=find_payload)
+        
+        # Log response for debugging
+        logging.info(f"Find records API response status code for tenant {tenant}: {response.status_code}")
+        
+        if not response.ok:
+            logging.error(f"Error finding record for barcode {barcode} in tenant {tenant}: {response.text}")
+            return None
+        
+        # Process response
+        records = response.json()
+        
+        if not records or len(records) == 0:
+            logging.warning(f"No records found for barcode {barcode} in tenant {tenant}")
+            return None
+        
+        # Get the first matching record ID
+        record_id = records[0].get('recordId') or records[0].get('id')
+        
+        if not record_id:
+            logging.error(f"Found record for barcode {barcode} in tenant {tenant} but could not extract recordId")
+            return None
+            
+        logging.info(f"Found record ID {record_id} for barcode {barcode} in tenant {tenant}")
+        return record_id
+        
+    except Exception as e:
+        logging.error(f"Error finding record for barcode {barcode} in tenant {tenant}: {str(e)}")
+        return None
 
-@app.route('/admin')
-def admin_panel():
-    """Simple admin panel to manage tenants"""
-    return render_template('admin.html', tenants=CONFIG["tenants"], default_tenant=DEFAULT_TENANT)
+# Location name extraction helper
+def extract_location_name_improved(location):
+    """Improved function to extract location name from Alchemy API response"""
+    # First, try to use the top-level name field which is most reliable
+    if "name" in location and location["name"]:
+        return location["name"]
+    
+    # Fallback to a default name if top-level name isn't available
+    default_name = f"Location {location.get('recordId') or location.get('id', 'unknown')}"
+    
+    # Check for name in fields array if top-level name isn't available
+    if "fields" in location:
+        # Look for fields with identifiers that might contain location name
+        name_field_identifiers = ["LocationName", "RecordName", "Name"]
+        for field in location["fields"]:
+            identifier = field.get("identifier", "")
+            if identifier in name_field_identifiers:
+                if field.get("rows") and len(field["rows"]) > 0:
+                    row = field["rows"][0]
+                    if row.get("values") and len(row["values"]) > 0:
+                        value = row["values"][0].get("value")
+                        if value and isinstance(value, str) and value.strip():
+                            return value
+    
+    # If no suitable name found, return the default
+    return default_name
 
-# Additional route handlers would be added here
-# (Include all existing route handlers for locations, barcode scanning, etc.)
+# Sublocation extraction helper
+def extract_sublocations_improved(location):
+    """Improved function to extract sublocations from Alchemy API response"""
+    sublocations = []
+    
+    # Check for sublocations in fieldGroups
+    if "fieldGroups" in location:
+        for group in location["fieldGroups"]:
+            group_id = group.get("identifier", "")
+            if "Location" in group_id or "SubLocation" in group_id:
+                for field in group.get("fields", []):
+                    field_id = field.get("identifier", "")
+                    if "SubLocation" in field_id or "Sublocation" in field_id:
+                        for idx, row in enumerate(field.get("rows", [])):
+                            if row.get("values") and len(row["values"]) > 0:
+                                value = row["values"][0].get("value")
+                                if value:
+                                    # Handle both string and object values
+                                    if isinstance(value, dict) and "name" in value:
+                                        sublocations.append({
+                                            "id": str(value.get("recordId", f"sub_{idx}")),
+                                            "name": value.get("name", "Unnamed Sublocation")
+                                        })
+                                    elif isinstance(value, str) and value.strip():
+                                        sublocations.append({
+                                            "id": f"sub_{location.get('recordId', location.get('id', 'unknown'))}_{idx}",
+                                            "name": value
+                                        })
+    
+    # If no sublocations found in fieldGroups, check fields directly
+    if not sublocations and "fields" in location:
+        for field in location["fields"]:
+            field_id = field.get("identifier", "")
+            if "SubLocation" in field_id or "Sublocation" in field_id:
+                for idx, row in enumerate(field.get("rows", [])):
+                    if row.get("values") and len(row["values"]) > 0:
+                        value = row["values"][0].get("value")
+                        if value and isinstance(value, str) and value.strip():
+                            sublocations.append({
+                                "id": f"sub_{location.get('recordId', location.get('id', 'unknown'))}_{idx}",
+                                "name": value
+                            })
+    
+    return sublocations
+
 # Route for getting locations from Alchemy API
 @app.route('/get-locations/<tenant>', methods=['GET'])
 def get_locations(tenant):
@@ -640,132 +942,169 @@ def get_locations(tenant):
         logging.error(f"Error fetching locations for tenant {tenant}: {str(e)}")
         return jsonify(get_fallback_locations())
 
-def extract_location_name_improved(location):
-    """Improved function to extract location name from Alchemy API response"""
-    # First, try to use the top-level name field which is most reliable
-    if "name" in location and location["name"]:
-        return location["name"]
-    
-    # Fallback to a default name if top-level name isn't available
-    default_name = f"Location {location.get('recordId') or location.get('id', 'unknown')}"
-    
-    # Check for name in fields array if top-level name isn't available
-    if "fields" in location:
-        # Look for fields with identifiers that might contain location name
-        name_field_identifiers = ["LocationName", "RecordName", "Name"]
-        for field in location["fields"]:
-            identifier = field.get("identifier", "")
-            if identifier in name_field_identifiers:
-                if field.get("rows") and len(field["rows"]) > 0:
-                    row = field["rows"][0]
-                    if row.get("values") and len(row["values"]) > 0:
-                        value = row["values"][0].get("value")
-                        if value and isinstance(value, str) and value.strip():
-                            return value
-    
-    # If no suitable name found, return the default
-    return default_name
+# Main Route Handlers
+@app.route('/')
+def root():
+    # Show tenant selector page
+    return render_template('tenant_selector.html', tenants=CONFIG["tenants"])
 
-def extract_sublocations_improved(location):
-    """Improved function to extract sublocations from Alchemy API response"""
-    sublocations = []
+@app.route('/tenant/<tenant>')
+def index(tenant):
+    # Validate tenant
+    if tenant not in CONFIG["tenants"]:
+        return render_template('error.html', message=f"Unknown tenant: {tenant}"), 404
     
-    # Check for sublocations in fieldGroups
-    if "fieldGroups" in location:
-        for group in location["fieldGroups"]:
-            group_id = group.get("identifier", "")
-            if "Location" in group_id or "SubLocation" in group_id:
-                for field in group.get("fields", []):
-                    field_id = field.get("identifier", "")
-                    if "SubLocation" in field_id or "Sublocation" in field_id:
-                        for idx, row in enumerate(field.get("rows", [])):
-                            if row.get("values") and len(row["values"]) > 0:
-                                value = row["values"][0].get("value")
-                                if value:
-                                    # Handle both string and object values
-                                    if isinstance(value, dict) and "name" in value:
-                                        sublocations.append({
-                                            "id": str(value.get("recordId", f"sub_{idx}")),
-                                            "name": value.get("name", "Unnamed Sublocation")
-                                        })
-                                    elif isinstance(value, str) and value.strip():
-                                        sublocations.append({
-                                            "id": f"sub_{location.get('recordId', location.get('id', 'unknown'))}_{idx}",
-                                            "name": value
-                                        })
+    tenant_config = get_tenant_config(tenant)
     
-    # If no sublocations found in fieldGroups, check fields directly
-    if not sublocations and "fields" in location:
-        for field in location["fields"]:
-            field_id = field.get("identifier", "")
-            if "SubLocation" in field_id or "Sublocation" in field_id:
-                for idx, row in enumerate(field.get("rows", [])):
-                    if row.get("values") and len(row["values"]) > 0:
-                        value = row["values"][0].get("value")
-                        if value and isinstance(value, str) and value.strip():
-                            sublocations.append({
-                                "id": f"sub_{location.get('recordId', location.get('id', 'unknown'))}_{idx}",
-                                "name": value
-                            })
-    
-    return sublocations
+    app.logger.info(f"Rendering index.html for tenant: {tenant} ({tenant_config['tenant_name']})")
+    return render_template('index.html', tenant=tenant, tenant_name=tenant_config['display_name'])
 
-# Function to find record ID by scanned barcode
-def find_record_id_by_barcode(barcode, access_token, tenant):
-    """Find Alchemy record ID using barcode as the Result.Code"""
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    return send_from_directory(app.static_folder, filename)
+
+@app.route('/admin', methods=['GET'])
+def admin_panel():
+    """Simple admin panel to manage tenants"""
+    return render_template('admin.html', tenants=CONFIG["tenants"], default_tenant=DEFAULT_TENANT)
+
+# Route for updating record location in Alchemy
+@app.route('/update-location/<tenant>', methods=['POST'])
+def update_location(tenant):
+    data = request.json
+    
+    if not data:
+        return jsonify({"status": "error", "message": "No data provided"}), 400
+    
     try:
-        tenant_config = get_tenant_config(tenant)
-        find_records_url = tenant_config.get('find_records_url')
-        
-        # Prepare find request payload
-        find_payload = {
-            "queryTerm": f"Result.Code == '{barcode}'",
-            "recordTemplateIdentifier": "AC_Study_LabTrial",
-            "lastChangedOnFrom": "2022-03-03T00:00:00Z",
-            "lastChangedOnTo": "2025-12-31T23:59:59Z"  # Extended date range to future
-        }
-        
-        # Send request to Alchemy API
-        headers = {
-            "Authorization": f"Bearer {access_token}",
-            "Content-Type": "application/json"
-        }
-        
-        logging.info(f"Finding record for barcode '{barcode}' in tenant {tenant}: {json.dumps(find_payload)}")
-        response = requests.put(find_records_url, headers=headers, json=find_payload)
-        
-        # Log response for debugging
-        logging.info(f"Find records API response status code for tenant {tenant}: {response.status_code}")
-        
-        if not response.ok:
-            logging.error(f"Error finding record for barcode {barcode} in tenant {tenant}: {response.text}")
-            return None
-        
-        # Process response
-        records = response.json()
-        
-        if not records or len(records) == 0:
-            logging.warning(f"No records found for barcode {barcode} in tenant {tenant}")
-            return None
-        
-        # Get the first matching record ID
-        record_id = records[0].get('recordId') or records[0].get('id')
-        
-        if not record_id:
-            logging.error(f"Found record for barcode {barcode} in tenant {tenant} but could not extract recordId")
-            return None
+        # Check if tenant exists
+        if tenant not in CONFIG["tenants"]:
+            return jsonify({"status": "error", "message": f"Unknown tenant: {tenant}"}), 404
             
-        logging.info(f"Found record ID {record_id} for barcode {barcode} in tenant {tenant}")
-        return record_id
+        tenant_config = get_tenant_config(tenant)
+        
+        barcode_codes = data.get('recordIds', [])  # These are actually barcode codes now, not record IDs
+        location_id = data.get('locationId', '')
+        sublocation_id = data.get('sublocationId', '')
+        
+        if not barcode_codes:
+            return jsonify({"status": "error", "message": "No barcode codes provided"}), 400
+        
+        if not location_id:
+            return jsonify({"status": "error", "message": "No location ID provided"}), 400
+        
+        # Get a fresh access token from Alchemy
+        access_token = refresh_alchemy_token(tenant)
+        
+        if not access_token:
+            return jsonify({
+                "status": "error", 
+                "message": f"Failed to authenticate with Alchemy API for tenant {tenant}"
+            }), 500
+        
+        success_records = []
+        failed_records = []
+        
+        for barcode in barcode_codes:
+            try:
+                # First, find the record ID from the barcode
+                record_id = find_record_id_by_barcode(barcode, access_token, tenant)
+                
+                if not record_id:
+                    failed_records.append({
+                        "id": barcode,
+                        "error": f"Record not found for this barcode in tenant {tenant_config['display_name']}"
+                    })
+                    continue
+                
+                # Format data for Alchemy API update
+                alchemy_payload = {
+                    "recordId": int(record_id),
+                    "fields": [
+                        {
+                            "identifier": "Location",
+                            "rows": [
+                                {
+                                    "row": 0,
+                                    "values": [
+                                        {
+                                            "value": location_id,
+                                            "valuePreview": ""
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+                
+                # Add sublocation if provided
+                if sublocation_id:
+                    alchemy_payload["fields"].append({
+                        "identifier": "Sublocation",
+                        "rows": [
+                            {
+                                "row": 0,
+                                "values": [
+                                    {
+                                        "value": sublocation_id,
+                                        "valuePreview": ""
+                                    }
+                                ]
+                            }
+                        ]
+                    })
+                
+                # Send update to Alchemy API
+                headers = {
+                    "Authorization": f"Bearer {access_token}",
+                    "Content-Type": "application/json"
+                }
+                
+                api_url = tenant_config.get('api_url')
+                logging.info(f"Sending update for record {record_id} (barcode: {barcode}) to Alchemy for tenant {tenant}: {json.dumps(alchemy_payload)}")
+                response = requests.put(api_url, headers=headers, json=alchemy_payload)
+                
+                # Log response for debugging
+                logging.info(f"Alchemy API response status code for tenant {tenant}: {response.status_code}")
+                if response.text:
+                    logging.info(f"Alchemy API response for tenant {tenant}: {response.text}")
+                
+                # Check if the request was successful
+                if response.ok:
+                    success_records.append(barcode)
+                else:
+                    logging.error(f"Error updating record {record_id} (barcode: {barcode}) for tenant {tenant}: {response.text}")
+                    failed_records.append({
+                        "id": barcode,
+                        "error": f"API returned status code {response.status_code}"
+                    })
+                
+            except Exception as e:
+                logging.error(f"Error processing barcode {barcode} for tenant {tenant}: {str(e)}")
+                failed_records.append({
+                    "id": barcode,
+                    "error": str(e)
+                })
+        
+        # Return results
+        return jsonify({
+            "status": "success" if not failed_records else "partial",
+            "message": f"Updated {len(success_records)} of {len(barcode_codes)} records in tenant {tenant_config['display_name']}",
+            "successful": success_records,
+            "failed": failed_records
+        })
         
     except Exception as e:
-        logging.error(f"Error finding record for barcode {barcode} in tenant {tenant}: {str(e)}")
-        return None
-
-# Barcode scanning routes, location fetching routes, etc. would follow...
+        logging.error(f"Error updating locations for tenant {tenant}: {e}")
+        return jsonify({
+            "status": "error", 
+            "message": str(e)
+        }), 500
 
 # Configuration Initialization
 ensure_config_directory()
+ensure_config_file()
 CONFIG = load_config()
 DEFAULT_URLS = CONFIG["default_urls"]
 DEFAULT_TENANT = CONFIG["default_tenant"]
