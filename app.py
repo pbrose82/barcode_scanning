@@ -46,36 +46,39 @@ def load_config():
         # ONLY check Render path first
         logging.info(f"Attempting to load config from {RENDER_CONFIG_PATH}")
         
-        # Ensure it's a file, not a directory
-        if os.path.exists(RENDER_CONFIG_PATH) and os.path.isfile(RENDER_CONFIG_PATH):
+        # Check if config file exists and is not empty
+        if os.path.exists(RENDER_CONFIG_PATH) and os.path.getsize(RENDER_CONFIG_PATH) > 0:
             try:
                 with open(RENDER_CONFIG_PATH, 'r') as f:
                     config = json.load(f)
                 
                 # Validate config structure
-                if config and 'tenants' in config:
-                    logging.info("Successfully loaded configuration from Render path")
+                if config and 'tenants' in config and len(config.get('tenants', {})) > 0:
+                    logging.info("Successfully loaded existing configuration from Render path")
                     return config
-            except json.JSONDecodeError:
-                logging.error(f"JSON decode error in config file at {RENDER_CONFIG_PATH}")
-            except Exception as e:
-                logging.error(f"Error reading config from {RENDER_CONFIG_PATH}: {str(e)}")
+            except (json.JSONDecodeError, IOError) as e:
+                logging.error(f"Error reading config file: {str(e)}")
         
-        # If no valid config is found, check if the file is empty
+        # If no valid config exists, check for a previous config in the repository
         try:
-            # If file exists but is empty or invalid, read the contents
-            if os.path.exists(RENDER_CONFIG_PATH):
-                with open(RENDER_CONFIG_PATH, 'r') as f:
-                    file_contents = f.read().strip()
-                    logging.warning(f"Existing config file contents: {file_contents}")
-        except Exception as e:
-            logging.error(f"Error reading existing config file: {str(e)}")
+            repo_config_path = os.path.join(os.path.dirname(__file__), 'config.json')
+            if os.path.exists(repo_config_path):
+                with open(repo_config_path, 'r') as f:
+                    repo_config = json.load(f)
+                
+                if repo_config and 'tenants' in repo_config and len(repo_config.get('tenants', {})) > 0:
+                    logging.info("Using configuration from repository")
+                    # Save the repository config to the persistent storage
+                    save_config(repo_config)
+                    return repo_config
+        except Exception as repo_error:
+            logging.error(f"Error reading repository config: {str(repo_error)}")
         
-        # Only create default config if NO config exists at all
+        # Only create default config if absolutely no valid config exists
         logging.warning("No existing configuration found. Creating default configuration.")
         default_config = create_default_config()
         
-        # ONLY save default config if no valid config exists
+        # Save default config to persistent storage
         save_config(default_config)
         
         return default_config
@@ -85,12 +88,17 @@ def load_config():
         default_config = create_default_config()
         save_config(default_config)
         return default_config
+        
 def save_config(config):
-    
     """Save configuration ONLY to Render persistent storage"""
     try:
         # Ensure directory exists and is clean
         ensure_config_directory()
+        
+        # Check if the configuration is valid
+        if not config or 'tenants' not in config or len(config.get('tenants', {})) == 0:
+            logging.error("Attempted to save invalid configuration")
+            return False
         
         # Explicitly create the file ONLY in Render path
         with open(RENDER_CONFIG_PATH, 'w') as f:
