@@ -56,7 +56,7 @@ def ensure_config_file():
             "tenants": {
                 "default": {
                     "tenant_name": "productcaseelnlims4uat",
-                    "display_name": "Product Case ELN&LIMS UAT",
+                    "display_name": "Product Case ELN LIMS UAT",
                     "description": "Primary Alchemy environment",
                     "button_class": "primary",
                     "env_token_var": "DEFAULT_REFRESH_TOKEN",
@@ -64,12 +64,26 @@ def ensure_config_file():
                 },
                 "tenant1": {
                     "tenant_name": "caseelnlims4uat",
-                    "display_name": "CASE ELN&LIMS UAT",
+                    "display_name": "CASE UAT",
                     "description": "Test environment",
                     "button_class": "secondary",
                     "env_token_var": "TENANT1_REFRESH_TOKEN",
                     "use_custom_urls": False
-                }
+                },
+                "custom": {
+                    "tenant_name": "custom",
+                    "display_name": "Custom Tenant",
+                    "description": "Custom Alchemy environment",
+                    "button_class": "warning",
+                    "env_token_var": "CUSTOM_REFRESH_TOKEN",
+                    "use_custom_urls": True,
+                    "custom_urls": {
+                        "refresh_url": "https://custom-instance.alchemy.cloud/core/api/v2/refresh-token",
+                        "api_url": "https://custom-instance.alchemy.cloud/core/api/v2/update-record", 
+                        "filter_url": "https://custom-instance.alchemy.cloud/core/api/v2/filter-records",
+                        "find_records_url": "https://custom-instance.alchemy.cloud/core/api/v2/find-records",
+                        "base_url": "https://custom-instance.alchemy.cloud/"
+                    }
                 }
             }
         }
