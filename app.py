@@ -37,58 +37,43 @@ def ensure_config_directory():
 
 def load_config():
     """
-    Load configuration with multiple fallback strategies
-    First tries Render persistent storage, then falls back to other locations
+    Load configuration STRICTLY from Render persistent storage
     """
     try:
         # Ensure the config directory and path are correctly set up
         ensure_config_directory()
         
-        # Paths to check for configuration (Render path first)
-        config_paths = [
-            RENDER_CONFIG_PATH,  # Render persistent storage path
-            os.path.join(os.path.dirname(__file__), 'config.json'),
-            '/app/config.json',
-            '/barcode_scanning/config.json',
-            os.path.join(os.path.dirname(__file__), '..', 'config.json'),
-            './config.json',
-            '../config.json',
-            '/app/barcode_scanning/config.json',
-            os.path.abspath('config.json')
-        ]
+        # ONLY check Render path first
+        logging.info(f"Attempting to load config from {RENDER_CONFIG_PATH}")
         
-        for config_path in config_paths:
-            logging.info(f"Checking for config file at: {config_path}")
-            
-            # Ensure it's a file, not a directory
-            if os.path.exists(config_path) and os.path.isfile(config_path):
-                try:
-                    with open(config_path, 'r') as f:
-                        config = json.load(f)
-                    
-                    # Validate config structure
-                    if config and 'tenants' in config:
-                        # Copy to Render path if not already there
-                        if config_path != RENDER_CONFIG_PATH:
-                            with open(RENDER_CONFIG_PATH, 'w') as f:
-                                json.dump(config, f, indent=2)
-                        return config
-                except json.JSONDecodeError:
-                    logging.error(f"JSON decode error in config file at {config_path}")
-                except Exception as e:
-                    logging.error(f"Error reading config from {config_path}: {str(e)}")
+        # Ensure it's a file, not a directory
+        if os.path.exists(RENDER_CONFIG_PATH) and os.path.isfile(RENDER_CONFIG_PATH):
+            try:
+                with open(RENDER_CONFIG_PATH, 'r') as f:
+                    config = json.load(f)
+                
+                # Validate config structure
+                if config and 'tenants' in config:
+                    logging.info("Successfully loaded configuration from Render path")
+                    return config
+            except json.JSONDecodeError:
+                logging.error(f"JSON decode error in config file at {RENDER_CONFIG_PATH}")
+            except Exception as e:
+                logging.error(f"Error reading config from {RENDER_CONFIG_PATH}: {str(e)}")
         
-        # If no config found, create default and save
+        # Only create default config if NO config exists at all
+        logging.warning("No existing configuration found. Creating default configuration.")
         default_config = create_default_config()
-        save_config(default_config)
+        
+        # ONLY save default config if absolutely no config exists
+        if not os.path.exists(RENDER_CONFIG_PATH):
+            save_config(default_config)
+        
         return default_config
     
     except Exception as e:
         logging.error(f"Unexpected error loading configuration: {str(e)}")
-        default_config = create_default_config()
-        save_config(default_config)
-        return default_config
-
+        return create_default_config()
 def save_config(config):
     """Save configuration ONLY to Render persistent storage"""
     try:
