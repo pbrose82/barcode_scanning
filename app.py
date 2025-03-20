@@ -16,8 +16,13 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
 def ensure_config_directory():
-    """Ensure the configuration directory exists"""
+    """Ensure the configuration directory exists and is not a file"""
     try:
+        # If config path exists and is a file, remove it
+        if os.path.exists(RENDER_CONFIG_PATH) and os.path.isfile(RENDER_CONFIG_PATH):
+            os.remove(RENDER_CONFIG_PATH)
+        
+        # Ensure directory exists
         os.makedirs(RENDER_CONFIG_DIR, exist_ok=True)
         logging.info(f"Ensuring config directory exists: {RENDER_CONFIG_DIR}")
     except Exception as e:
@@ -29,6 +34,9 @@ def load_config():
     First tries Render persistent storage, then falls back to other locations
     """
     try:
+        # Ensure the config directory and path are correctly set up
+        ensure_config_directory()
+        
         # Paths to check for configuration (Render path first)
         config_paths = [
             RENDER_CONFIG_PATH,  # Render persistent storage path
@@ -44,17 +52,17 @@ def load_config():
         
         for config_path in config_paths:
             logging.info(f"Checking for config file at: {config_path}")
-            if os.path.exists(config_path):
-                logging.info(f"Found config file at {config_path}")
+            
+            # Ensure it's a file, not a directory
+            if os.path.exists(config_path) and os.path.isfile(config_path):
                 try:
                     with open(config_path, 'r') as f:
                         config = json.load(f)
                     
                     # Validate config structure
                     if config and 'tenants' in config:
-                        # Optional: If not using Render path, copy to Render path
+                        # Copy to Render path if not already there
                         if config_path != RENDER_CONFIG_PATH:
-                            ensure_config_directory()
                             with open(RENDER_CONFIG_PATH, 'w') as f:
                                 json.dump(config, f, indent=2)
                         return config
@@ -63,7 +71,7 @@ def load_config():
                 except Exception as e:
                     logging.error(f"Error reading config from {config_path}: {str(e)}")
         
-        # If no config found, create default and save to Render path
+        # If no config found, create default and save
         default_config = create_default_config()
         save_config(default_config)
         return default_config
@@ -77,6 +85,7 @@ def load_config():
 def save_config(config):
     """Save configuration to Render persistent storage"""
     try:
+        # Ensure directory exists and is clean
         ensure_config_directory()
         
         # Save to Render persistent storage path
@@ -318,7 +327,57 @@ def add_tenant():
             "use_custom_urls": use_custom_urls
         }
         
-       # Update custom URLs if needed
+        # Add custom URLs if needed
+        if use_custom_urls:
+            new_tenant["custom_urls"] = {
+                "refresh_url": request.form.get('refresh_url', DEFAULT_URLS["refresh_url"]),
+                "api_url": request.form.get('api_url', DEFAULT_URLS["api_url"]),
+                "filter_url": request.form.get('filter_url', DEFAULT_URLS["filter_url"]),
+                "find_records_url": request.form.get('find_records_url', DEFAULT_URLS["find_records_url"]),
+                "base_url": request.form.get('base_url', DEFAULT_URLS["base_url"])
+            }
+        
+        # Update configuration in memory
+        CONFIG["tenants"][tenant_id] = new_tenant
+        
+        # Save configuration to file
+        save_config(CONFIG)
+        
+        return jsonify({"status": "success", "message": f"Tenant {display_name} added successfully"})
+    except Exception as e:
+        logging.error(f"Error adding tenant: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/admin/update-tenant/<tenant_id>', methods=['POST'])
+def update_tenant(tenant_id):
+    """Update an existing tenant"""
+    try:
+        # Check if tenant exists
+        if tenant_id not in CONFIG["tenants"]:
+            return jsonify({"status": "error", "message": f"Tenant {tenant_id} not found"}), 404
+        
+        tenant_name = request.form.get('tenant_name')
+        display_name = request.form.get('display_name')
+        description = request.form.get('description', '')
+        button_class = request.form.get('button_class', 'primary')
+        env_token_var = request.form.get('env_token_var')
+        use_custom_urls = request.form.get('use_custom_urls') == 'on'
+        
+        # Validate input
+        if not tenant_name or not display_name or not env_token_var:
+            return jsonify({"status": "error", "message": "Missing required fields"}), 400
+        
+        # Update tenant config
+        CONFIG["tenants"][tenant_id].update({
+            "tenant_name": tenant_name,
+            "display_name": display_name,
+            "description": description,
+            "button_class": button_class,
+            "env_token_var": env_token_var,
+            "use_custom_urls": use_custom_urls
+        })
+        
+        # Update custom URLs if needed
         if use_custom_urls:
             CONFIG["tenants"][tenant_id]["custom_urls"] = {
                 "refresh_url": request.form.get('refresh_url', DEFAULT_URLS["refresh_url"]),
@@ -406,7 +465,7 @@ def get_refresh_token():
         logging.error(f"Error getting refresh token: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
-# Route Handlers for Locations and Other Existing Functionality
+# Main Route Handlers
 @app.route('/')
 def root():
     # Show tenant selector page
@@ -432,10 +491,12 @@ def admin_panel():
     """Simple admin panel to manage tenants"""
     return render_template('admin.html', tenants=CONFIG["tenants"], default_tenant=DEFAULT_TENANT)
 
-# Add additional route handlers for locations, barcode scanning, etc.
-# (Include all the existing route handlers from your previous implementation)
+# Additional route handlers would be added here
+# (Include all existing route handlers for locations, barcode scanning, etc.)
 
-# Initialize configuration
+# Barcode scanning routes, location fetching routes, etc. would follow...
+
+# Configuration Initialization
 ensure_config_directory()
 CONFIG = load_config()
 DEFAULT_URLS = CONFIG["default_urls"]
