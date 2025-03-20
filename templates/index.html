@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Alchemy Barcode Scanner</title>
+    <title>Alchemy Barcode Scanner - {{ tenant_name }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
@@ -30,13 +30,23 @@
             align-items: center;
             justify-content: center;
         }
+        
+        .tenant-badge {
+            font-size: 14px;
+            background-color: #6c757d;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
     </style>
 </head>
 <body>
     <div class="header">
         <div class="header-container">
             <i class="fas fa-barcode header-logo"></i>
-            <h1>Alchemy Barcode Scanner</h1>
+            <h1>Alchemy Barcode Scanner <span class="tenant-badge">{{ tenant_name }}</span></h1>
         </div>
     </div>
     
@@ -114,6 +124,14 @@
         <img src="{{ url_for('static', filename='Alchemy-logo.svg') }}" alt="Alchemy Cloud Logo" class="footer-logo">
         <div class="copyright">© ALCHEMY CLOUD, INC. ALL RIGHTS RESERVED.</div>
     </div>
+    
+    <!-- Add tenant info for JavaScript -->
+    <script>
+        window.tenantInfo = {
+            tenant: "{{ tenant }}",
+            tenantName: "{{ tenant_name }}"
+        };
+    </script>
     
     <!-- Main script file -->
     <script src="{{ url_for('static', filename='js/scanner.js') }}"></script>
