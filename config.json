@@ -1,0 +1,59 @@
+{
+  "default_tenant": "default",
+  "default_urls": {
+    "refresh_url": "https://core-production.alchemy.cloud/core/api/v2/refresh-token",
+    "api_url": "https://core-production.alchemy.cloud/core/api/v2/update-record",
+    "filter_url": "https://core-production.alchemy.cloud/core/api/v2/filter-records",
+    "find_records_url": "https://core-production.alchemy.cloud/core/api/v2/find-records",
+    "base_url": "https://app.alchemy.cloud/"
+  },
+  "tenants": {
+    "default": {
+      "tenant_name": "productcaseelnlims4uat",
+      "display_name": "Default Tenant",
+      "description": "Primary Alchemy environment",
+      "button_class": "primary",
+      "env_token_var": "ALCHEMY_REFRESH_TOKEN",
+      "use_custom_urls": false
+    },
+    "tenant1": {
+      "tenant_name": "tenant1",
+      "display_name": "Tenant 1",
+      "description": "Test environment",
+      "button_class": "secondary",
+      "env_token_var": "TENANT1_REFRESH_TOKEN",
+      "use_custom_urls": false
+    },
+    "tenant2": {
+      "tenant_name": "tenant2",
+      "display_name": "Tenant 2",
+      "description": "Production environment",
+      "button_class": "info",
+      "env_token_var": "TENANT2_REFRESH_TOKEN",
+      "use_custom_urls": false
+    },
+    "tenant3": {
+      "tenant_name": "tenant3",
+      "display_name": "Tenant 3",
+      "description": "Development environment",
+      "button_class": "success",
+      "env_token_var": "TENANT3_REFRESH_TOKEN",
+      "use_custom_urls": false
+    },
+    "custom": {
+      "tenant_name": "custom",
+      "display_name": "Custom Tenant",
+      "description": "Custom Alchemy environment",
+      "button_class": "warning",
+      "env_token_var": "CUSTOM_REFRESH_TOKEN",
+      "use_custom_urls": true,
+      "custom_urls": {
+        "refresh_url": "https://custom-instance.alchemy.cloud/core/api/v2/refresh-token",
+        "api_url": "https://custom-instance.alchemy.cloud/core/api/v2/update-record", 
+        "filter_url": "https://custom-instance.alchemy.cloud/core/api/v2/filter-records",
+        "find_records_url": "https://custom-instance.alchemy.cloud/core/api/v2/find-records",
+        "base_url": "https://custom-instance.alchemy.cloud/"
+      }
+    }
+  }
+}
