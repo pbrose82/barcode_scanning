@@ -465,7 +465,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Send update request to server
         fetch('/update-location', {
-            method: 'POST',
+            method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'
             },
