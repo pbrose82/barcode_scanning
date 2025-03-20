@@ -15,8 +15,13 @@ def load_config():
     try:
         paths = [
             os.path.join(os.path.dirname(__file__), 'config.json'),
+            '/app/config.json',
             '/barcode_scanning/config.json',
-            os.path.join(os.path.dirname(__file__), '..', 'config.json')
+            os.path.join(os.path.dirname(__file__), '..', 'config.json'),
+            './config.json',
+            '../config.json',
+            '/app/barcode_scanning/config.json',
+            os.path.abspath('config.json')
         ]
         
         for config_path in paths:
@@ -26,12 +31,14 @@ def load_config():
                 with open(config_path, 'r') as f:
                     return json.load(f)
         
+        # Print the current working directory to help debug
+        logging.warning(f"Current working directory: {os.getcwd()}")
+        logging.warning(f"Directory contents: {os.listdir('.')}")
         logging.warning("Config file not found in any of the expected locations, using default configuration")
         return create_default_config()
     except Exception as e:
         logging.error(f"Error loading configuration: {str(e)}")
         return create_default_config()
-
 def create_default_config():
     """Create a default configuration if the config file is not found"""
     return {
