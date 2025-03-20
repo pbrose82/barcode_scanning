@@ -967,6 +967,32 @@ def serve_static(filename):
 def admin_panel():
     """Simple admin panel to manage tenants"""
     return render_template('admin.html', tenants=CONFIG["tenants"], default_tenant=DEFAULT_TENANT)
+    
+@app.route('/api/get-refresh-token', methods=['POST'])
+def get_refresh_token():
+    """Proxy for Alchemy sign-in API to get refresh tokens"""
+    try:
+        # Get credentials from request
+        data = request.json
+        if not data or 'email' not in data or 'password' not in data:
+            return jsonify({"status": "error", "message": "Missing email or password"}), 400
+            
+        # Forward the request to Alchemy API
+        alchemy_response = requests.post(
+            'https://core-production.alchemy.cloud/core/api/v2/sign-in',
+            json={
+                "email": data['email'],
+                "password": data['password']
+            },
+            headers={"Content-Type": "application/json"}
+        )
+        
+        # Return the response directly
+        return alchemy_response.json(), alchemy_response.status_code
+            
+    except Exception as e:
+        logging.error(f"Error getting refresh token: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 # Route for updating record location in Alchemy
 @app.route('/update-location/<tenant>', methods=['POST'])
