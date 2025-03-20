@@ -19,7 +19,7 @@
                 <li>Position your handheld scanner close to the barcode</li>
                 <li>Make sure there's adequate lighting</li>
                 <li>Ensure the input field is focused before scanning</li>
-                <li>You can manually enter record IDs if scanning fails</li>
+                <li>You can manually enter barcodes if scanning fails</li>
             </ul>
         </div>
     </div>
@@ -29,16 +29,16 @@
             <h2>Scan Barcodes</h2>
             
             <div class="form-group mb-4">
-                <label class="form-label">Scan or Enter Record ID</label>
+                <label class="form-label">Scan or Enter Barcode</label>
                 <div class="input-group">
-                    <input type="text" id="barcode-input" class="form-control" placeholder="Scan barcode or enter record ID" autofocus>
+                    <input type="text" id="barcode-input" class="form-control" placeholder="Scan or enter barcode (e.g., M1-1.0.S3)" autofocus>
                     <button id="add-barcode" class="btn btn-primary">Add</button>
                 </div>
                 <small class="text-muted">Press Enter or click Add after scanning</small>
             </div>
             
             <div class="form-group mb-4">
-                <label class="form-label">Scanned Records <small>(Max 5)</small></label>
+                <label class="form-label">Scanned Barcodes <small>(Max 5)</small></label>
                 <div class="scanned-items-container">
                     <ul id="scanned-items" class="list-group">
                         <!-- Scanned items will be listed here -->
