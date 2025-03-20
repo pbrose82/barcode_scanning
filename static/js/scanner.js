@@ -3,8 +3,24 @@
  * This script handles handheld barcode scanner input, location selection, and record updates
  */
 
+// Debug console messages to check if the script is loading
+console.log('Scanner.js is loading...');
+
 // Wait for the DOM to be fully loaded before executing
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, initializing application...');
+    
+    // Debug check to see if elements are found correctly
+    console.log('Elements check:', {
+        'barcodeInput': document.getElementById('barcode-input'),
+        'addBarcodeBtn': document.getElementById('add-barcode'),
+        'scannedItems': document.getElementById('scanned-items'),
+        'locationSelect': document.getElementById('location-select'),
+        'sublocationSelect': document.getElementById('sublocation-select'),
+        'updateButton': document.getElementById('update-button'),
+        'resetButton': document.getElementById('reset-button')
+    });
+    
     // Define variables for various HTML elements
     const barcodeInput = document.getElementById('barcode-input');
     const addBarcodeBtn = document.getElementById('add-barcode');
@@ -37,33 +53,62 @@ document.addEventListener('DOMContentLoaded', function() {
         // Load locations
         fetchLocations();
         
-        // Add event listeners
-        addBarcodeBtn.addEventListener('click', addBarcode);
-        locationSelect.addEventListener('change', handleLocationChange);
-        updateButton.addEventListener('click', updateRecordLocations);
-        resetButton.addEventListener('click', resetApp);
+        // Add event listeners - with error checking
+        if (addBarcodeBtn) {
+            addBarcodeBtn.addEventListener('click', addBarcode);
+            console.log('Add barcode button event listener attached');
+        } else {
+            console.error('Add barcode button not found!');
+        }
+        
+        if (locationSelect) {
+            locationSelect.addEventListener('change', handleLocationChange);
+            console.log('Location select event listener attached');
+        } else {
+            console.error('Location select not found!');
+        }
+        
+        if (updateButton) {
+            updateButton.addEventListener('click', updateRecordLocations);
+            console.log('Update button event listener attached');
+        } else {
+            console.error('Update button not found!');
+        }
+        
+        if (resetButton) {
+            resetButton.addEventListener('click', resetApp);
+            console.log('Reset button event listener attached');
+        } else {
+            console.error('Reset button not found!');
+        }
         
         // Handle barcode input with Enter key (common for barcode scanners)
-        barcodeInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault(); // Prevent form submission
-                addBarcode();
-            }
-        });
-        
-        // Automatically focus the input field for scanner
-        barcodeInput.focus();
-        
-        // When input field loses focus, focus it again (helps with scanning multiple barcodes)
-        barcodeInput.addEventListener('blur', function() {
-            // Short timeout to allow for button clicks
-            setTimeout(() => {
-                // Only re-focus if we're not at max barcodes
-                if (recordIds.length < MAX_BARCODES) {
-                    barcodeInput.focus();
+        if (barcodeInput) {
+            barcodeInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault(); // Prevent form submission
+                    addBarcode();
                 }
-            }, 100);
-        });
+            });
+            
+            // Automatically focus the input field for scanner
+            barcodeInput.focus();
+            
+            // When input field loses focus, focus it again (helps with scanning multiple barcodes)
+            barcodeInput.addEventListener('blur', function() {
+                // Short timeout to allow for button clicks
+                setTimeout(() => {
+                    // Only re-focus if we're not at max barcodes
+                    if (recordIds.length < MAX_BARCODES) {
+                        barcodeInput.focus();
+                    }
+                }, 100);
+            });
+            
+            console.log('Barcode input event listeners attached');
+        } else {
+            console.error('Barcode input not found!');
+        }
         
         // Update UI based on initial state
         updateUI();
@@ -75,18 +120,16 @@ document.addEventListener('DOMContentLoaded', function() {
     function fetchLocations() {
         console.log('Fetching locations...');
         
+        if (!locationSelect) {
+            console.error('Cannot fetch locations: locationSelect element not found');
+            return;
+        }
+        
         // Show loading state
         locationSelect.innerHTML = '<option value="">Loading locations...</option>';
         
-        // Try the test endpoint first, then fall back to the real endpoint
-        fetch('/get-test-locations')
-            .then(response => {
-                if (!response.ok) {
-                    console.log('Test endpoint not available, trying real endpoint');
-                    return fetch('/get-locations');
-                }
-                return response;
-            })
+        // Try both endpoints for reliability
+        fetch('/get-locations')
             .then(response => {
                 console.log('Fetch response:', response);
                 if (!response.ok) {
@@ -112,17 +155,34 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(error => {
                 console.error('Error fetching locations:', error);
                 
-                // Show error in dropdown
-                locationSelect.innerHTML = '<option value="">Failed to load locations</option>';
-                
-                // Show error notification
-                showNotification('Failed to load locations. Please try refreshing the page.', 'error');
+                // Try fallback to test locations if real locations fail
+                console.log('Trying test locations instead...');
+                fetch('/get-test-locations')
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Test locations fetched:', data);
+                        locationData = data;
+                        populateLocations(data);
+                    })
+                    .catch(fallbackError => {
+                        console.error('Error fetching test locations:', fallbackError);
+                        // Show error in dropdown
+                        locationSelect.innerHTML = '<option value="">Failed to load locations</option>';
+                        
+                        // Show error notification
+                        showNotification('Failed to load locations. Please try refreshing the page.', 'error');
+                    });
             });
     }
     
     // Populate the location dropdown
     function populateLocations(locations) {
         console.log('Populating location dropdown with', locations.length, 'locations');
+        
+        if (!locationSelect) {
+            console.error('Cannot populate locations: locationSelect element not found');
+            return;
+        }
         
         // Clear existing options
         locationSelect.innerHTML = '';
@@ -157,10 +217,16 @@ document.addEventListener('DOMContentLoaded', function() {
             locationSelect.appendChild(noLocationsOption);
         }
     }
+    
     // Handle location change
     function handleLocationChange() {
         console.log('Location changed to:', locationSelect.value);
         const selectedLocationId = locationSelect.value;
+        
+        if (!sublocationSelect) {
+            console.error('Cannot handle location change: sublocationSelect element not found');
+            return;
+        }
         
         // Clear sublocation dropdown
         sublocationSelect.innerHTML = '';
@@ -210,6 +276,11 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Add a barcode to the list
     function addBarcode() {
+        if (!barcodeInput || !scannedItems) {
+            console.error('Cannot add barcode: required elements not found');
+            return;
+        }
+        
         const code = barcodeInput.value.trim();
         console.log('Adding barcode:', code);
         
@@ -292,18 +363,23 @@ document.addEventListener('DOMContentLoaded', function() {
             recordIds.splice(index, 1);
             
             // Remove from UI
-            const items = scannedItems.querySelectorAll('li');
-            items.forEach(item => {
-                if (item.querySelector('.remove-item').getAttribute('data-id') === id) {
-                    item.remove();
-                }
-            });
+            if (scannedItems) {
+                const items = scannedItems.querySelectorAll('li');
+                items.forEach(item => {
+                    const removeBtn = item.querySelector('.remove-item');
+                    if (removeBtn && removeBtn.getAttribute('data-id') === id) {
+                        item.remove();
+                    }
+                });
+            }
             
             // Update UI
             updateUI();
             
             // Focus back on input field
-            barcodeInput.focus();
+            if (barcodeInput) {
+                barcodeInput.focus();
+            }
             
             console.log('Record ID removed. Current record IDs:', recordIds);
         }
@@ -312,8 +388,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // Update locations for scanned records
     function updateRecordLocations() {
         console.log('Updating record locations...');
+        
+        if (!locationSelect || !updateButton || !processingStatus || !progressBar || !statusText) {
+            console.error('Cannot update locations: required elements not found');
+            return;
+        }
+        
         const locationId = locationSelect.value;
-        const sublocationId = sublocationSelect.value;
+        const sublocationId = sublocationSelect ? sublocationSelect.value : '';
         
         if (recordIds.length === 0) {
             showNotification('Please scan at least one barcode.', 'error');
@@ -389,6 +471,11 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Display update results
     function displayUpdateResults(result) {
+        if (!updateResults || !resultsContent) {
+            console.error('Cannot display results: required elements not found');
+            return;
+        }
+        
         let html = '';
         
         if (result.status === 'success') {
@@ -402,12 +489,6 @@ document.addEventListener('DOMContentLoaded', function() {
             
             result.successful.forEach(id => {
                 html += `<li class="list-group-item">Record ID: ${id}</li>`;
-            });
-            
-            html += '</ul><p>Failed to update the following records:</p><ul class="list-group">';
-            
-            result.failed.forEach(item => {
-                html += `<li class="list-group-item">Record ID: ${item.id} - Error: ${item.error}</li>`;
             });
             
             html += '</ul>';
@@ -447,6 +528,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Reset the application
     function resetApp() {
         console.log('Resetting application...');
+        
+        if (!scannedItems || !barcodeInput || !locationSelect || !sublocationSelect || !updateResults) {
+            console.error('Cannot reset: required elements not found');
+            return;
+        }
+        
         // Clear record IDs
         recordIds = [];
         
@@ -477,11 +564,16 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Update UI based on current state
     function updateUI() {
+        if (!updateButton) {
+            console.error('Cannot update UI: updateButton element not found');
+            return;
+        }
+        
         // Update the record counter
         const recordCount = recordIds.length;
         
         // Enable/disable update button based on conditions
-        const enableUpdate = recordCount > 0 && locationSelect.value !== '';
+        const enableUpdate = recordCount > 0 && (locationSelect && locationSelect.value !== '');
         
         if (enableUpdate) {
             updateButton.disabled = false;
@@ -525,13 +617,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Play beep sound when barcode is successfully scanned
     function playBeepSound() {
         try {
-            const audio = new Audio('data:audio/mp3;base64,SUQzAwAAAAAAJlRQRTEAAAAcAAAAU291bmRKYXkuY29tIFNvdW5kIEVmZmVjdHMA//uSwAAAAAABLBQAAAMBUVTEFDQABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/7ksH/g8AAAaQcAAAgAAA0gAAABFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
-                                    audio.volume = 0.5;
+            const audio = new Audio('data:audio/mp3;base64,SUQzAwAAAAAAJlRQRTEAAAAcAAAAU291bmRKYXkuY29tIFNvdW5kIEVmZmVjdHMA//uSwAAAAAABLBQAAAMBUVTEFDQABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/7ksH/g8AAAaQcAAAgAAA0gAAABFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV');
+            audio.volume = 0.5;
             audio.play().catch(e => console.log('Audio play failed:', e));
         } catch (e) {
             console.warn('Unable to play beep sound:', e);
         }
     }
 });
-
         
+            
