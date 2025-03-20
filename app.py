@@ -471,7 +471,7 @@ def extract_sublocations_improved(location):
     return sublocations
 
 # Route for updating record location in Alchemy
-@app.route('/update-location', methods=['POST'])
+@app.route('/update-location', methods=['put'])
 def update_location():
     data = request.json
     
@@ -548,7 +548,7 @@ def update_location():
                 }
                 
                 logging.info(f"Sending update for record {record_id} to Alchemy: {json.dumps(alchemy_payload)}")
-                response = requests.post(ALCHEMY_API_URL, headers=headers, json=alchemy_payload)
+                response = requests.put(ALCHEMY_API_URL, headers=headers, json=alchemy_payload)
                 
                 # Log response for debugging
                 logging.info(f"Alchemy API response status code: {response.status_code}")
