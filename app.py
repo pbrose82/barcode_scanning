@@ -11,16 +11,25 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # Flask Application Setup
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
-# Load configuration from file
 def load_config():
     try:
-        config_path = os.path.join(os.path.dirname(__file__), 'config.json')
-        if os.path.exists(config_path):
-            with open(config_path, 'r') as f:
-                return json.load(f)
-        else:
-            logging.warning(f"Config file not found at {config_path}, using default configuration")
-            return create_default_config()
+        # Try different potential paths
+        paths = [
+            os.path.join(os.path.dirname(__file__), 'config.json'),
+            '/app/config.json',
+            os.path.join(os.path.dirname(__file__), '..', 'config.json')
+        ]
+        
+        # Try each path
+        for config_path in paths:
+            if os.path.exists(config_path):
+                logging.info(f"Found config file at {config_path}")
+                with open(config_path, 'r') as f:
+                    return json.load(f)
+        
+        # If we get here, no config file was found
+        logging.warning(f"Config file not found in any of the expected locations, using default configuration")
+        return create_default_config()
     except Exception as e:
         logging.error(f"Error loading configuration: {str(e)}")
         return create_default_config()
