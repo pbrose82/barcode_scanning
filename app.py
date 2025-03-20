@@ -467,24 +467,7 @@ def update_tenant_token():
                 "message": f"Token verification error: {str(verify_error)}"
             }), 500
             
-        # Update token in config
-        CONFIG["tenants"][tenant_id]["stored_refresh_token"] = refresh_token
-        
-        # Save the updated config
-        save_config(CONFIG)
-        
-        # Clear the token cache for this tenant
-        if tenant_id in token_cache:
-            del token_cache[tenant_id]
-        
-        return jsonify({
-            "status": "success", 
-            "message": f"Refresh token updated for tenant {tenant_id}"
-        })
-        
-    except Exception as e:
-        logging.error(f"Error updating tenant token: {str(e)}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+    
             
         # Update token in config
         CONFIG["tenants"][tenant_id]["stored_refresh_token"] = refresh_token
