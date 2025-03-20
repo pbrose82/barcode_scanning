@@ -325,12 +325,12 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Adding barcode:', code);
         
         if (!code) {
-            showNotification('Please scan or enter a record ID.', 'warning');
+            showNotification('Please scan or enter a barcode.', 'warning');
             return;
         }
         
         if (!isValidRecordId(code)) {
-            showNotification('Please enter a valid record ID.', 'error');
+            showNotification('Please enter a valid barcode format.', 'error');
             return;
         }
         
@@ -342,7 +342,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Check for duplicates
         if (recordIds.includes(code)) {
-            showNotification('This record ID has already been scanned.', 'warning');
+            showNotification('This barcode has already been scanned.', 'warning');
             barcodeInput.value = '';
             barcodeInput.focus();
             return;
@@ -355,7 +355,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const li = document.createElement('li');
         li.className = 'list-group-item d-flex justify-content-between align-items-center';
         li.innerHTML = `
-            <span>Record ID: <span class="record-badge">${code}</span></span>
+            <span>Barcode: <span class="record-badge">${code}</span></span>
             <button class="remove-item" data-id="${code}">
                 <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                     <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
@@ -386,10 +386,10 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Barcode added. Current record IDs:', recordIds);
     }
     
-    // Check if a string looks like a valid record ID
-    function isValidRecordId(id) {
-        // Basic validation - could be enhanced based on your record ID format
-        return /^\d+$/.test(id) && id.length > 0;
+    // Check if a string looks like a valid barcode
+    function isValidRecordId(code) {
+        // Updated validation for barcodes (alphanumeric with possible special chars like dash)
+        return /^[A-Za-z0-9\-\.]+$/.test(code) && code.length > 0;
     }
     
     // Remove a record ID from the list
@@ -465,7 +465,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Send update request to server
         fetch('/update-location', {
-            method: 'PUT',
+            method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
@@ -528,7 +528,7 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
             
             result.successful.forEach(id => {
-                html += `<li class="list-group-item">Record ID: ${id}</li>`;
+                html += `<li class="list-group-item">Barcode: ${id}</li>`;
             });
             
             html += '</ul>';
@@ -542,13 +542,13 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
             
             result.successful.forEach(id => {
-                html += `<li class="list-group-item">Record ID: ${id}</li>`;
+                html += `<li class="list-group-item">Barcode: ${id}</li>`;
             });
             
             html += '</ul><p>Failed to update the following records:</p><ul class="list-group">';
             
             result.failed.forEach(item => {
-                html += `<li class="list-group-item">Record ID: ${item.id} - Error: ${item.error}</li>`;
+                html += `<li class="list-group-item">Barcode: ${item.id} - Error: ${item.error}</li>`;
             });
             
             html += '</ul>';
