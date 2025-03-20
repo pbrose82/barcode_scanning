@@ -10,6 +10,12 @@ console.log('Scanner.js is loading...');
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded, initializing application...');
     
+    // Get tenant information from the global variable (set in the HTML template)
+    const tenant = window.tenantInfo ? window.tenantInfo.tenant : 'default';
+    const tenantName = window.tenantInfo ? window.tenantInfo.tenantName : 'Default';
+    
+    console.log(`Running in tenant: ${tenant} (${tenantName})`);
+    
     // Debug check to see if elements are found correctly
     console.log('Elements check:', {
         'barcodeInput': document.getElementById('barcode-input'),
@@ -169,7 +175,7 @@ document.addEventListener('DOMContentLoaded', function() {
         locationSelect.innerHTML = '<option value="">Loading locations...</option>';
         
         // Try both endpoints for reliability
-        fetch('/get-locations')
+        fetch(`/get-locations/${tenant}`)
             .then(response => {
                 console.log('Fetch response:', response);
                 if (!response.ok) {
@@ -197,7 +203,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Try fallback to test locations if real locations fail
                 console.log('Trying test locations instead...');
-                fetch('/get-test-locations')
+                fetch(`/get-test-locations/${tenant}`)
                     .then(response => response.json())
                     .then(data => {
                         console.log('Test locations fetched:', data);
@@ -464,7 +470,7 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Sending update data:', data);
         
         // Send update request to server
-        fetch('/update-location', {
+        fetch(`/update-location/${tenant}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -630,38 +636,4 @@ document.addEventListener('DOMContentLoaded', function() {
     function showNotification(message, type) {
         console.log(`Notification (${type}):`, message);
         // Create notification element
-        const notification = document.createElement('div');
-        notification.className = `alert alert-${type === 'error' ? 'danger' : type === 'warning' ? 'warning' : 'success'} notification`;
-        notification.style.position = 'fixed';
-        notification.style.top = '20px';
-        notification.style.right = '20px';
-        notification.style.zIndex = '1000';
-        notification.style.maxWidth = '300px';
-        notification.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
-        notification.innerHTML = message;
-        
-        // Add to document
-        document.body.appendChild(notification);
-        
-        // Remove after 3 seconds
-        setTimeout(() => {
-            notification.style.opacity = '0';
-            notification.style.transition = 'opacity 0.5s';
-            
-            setTimeout(() => {
-                document.body.removeChild(notification);
-            }, 500);
-        }, 3000);
-    }
-    
-    // Play beep sound when barcode is successfully scanned
-    function playBeepSound() {
-        try {
-            const audio = new Audio('data:audio/mp3;base64,SUQzAwAAAAAAJlRQRTEAAAAcAAAAU291bmRKYXkuY29tIFNvdW5kIEVmZmVjdHMA//uSwAAAAAABLBQAAAMBUVTEFDQABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/7ksH/g8AAAaQcAAAgAAA0gAAABFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV');
-            audio.volume = 0.5;
-            audio.play().catch(e => console.log('Audio play failed:', e));
-        } catch (e) {
-            console.warn('Unable to play beep sound:', e);
-        }
-    }
-});
+        const notification = document.createElement('
