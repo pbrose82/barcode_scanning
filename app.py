@@ -419,8 +419,9 @@ def get_fallback_locations():
     ]
 
 # Configuration Management Routes
-@app.route('/admin/update-tenant-token', methods=['POST'])
+@app.route('/admin/update-tenant-token', methods=['POST'])  # Kept as POST for admin route
 def update_tenant_token():
+    # Existing implementation...
     """Update refresh token for a tenant directly in the config"""
     try:
         data = request.json
