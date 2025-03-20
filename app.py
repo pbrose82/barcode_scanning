@@ -13,22 +13,20 @@ app = Flask(__name__, static_folder='static', template_folder='templates')
 
 def load_config():
     try:
-        # Try different potential paths
         paths = [
             os.path.join(os.path.dirname(__file__), 'config.json'),
             '/app/config.json',
             os.path.join(os.path.dirname(__file__), '..', 'config.json')
         ]
         
-        # Try each path
         for config_path in paths:
+            logging.info(f"Checking for config file at: {config_path}")
             if os.path.exists(config_path):
                 logging.info(f"Found config file at {config_path}")
                 with open(config_path, 'r') as f:
                     return json.load(f)
         
-        # If we get here, no config file was found
-        logging.warning(f"Config file not found in any of the expected locations, using default configuration")
+        logging.warning("Config file not found in any of the expected locations, using default configuration")
         return create_default_config()
     except Exception as e:
         logging.error(f"Error loading configuration: {str(e)}")
