@@ -222,7 +222,7 @@ def serve_static(filename):
 @app.route('/admin', methods=['GET'])
 def admin_panel():
     """Simple admin panel to manage tenants"""
-    return render_template('admin.html', tenants=CONFIG["tenants"])
+    return render_template('admin.html', tenants=CONFIG["tenants"], default_tenant=DEFAULT_TENANT)
 
 @app.route('/admin/add-tenant', methods=['POST'])
 def add_tenant():
