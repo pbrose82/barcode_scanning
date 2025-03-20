@@ -18,12 +18,19 @@ app = Flask(__name__, static_folder='static', template_folder='templates')
 def ensure_config_directory():
     """Ensure the configuration directory exists and is not a file"""
     try:
-        # If config path exists and is a file, remove it
-        if os.path.exists(RENDER_CONFIG_PATH) and os.path.isfile(RENDER_CONFIG_PATH):
-            os.remove(RENDER_CONFIG_PATH)
+        # If config path exists and is a directory, remove it
+        if os.path.exists(RENDER_CONFIG_PATH):
+            if os.path.isdir(RENDER_CONFIG_PATH):
+                # Remove the directory if it's blocking the file path
+                import shutil
+                shutil.rmtree(RENDER_CONFIG_PATH)
+            elif os.path.isfile(RENDER_CONFIG_PATH):
+                # Remove the file if it's blocking directory creation
+                os.remove(RENDER_CONFIG_PATH)
         
-        # Ensure directory exists
-        os.makedirs(RENDER_CONFIG_DIR, exist_ok=True)
+        # Ensure the parent directory exists
+        os.makedirs(os.path.dirname(RENDER_CONFIG_PATH), exist_ok=True)
+        
         logging.info(f"Ensuring config directory exists: {RENDER_CONFIG_DIR}")
     except Exception as e:
         logging.error(f"Error creating config directory: {str(e)}")
@@ -88,19 +95,27 @@ def save_config(config):
         # Ensure directory exists and is clean
         ensure_config_directory()
         
-        # Save to Render persistent storage path
+        # Explicitly create the file
         with open(RENDER_CONFIG_PATH, 'w') as f:
             json.dump(config, f, indent=2)
         
-        # Optional: Also save to local path for backwards compatibility
-        local_config_path = os.path.join(os.path.dirname(__file__), 'config.json')
-        with open(local_config_path, 'w') as f:
-            json.dump(config, f, indent=2)
+        # Set appropriate file permissions
+        os.chmod(RENDER_CONFIG_PATH, 0o644)
         
-        logging.info(f"Configuration saved to {RENDER_CONFIG_PATH} and {local_config_path}")
+        # Optional: Also save to local path for backwards compatibility
+        try:
+            local_config_path = os.path.join(os.path.dirname(__file__), 'config.json')
+            with open(local_config_path, 'w') as f:
+                json.dump(config, f, indent=2)
+        except Exception as local_save_error:
+            logging.warning(f"Could not save local config: {local_save_error}")
+        
+        logging.info(f"Configuration saved to {RENDER_CONFIG_PATH}")
         return True
     except Exception as e:
         logging.error(f"Error saving configuration: {str(e)}")
+        # Additional debug logging
+        logging.error(f"Current directory structure: {os.listdir(os.path.dirname(RENDER_CONFIG_PATH))}")
         return False
 
 def create_default_config():
