@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template, send_from_directory, redirect, url_for
+from flask import Flask, request, jsonify, render_template, send_from_directory, redirect, url_for, Response
 import os
 import logging
 import json
@@ -11,34 +11,24 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # Flask Application Setup
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
-def load_config():
-    try:
-        paths = [
-            os.path.join(os.path.dirname(__file__), 'config.json'),
-            '/app/config.json',
-            '/barcode_scanning/config.json',
-            os.path.join(os.path.dirname(__file__), '..', 'config.json'),
-            './config.json',
-            '../config.json',
-            '/app/barcode_scanning/config.json',
-            os.path.abspath('config.json')
-        ]
-        
-        for config_path in paths:
-            logging.info(f"Checking for config file at: {config_path}")
-            if os.path.exists(config_path):
-                logging.info(f"Found config file at {config_path}")
-                with open(config_path, 'r') as f:
-                    return json.load(f)
-        
-        # Print the current working directory to help debug
-        logging.warning(f"Current working directory: {os.getcwd()}")
-        logging.warning(f"Directory contents: {os.listdir('.')}")
-        logging.warning("Config file not found in any of the expected locations, using default configuration")
-        return create_default_config()
-    except Exception as e:
-        logging.error(f"Error loading configuration: {str(e)}")
-        return create_default_config()
+# Authentication for admin routes
+def authenticate(username, password):
+    """Validate admin credentials"""
+    admin_username = os.getenv('ADMIN_USERNAME', 'admin')
+    admin_password = os.getenv('ADMIN_PASSWORD', 'admin123')
+    return username == admin_username and password == admin_password
+
+@app.before_request
+def require_auth():
+    """Require authentication for admin routes"""
+    if request.path.startswith('/admin'):
+        auth = request.authorization
+        if not auth or not authenticate(auth.username, auth.password):
+            return Response(
+                'Could not verify your access level for that URL.\n'
+                'You have to login with proper credentials', 401,
+                {'WWW-Authenticate': 'Basic realm="Admin Access"'})
+
 def ensure_config_file():
     """Create config.json if it doesn't exist"""
     config_path = os.path.join(os.path.dirname(__file__), 'config.json')
@@ -96,10 +86,72 @@ def ensure_config_file():
             return False
     return True
 
-# Call this function before loading config
-ensure_config_file()
+def load_config():
+    try:
+        paths = [
+            os.path.join(os.path.dirname(__file__), 'config.json'),
+            '/app/config.json',
+            '/barcode_scanning/config.json',
+            os.path.join(os.path.dirname(__file__), '..', 'config.json'),
+            './config.json',
+            '../config.json',
+            '/app/barcode_scanning/config.json',
+            os.path.abspath('config.json')
+        ]
+        
+        for config_path in paths:
+            logging.info(f"Checking for config file at: {config_path}")
+            if os.path.exists(config_path):
+                logging.info(f"Found config file at {config_path}")
+                with open(config_path, 'r') as f:
+                    return json.load(f)
+        
+        # Print the current working directory to help debug
+        logging.warning(f"Current working directory: {os.getcwd()}")
+        logging.warning(f"Directory contents: {os.listdir('.')}")
+        logging.warning("Config file not found in any of the expected locations, using default configuration")
+        return create_default_config()
+    except Exception as e:
+        logging.error(f"Error loading configuration: {str(e)}")
+        return create_default_config()
+
+def save_config():
+    """Save the current configuration to the config file"""
+    try:
+        config_path = os.path.join(os.path.dirname(__file__), 'config.json')
+        with open(config_path, 'w') as f:
+            json.dump(CONFIG, f, indent=2)
+        logging.info(f"Configuration saved to {config_path}")
+        return True
+    except Exception as e:
+        logging.error(f"Error saving configuration: {str(e)}")
+        return False
+
+def create_default_config():
+    """Create a default configuration if the config file is not found"""
+    return {
+        "default_tenant": "default",
+        "default_urls": {
+            "refresh_url": "https://core-production.alchemy.cloud/core/api/v2/refresh-token",
+            "api_url": "https://core-production.alchemy.cloud/core/api/v2/update-record",
+            "filter_url": "https://core-production.alchemy.cloud/core/api/v2/filter-records",
+            "find_records_url": "https://core-production.alchemy.cloud/core/api/v2/find-records",
+            "base_url": "https://app.alchemy.cloud/"
+        },
+        "tenants": {
+            "default": {
+                "tenant_name": "productcaseelnlims4uat",
+                "display_name": "Default Tenant",
+                "description": "Primary Alchemy environment",
+                "button_class": "primary",
+                "env_token_var": "ALCHEMY_REFRESH_TOKEN",
+                "use_custom_urls": False
+            }
+        }
+    }
 
 # Load configuration
+ensure_config_file()
 CONFIG = load_config()
 DEFAULT_URLS = CONFIG["default_urls"]
 DEFAULT_TENANT = CONFIG["default_tenant"]
@@ -166,6 +218,153 @@ def index(tenant):
 @app.route('/static/<path:filename>')
 def serve_static(filename):
     return send_from_directory(app.static_folder, filename)
+
+@app.route('/admin', methods=['GET'])
+def admin_panel():
+    """Simple admin panel to manage tenants"""
+    return render_template('admin.html', tenants=CONFIG["tenants"])
+
+@app.route('/admin/add-tenant', methods=['POST'])
+def add_tenant():
+    """Add a new tenant to the configuration"""
+    try:
+        tenant_id = request.form.get('tenant_id')
+        tenant_name = request.form.get('tenant_name')
+        display_name = request.form.get('display_name')
+        description = request.form.get('description', '')
+        button_class = request.form.get('button_class', 'primary')
+        env_token_var = request.form.get('env_token_var')
+        use_custom_urls = request.form.get('use_custom_urls') == 'on'
+        
+        # Validate input
+        if not tenant_id or not tenant_name or not display_name or not env_token_var:
+            return jsonify({"status": "error", "message": "Missing required fields"}), 400
+        
+        # Check if tenant already exists
+        if tenant_id in CONFIG["tenants"]:
+            return jsonify({"status": "error", "message": f"Tenant {tenant_id} already exists"}), 400
+        
+        # Create tenant config
+        new_tenant = {
+            "tenant_name": tenant_name,
+            "display_name": display_name,
+            "description": description,
+            "button_class": button_class,
+            "env_token_var": env_token_var,
+            "use_custom_urls": use_custom_urls
+        }
+        
+        # Add custom URLs if needed
+        if use_custom_urls:
+            new_tenant["custom_urls"] = {
+                "refresh_url": request.form.get('refresh_url', DEFAULT_URLS["refresh_url"]),
+                "api_url": request.form.get('api_url', DEFAULT_URLS["api_url"]),
+                "filter_url": request.form.get('filter_url', DEFAULT_URLS["filter_url"]),
+                "find_records_url": request.form.get('find_records_url', DEFAULT_URLS["find_records_url"]),
+                "base_url": request.form.get('base_url', DEFAULT_URLS["base_url"])
+            }
+        
+        # Update configuration in memory
+        CONFIG["tenants"][tenant_id] = new_tenant
+        
+        # Save configuration to file
+        save_config()
+        
+        return jsonify({"status": "success", "message": f"Tenant {display_name} added successfully"})
+    except Exception as e:
+        logging.error(f"Error adding tenant: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/admin/update-tenant/<tenant_id>', methods=['POST'])
+def update_tenant(tenant_id):
+    """Update an existing tenant"""
+    try:
+        # Check if tenant exists
+        if tenant_id not in CONFIG["tenants"]:
+            return jsonify({"status": "error", "message": f"Tenant {tenant_id} not found"}), 404
+        
+        tenant_name = request.form.get('tenant_name')
+        display_name = request.form.get('display_name')
+        description = request.form.get('description', '')
+        button_class = request.form.get('button_class', 'primary')
+        env_token_var = request.form.get('env_token_var')
+        use_custom_urls = request.form.get('use_custom_urls') == 'on'
+        
+        # Validate input
+        if not tenant_name or not display_name or not env_token_var:
+            return jsonify({"status": "error", "message": "Missing required fields"}), 400
+        
+        # Update tenant config
+        CONFIG["tenants"][tenant_id].update({
+            "tenant_name": tenant_name,
+            "display_name": display_name,
+            "description": description,
+            "button_class": button_class,
+            "env_token_var": env_token_var,
+            "use_custom_urls": use_custom_urls
+        })
+        
+        # Update custom URLs if needed
+        if use_custom_urls:
+            CONFIG["tenants"][tenant_id]["custom_urls"] = {
+                "refresh_url": request.form.get('refresh_url', DEFAULT_URLS["refresh_url"]),
+                "api_url": request.form.get('api_url', DEFAULT_URLS["api_url"]),
+                "filter_url": request.form.get('filter_url', DEFAULT_URLS["filter_url"]),
+                "find_records_url": request.form.get('find_records_url', DEFAULT_URLS["find_records_url"]),
+                "base_url": request.form.get('base_url', DEFAULT_URLS["base_url"])
+            }
+        elif "custom_urls" in CONFIG["tenants"][tenant_id]:
+            del CONFIG["tenants"][tenant_id]["custom_urls"]
+        
+        # Save configuration to file
+        save_config()
+        
+        return jsonify({"status": "success", "message": f"Tenant {display_name} updated successfully"})
+    except Exception as e:
+        logging.error(f"Error updating tenant: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/admin/delete-tenant/<tenant_id>', methods=['POST'])
+def delete_tenant(tenant_id):
+    """Delete a tenant"""
+    try:
+        # Check if tenant exists
+        if tenant_id not in CONFIG["tenants"]:
+            return jsonify({"status": "error", "message": f"Tenant {tenant_id} not found"}), 404
+        
+        # Can't delete default tenant
+        if tenant_id == DEFAULT_TENANT:
+            return jsonify({"status": "error", "message": "Cannot delete default tenant"}), 400
+        
+        # Delete tenant
+        display_name = CONFIG["tenants"][tenant_id].get("display_name", tenant_id)
+        del CONFIG["tenants"][tenant_id]
+        
+        # Save configuration to file
+        save_config()
+        
+        return jsonify({"status": "success", "message": f"Tenant {display_name} deleted successfully"})
+    except Exception as e:
+        logging.error(f"Error deleting tenant: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/admin/reload-config', methods=['POST'])
+def reload_config():
+    """Reload the configuration from disk"""
+    global CONFIG, DEFAULT_URLS, DEFAULT_TENANT
+    try:
+        CONFIG = load_config()
+        DEFAULT_URLS = CONFIG["default_urls"]
+        DEFAULT_TENANT = CONFIG["default_tenant"]
+        
+        # Clear token cache to force token refresh for all tenants
+        global token_cache
+        token_cache = {}
+        
+        return jsonify({"status": "success", "message": "Configuration reloaded successfully"})
+    except Exception as e:
+        logging.error(f"Error reloading configuration: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/debug/<tenant>')
 def debug_page(tenant):
