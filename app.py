@@ -18,18 +18,29 @@ app = Flask(__name__, static_folder='static', template_folder='templates')
 def ensure_config_directory():
     """Ensure the configuration directory exists and is not a file"""
     try:
-        # If config path exists and is a directory, remove it
-        if os.path.exists(RENDER_CONFIG_PATH):
-            if os.path.isdir(RENDER_CONFIG_PATH):
-                # Remove the directory if it's blocking the file path
-                import shutil
-                shutil.rmtree(RENDER_CONFIG_PATH)
-            elif os.path.isfile(RENDER_CONFIG_PATH):
-                # Remove the file if it's blocking directory creation
-                os.remove(RENDER_CONFIG_PATH)
+        # Log detailed filesystem information
+        logging.info(f"Current working directory: {os.getcwd()}")
+        logging.info(f"Attempting to check {RENDER_CONFIG_DIR}")
+        logging.info(f"Directory exists: {os.path.exists(RENDER_CONFIG_DIR)}")
+        logging.info(f"Is directory: {os.path.isdir(RENDER_CONFIG_DIR)}")
+        
+        try:
+            # List contents of the directory
+            logging.info(f"Directory contents: {os.listdir(RENDER_CONFIG_DIR)}")
+        except Exception as list_error:
+            logging.error(f"Error listing directory contents: {list_error}")
         
         # Ensure the parent directory exists
-        os.makedirs(os.path.dirname(RENDER_CONFIG_PATH), exist_ok=True)
+        os.makedirs(RENDER_CONFIG_DIR, exist_ok=True)
+        
+        # Check file permissions and ownership
+        try:
+            stat_info = os.stat(RENDER_CONFIG_DIR)
+            logging.info(f"Directory permissions: {oct(stat_info.st_mode)}")
+            logging.info(f"Owner UID: {stat_info.st_uid}")
+            logging.info(f"Group GID: {stat_info.st_gid}")
+        except Exception as stat_error:
+            logging.error(f"Error getting directory stats: {stat_error}")
         
         logging.info(f"Ensuring config directory exists: {RENDER_CONFIG_DIR}")
     except Exception as e:
@@ -37,54 +48,56 @@ def ensure_config_directory():
 
 def load_config():
     """
-    Load configuration STRICTLY from Render persistent storage
+    Load configuration with extensive diagnostics
     """
     try:
-        # Ensure the config directory and path are correctly set up
+        # Extensive diagnostic logging
+        logging.info("Starting config load process")
+        logging.info(f"Config directory: {RENDER_CONFIG_DIR}")
+        logging.info(f"Config path: {RENDER_CONFIG_PATH}")
+        
+        # Ensure directory exists
         ensure_config_directory()
         
-        # ONLY check Render path first
-        logging.info(f"Attempting to load config from {RENDER_CONFIG_PATH}")
+        # Log file existence and details
+        logging.info(f"Config path exists: {os.path.exists(RENDER_CONFIG_PATH)}")
         
-        # Check if config file exists and is not empty
-        if os.path.exists(RENDER_CONFIG_PATH) and os.path.getsize(RENDER_CONFIG_PATH) > 0:
+        if os.path.exists(RENDER_CONFIG_PATH):
+            try:
+                # Log file details
+                file_stat = os.stat(RENDER_CONFIG_PATH)
+                logging.info(f"File size: {file_stat.st_size} bytes")
+                logging.info(f"File permissions: {oct(file_stat.st_mode)}")
+            except Exception as stat_error:
+                logging.error(f"Error getting file stats: {stat_error}")
+        
+        # Attempt to read the file
+        if os.path.exists(RENDER_CONFIG_PATH) and os.path.isfile(RENDER_CONFIG_PATH):
             try:
                 with open(RENDER_CONFIG_PATH, 'r') as f:
-                    config = json.load(f)
+                    # Read and log file contents
+                    file_contents = f.read()
+                    logging.info(f"Raw file contents: {file_contents}")
+                
+                # Parse the contents
+                config = json.loads(file_contents)
                 
                 # Validate config structure
-                if config and 'tenants' in config and len(config.get('tenants', {})) > 0:
-                    logging.info("Successfully loaded existing configuration from Render path")
+                if config and 'tenants' in config:
+                    logging.info("Successfully loaded configuration")
                     return config
-            except (json.JSONDecodeError, IOError) as e:
-                logging.error(f"Error reading config file: {str(e)}")
+            except Exception as read_error:
+                logging.error(f"Error reading config file: {read_error}")
         
-        # If no valid config exists, check for a previous config in the repository
-        try:
-            repo_config_path = os.path.join(os.path.dirname(__file__), 'config.json')
-            if os.path.exists(repo_config_path):
-                with open(repo_config_path, 'r') as f:
-                    repo_config = json.load(f)
-                
-                if repo_config and 'tenants' in repo_config and len(repo_config.get('tenants', {})) > 0:
-                    logging.info("Using configuration from repository")
-                    # Save the repository config to the persistent storage
-                    save_config(repo_config)
-                    return repo_config
-        except Exception as repo_error:
-            logging.error(f"Error reading repository config: {str(repo_error)}")
-        
-        # Only create default config if absolutely no valid config exists
+        # If no config found, create and save default
         logging.warning("No existing configuration found. Creating default configuration.")
         default_config = create_default_config()
-        
-        # Save default config to persistent storage
         save_config(default_config)
         
         return default_config
     
     except Exception as e:
-        logging.error(f"Unexpected error loading configuration: {str(e)}")
+        logging.error(f"Unexpected error in load_config: {str(e)}")
         default_config = create_default_config()
         save_config(default_config)
         return default_config
