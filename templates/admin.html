@@ -5,65 +5,303 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tenant Administration - Alchemy Barcode Scanner</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --alchemy-blue: #0047BB;
+            --alchemy-light-blue: #3F88F6;
+            --alchemy-dark: #001952;
+            --alchemy-green: #00A86B;
+            --alchemy-red: #E4002B;
+            --alchemy-grey: #6C757D;
+            --alchemy-light-grey: #F8F9FA;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f8f9fa;
+            padding-bottom: 70px;
+        }
+        
+        .header {
+            background-color: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            padding: 15px 0;
+            margin-bottom: 30px;
+        }
+        
+        .header-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .header-logo {
+            height: 40px;
+        }
+        
+        .barcode-icon {
+            color: var(--alchemy-blue);
+            font-size: 24px;
+            margin-right: 10px;
+        }
+        
+        .page-title {
+            color: var(--alchemy-dark);
+            font-weight: 600;
+            margin: 0;
+        }
+        
+        .back-link {
+            color: var(--alchemy-blue);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+        
+        .back-link:hover {
+            color: var(--alchemy-light-blue);
+        }
+        
+        .container {
+            max-width: 1200px;
+        }
+        
+        .card {
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.04);
+            border: none;
+            margin-bottom: 25px;
+        }
+        
+        .card-header {
+            background-color: white;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+            padding: 15px 20px;
+        }
+        
+        .card-header h5 {
+            color: var(--alchemy-dark);
+            font-weight: 600;
+            margin: 0;
+        }
+        
+        .card-body {
+            padding: 20px;
+        }
+        
+        .btn-primary, .btn-success {
+            background-color: var(--alchemy-blue);
+            border-color: var(--alchemy-blue);
+        }
+        
+        .btn-primary:hover, .btn-success:hover {
+            background-color: var(--alchemy-light-blue);
+            border-color: var(--alchemy-light-blue);
+        }
+        
+        .btn-outline-primary {
+            color: var(--alchemy-blue);
+            border-color: var(--alchemy-blue);
+        }
+        
+        .btn-outline-primary:hover {
+            background-color: var(--alchemy-blue);
+            border-color: var(--alchemy-blue);
+        }
+        
+        .btn-outline-success {
+            color: var(--alchemy-green);
+            border-color: var(--alchemy-green);
+        }
+        
+        .btn-outline-success:hover {
+            background-color: var(--alchemy-green);
+            border-color: var(--alchemy-green);
+        }
+        
+        .btn-outline-danger {
+            color: var(--alchemy-red);
+            border-color: var(--alchemy-red);
+        }
+        
+        .btn-outline-danger:hover {
+            background-color: var(--alchemy-red);
+            border-color: var(--alchemy-red);
+        }
+        
+        .footer {
+            background-color: white;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            padding: 15px 0;
+            border-top: 1px solid rgba(0, 0, 0, 0.08);
+            text-align: center;
+        }
+        
+        .footer-content {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .footer-logo {
+            height: 20px;
+        }
+        
+        .copyright {
+            color: var(--alchemy-grey);
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .form-label {
+            color: var(--alchemy-dark);
+            font-weight: 500;
+        }
+        
+        .table {
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        
+        .table th {
+            background-color: var(--alchemy-light-grey);
+            color: var(--alchemy-dark);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 0.5px;
+        }
+        
+        .btn-group {
+            gap: 5px;
+        }
+        
+        .modal-header {
+            background-color: var(--alchemy-light-grey);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+        }
+        
+        .modal-title {
+            color: var(--alchemy-dark);
+            font-weight: 600;
+        }
+        
+        .alert-success {
+            background-color: rgba(0, 168, 107, 0.1);
+            border-color: rgba(0, 168, 107, 0.2);
+            color: var(--alchemy-green);
+        }
+        
+        .alert-danger {
+            background-color: rgba(228, 0, 43, 0.1);
+            border-color: rgba(228, 0, 43, 0.2);
+            color: var(--alchemy-red);
+        }
+        
+        .alert-info {
+            background-color: rgba(63, 136, 246, 0.1);
+            border-color: rgba(63, 136, 246, 0.2);
+            color: var(--alchemy-blue);
+        }
+        
+        .alert-dark {
+            background-color: var(--alchemy-light-grey);
+            border-color: rgba(0, 0, 0, 0.1);
+            color: var(--alchemy-dark);
+            font-family: monospace;
+            padding: 15px;
+        }
+    </style>
 </head>
 <body>
-    <div class="container py-5">
-        <h1 class="mb-4">Tenant Administration</h1>
-        
-        <div class="row mb-5">
+    <div class="header">
+        <div class="header-container">
+            <div class="logo-container">
+                <img src="{{ url_for('static', filename='Alchemy-logo.svg') }}" alt="Alchemy Cloud Logo" class="header-logo">
+                <div>
+                    <h4 class="page-title"><i class="fas fa-barcode barcode-icon"></i> Tenant Administration</h4>
+                </div>
+            </div>
+            <a href="/" class="back-link">
+                <i class="fas fa-arrow-left"></i> Back to Home
+            </a>
+        </div>
+    </div>
+    
+    <div class="container py-3">
+        <div class="row mb-4">
             <div class="col-md-12">
                 <div class="card">
                     <div class="card-header">
                         <h5>Current Tenants</h5>
                     </div>
                     <div class="card-body">
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Display Name</th>
-                                    <th>Actual Tenant Name</th>
-                                    <th>Description</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for tenant_id, tenant in tenants.items() %}
-                                <tr>
-                                    <td>{{ tenant_id }}</td>
-                                    <td>{{ tenant.display_name }}</td>
-                                    <td>{{ tenant.tenant_name }}</td>
-                                    <td>{{ tenant.description }}</td>
-                                    <td>
-                                        <div class="btn-group">
-                                            <button class="btn btn-sm btn-outline-primary edit-tenant-btn" 
-                                                    data-tenant-id="{{ tenant_id }}" 
-                                                    data-tenant-name="{{ tenant.tenant_name }}"
-                                                    data-display-name="{{ tenant.display_name }}"
-                                                    data-description="{{ tenant.description }}"
-                                                    data-button-class="{{ tenant.button_class }}"
-                                                    data-env-token-var="{{ tenant.env_token_var }}"
-                                                    data-use-custom-urls="{{ tenant.use_custom_urls|lower }}">
-                                                Edit
-                                            </button>
-                                            <button class="btn btn-sm btn-outline-success get-token-btn"
-                                                    data-tenant-id="{{ tenant_id }}"
-                                                    data-tenant-name="{{ tenant.tenant_name }}">
-                                                Get Token
-                                            </button>
-                                            {% if tenant_id != default_tenant %}
-                                            <button class="btn btn-sm btn-outline-danger delete-tenant-btn" 
-                                                    data-tenant-id="{{ tenant_id }}"
-                                                    data-display-name="{{ tenant.display_name }}">
-                                                Delete
-                                            </button>
-                                            {% endif %}
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Display Name</th>
+                                        <th>Actual Tenant Name</th>
+                                        <th>Description</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for tenant_id, tenant in tenants.items() %}
+                                    <tr>
+                                        <td>{{ tenant_id }}</td>
+                                        <td>{{ tenant.display_name }}</td>
+                                        <td>{{ tenant.tenant_name }}</td>
+                                        <td>{{ tenant.description }}</td>
+                                        <td>
+                                            <div class="d-flex">
+                                                <button class="btn btn-sm btn-outline-primary edit-tenant-btn" 
+                                                        data-tenant-id="{{ tenant_id }}" 
+                                                        data-tenant-name="{{ tenant.tenant_name }}"
+                                                        data-display-name="{{ tenant.display_name }}"
+                                                        data-description="{{ tenant.description }}"
+                                                        data-button-class="{{ tenant.button_class }}"
+                                                        data-env-token-var="{{ tenant.env_token_var }}"
+                                                        data-use-custom-urls="{{ tenant.use_custom_urls|lower }}">
+                                                    <i class="fas fa-pencil-alt"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-success ms-1 get-token-btn"
+                                                        data-tenant-id="{{ tenant_id }}"
+                                                        data-tenant-name="{{ tenant.tenant_name }}">
+                                                    <i class="fas fa-key"></i>
+                                                </button>
+                                                {% if tenant_id != default_tenant %}
+                                                <button class="btn btn-sm btn-outline-danger ms-1 delete-tenant-btn" 
+                                                        data-tenant-id="{{ tenant_id }}"
+                                                        data-display-name="{{ tenant.display_name }}">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -170,13 +408,12 @@
                 </div>
             </div>
         </div>
-        
-        <div class="row mt-4">
-            <div class="col-md-12">
-                <div class="d-flex justify-content-end">
-                    <a href="/" class="btn btn-secondary">Back to Home</a>
-                </div>
-            </div>
+    </div>
+    
+    <div class="footer">
+        <div class="footer-content">
+            <img src="{{ url_for('static', filename='Alchemy-logo.svg') }}" alt="Alchemy Cloud Logo" class="footer-logo">
+            <div class="copyright">© ALCHEMY CLOUD, INC. ALL RIGHTS RESERVED.</div>
         </div>
     </div>
     
@@ -231,7 +468,7 @@
                             <label class="form-label">Refresh Token</label>
                             <div class="input-group">
                                 <input type="text" class="form-control" id="refresh-token-value" readonly>
-                                <button class="btn btn-outline-secondary" type="button" id="copy-token-btn">
+                                <button class="btn btn-outline-primary" type="button" id="copy-token-btn">
                                     Copy
                                 </button>
                             </div>
@@ -240,7 +477,7 @@
                             <label class="form-label">Access Token</label>
                             <div class="input-group">
                                 <input type="text" class="form-control" id="access-token-value" readonly>
-                                <button class="btn btn-outline-secondary" type="button" id="copy-access-token-btn">
+                                <button class="btn btn-outline-primary" type="button" id="copy-access-token-btn">
                                     Copy
                                 </button>
                             </div>
@@ -507,7 +744,7 @@
                 document.getElementById('token-result').style.display = 'none';
                 
                 // Make API request
-                fetch('https://core-production.alchemy.cloud/core/api/v2/sign-in', {
+                fetch('/api/get-refresh-token', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -519,7 +756,7 @@
                 })
                 .then(response => {
                     if (!response.ok) {
-                        throw new Error('Authentication failed. Please check your credentials.');
+                        throw new Error(`Authentication failed (${response.status}). Please check your credentials.`);
                     }
                     return response.json();
                 })
@@ -527,10 +764,15 @@
                     // Hide loading indicator
                     document.getElementById('token-loading').style.display = 'none';
                     
+                    // Check if the response has tokens
+                    if (!data.tokens || !Array.isArray(data.tokens) || data.tokens.length === 0) {
+                        throw new Error('No tokens found in the response. Please check your credentials.');
+                    }
+                    
                     // Find the token for the current tenant
-                    const tenantToken = data.tokens ? data.tokens.find(token => 
-                        token.tenant.toLowerCase() === currentTokenTenant.name.toLowerCase()
-                    ) : null;
+                    const tenantToken = data.tokens.find(token => 
+                        token.tenant && token.tenant.toLowerCase() === currentTokenTenant.name.toLowerCase()
+                    );
                     
                     if (!tenantToken) {
                         throw new Error(`No token found for tenant: ${currentTokenTenant.name}`);
