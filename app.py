@@ -547,6 +547,220 @@ def admin_panel():
 
 # Additional route handlers would be added here
 # (Include all existing route handlers for locations, barcode scanning, etc.)
+# Route for getting locations from Alchemy API
+@app.route('/get-locations/<tenant>', methods=['GET'])
+def get_locations(tenant):
+    try:
+        # Check if tenant exists
+        if tenant not in CONFIG["tenants"]:
+            return jsonify({"error": f"Unknown tenant: {tenant}"}), 404
+            
+        tenant_config = get_tenant_config(tenant)
+        
+        # Get access token
+        access_token = refresh_alchemy_token(tenant)
+        
+        if not access_token:
+            logging.warning(f"Failed to get access token for tenant {tenant}, returning fallback locations")
+            return jsonify(get_fallback_locations())
+        
+        # Prepare filter request for locations
+        filter_payload = {
+            "queryTerm": "Result.Status == 'Valid'",
+            "recordTemplateIdentifier": "AC_Location",
+            "drop": 0,
+            "take": 100,  # Fetch up to 100 locations
+            "lastChangedOnFrom": "2018-03-03T00:00:00Z",
+            "lastChangedOnTo": "2028-03-04T00:00:00Z"
+        }
+        
+        # Send request to Alchemy API
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
+        
+        filter_url = tenant_config.get('filter_url')
+        logging.info(f"Fetching locations from Alchemy API for tenant {tenant}: {json.dumps(filter_payload)}")
+        response = requests.put(filter_url, headers=headers, json=filter_payload)
+        
+        # Log response for debugging
+        logging.info(f"Alchemy API response status code for tenant {tenant}: {response.status_code}")
+        
+        if not response.ok:
+            logging.error(f"Error fetching locations for tenant {tenant}: {response.text}")
+            return jsonify(get_fallback_locations())
+        
+        # Process the response
+        locations_data = response.json()
+        logging.info(f"Received {len(locations_data)} locations from API for tenant {tenant}")
+        
+        # Debug the API response structure
+        debug_api_response(locations_data)
+        
+        # Log the full first item for debugging
+        if locations_data and len(locations_data) > 0:
+            logging.info(f"First location data for tenant {tenant}: {json.dumps(locations_data[0])}")
+        
+        # Transform the data into the format needed by the frontend
+        formatted_locations = []
+        
+        for location in locations_data:
+            try:
+                # Extract location ID - use recordId if it exists, otherwise fall back to id
+                location_id = str(location.get("recordId") or location.get("id", "unknown"))
+                
+                # Extract location name using improved method
+                location_name = extract_location_name_improved(location)
+                
+                # Extract sublocations - improved version
+                sublocations = extract_sublocations_improved(location)
+                
+                # Create location info object
+                location_info = {
+                    "id": location_id,
+                    "name": location_name,
+                    "sublocations": sublocations
+                }
+                
+                formatted_locations.append(location_info)
+                logging.info(f"Added location for tenant {tenant}: {location_name} (ID: {location_id}) with {len(sublocations)} sublocations")
+                
+            except Exception as e:
+                logging.error(f"Error processing location {location.get('recordId', location.get('id', 'unknown'))} for tenant {tenant}: {str(e)}")
+        
+        # If no locations were found, add fallback locations
+        if not formatted_locations:
+            logging.warning(f"No locations found in API response for tenant {tenant}, adding fallback locations")
+            return jsonify(get_fallback_locations())
+        
+        return jsonify(formatted_locations)
+        
+    except Exception as e:
+        logging.error(f"Error fetching locations for tenant {tenant}: {str(e)}")
+        return jsonify(get_fallback_locations())
+
+def extract_location_name_improved(location):
+    """Improved function to extract location name from Alchemy API response"""
+    # First, try to use the top-level name field which is most reliable
+    if "name" in location and location["name"]:
+        return location["name"]
+    
+    # Fallback to a default name if top-level name isn't available
+    default_name = f"Location {location.get('recordId') or location.get('id', 'unknown')}"
+    
+    # Check for name in fields array if top-level name isn't available
+    if "fields" in location:
+        # Look for fields with identifiers that might contain location name
+        name_field_identifiers = ["LocationName", "RecordName", "Name"]
+        for field in location["fields"]:
+            identifier = field.get("identifier", "")
+            if identifier in name_field_identifiers:
+                if field.get("rows") and len(field["rows"]) > 0:
+                    row = field["rows"][0]
+                    if row.get("values") and len(row["values"]) > 0:
+                        value = row["values"][0].get("value")
+                        if value and isinstance(value, str) and value.strip():
+                            return value
+    
+    # If no suitable name found, return the default
+    return default_name
+
+def extract_sublocations_improved(location):
+    """Improved function to extract sublocations from Alchemy API response"""
+    sublocations = []
+    
+    # Check for sublocations in fieldGroups
+    if "fieldGroups" in location:
+        for group in location["fieldGroups"]:
+            group_id = group.get("identifier", "")
+            if "Location" in group_id or "SubLocation" in group_id:
+                for field in group.get("fields", []):
+                    field_id = field.get("identifier", "")
+                    if "SubLocation" in field_id or "Sublocation" in field_id:
+                        for idx, row in enumerate(field.get("rows", [])):
+                            if row.get("values") and len(row["values"]) > 0:
+                                value = row["values"][0].get("value")
+                                if value:
+                                    # Handle both string and object values
+                                    if isinstance(value, dict) and "name" in value:
+                                        sublocations.append({
+                                            "id": str(value.get("recordId", f"sub_{idx}")),
+                                            "name": value.get("name", "Unnamed Sublocation")
+                                        })
+                                    elif isinstance(value, str) and value.strip():
+                                        sublocations.append({
+                                            "id": f"sub_{location.get('recordId', location.get('id', 'unknown'))}_{idx}",
+                                            "name": value
+                                        })
+    
+    # If no sublocations found in fieldGroups, check fields directly
+    if not sublocations and "fields" in location:
+        for field in location["fields"]:
+            field_id = field.get("identifier", "")
+            if "SubLocation" in field_id or "Sublocation" in field_id:
+                for idx, row in enumerate(field.get("rows", [])):
+                    if row.get("values") and len(row["values"]) > 0:
+                        value = row["values"][0].get("value")
+                        if value and isinstance(value, str) and value.strip():
+                            sublocations.append({
+                                "id": f"sub_{location.get('recordId', location.get('id', 'unknown'))}_{idx}",
+                                "name": value
+                            })
+    
+    return sublocations
+
+# Function to find record ID by scanned barcode
+def find_record_id_by_barcode(barcode, access_token, tenant):
+    """Find Alchemy record ID using barcode as the Result.Code"""
+    try:
+        tenant_config = get_tenant_config(tenant)
+        find_records_url = tenant_config.get('find_records_url')
+        
+        # Prepare find request payload
+        find_payload = {
+            "queryTerm": f"Result.Code == '{barcode}'",
+            "recordTemplateIdentifier": "AC_Study_LabTrial",
+            "lastChangedOnFrom": "2022-03-03T00:00:00Z",
+            "lastChangedOnTo": "2025-12-31T23:59:59Z"  # Extended date range to future
+        }
+        
+        # Send request to Alchemy API
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
+        
+        logging.info(f"Finding record for barcode '{barcode}' in tenant {tenant}: {json.dumps(find_payload)}")
+        response = requests.put(find_records_url, headers=headers, json=find_payload)
+        
+        # Log response for debugging
+        logging.info(f"Find records API response status code for tenant {tenant}: {response.status_code}")
+        
+        if not response.ok:
+            logging.error(f"Error finding record for barcode {barcode} in tenant {tenant}: {response.text}")
+            return None
+        
+        # Process response
+        records = response.json()
+        
+        if not records or len(records) == 0:
+            logging.warning(f"No records found for barcode {barcode} in tenant {tenant}")
+            return None
+        
+        # Get the first matching record ID
+        record_id = records[0].get('recordId') or records[0].get('id')
+        
+        if not record_id:
+            logging.error(f"Found record for barcode {barcode} in tenant {tenant} but could not extract recordId")
+            return None
+            
+        logging.info(f"Found record ID {record_id} for barcode {barcode} in tenant {tenant}")
+        return record_id
+        
+    except Exception as e:
+        logging.error(f"Error finding record for barcode {barcode} in tenant {tenant}: {str(e)}")
+        return None
 
 # Barcode scanning routes, location fetching routes, etc. would follow...
 
