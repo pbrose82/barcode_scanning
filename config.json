@@ -21,7 +21,7 @@
       "display_name": "CASE UAT",
       "description": "Test environment",
       "button_class": "secondary",
-      "env_token_var": "TENANT1_REFRESH_TOKEN",
+      "env_token_var": "eyJhbGciOiJIUzUxMiJ9.eyJ0ZW5hbnQiOiJwcm9kdWN0Y2FzZWVsbmxpbXM0dWF0IiwicHJpbmNpcGFsRW1haWwiOiJwYnJvc2UxOTgyQGdtYWlsLmNvbSIsImF1dGgiOiJyZWZyZXNoIiwiZXhwIjoxNzQ1MDYzOTM0fQ.x03mVSiMCM6CZswEN6F0SgLGsiCd1CLCMOm91pMQPNqTltgaZoAtxEPFDYBpm2PFfwGsMURsfuJkF5DwcJbt7g",
       "use_custom_urls": false
     },
     "custom": {
