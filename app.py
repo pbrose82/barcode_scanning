@@ -61,20 +61,32 @@ def load_config():
             except Exception as e:
                 logging.error(f"Error reading config from {RENDER_CONFIG_PATH}: {str(e)}")
         
+        # If no valid config is found, check if the file is empty
+        try:
+            # If file exists but is empty or invalid, read the contents
+            if os.path.exists(RENDER_CONFIG_PATH):
+                with open(RENDER_CONFIG_PATH, 'r') as f:
+                    file_contents = f.read().strip()
+                    logging.warning(f"Existing config file contents: {file_contents}")
+        except Exception as e:
+            logging.error(f"Error reading existing config file: {str(e)}")
+        
         # Only create default config if NO config exists at all
         logging.warning("No existing configuration found. Creating default configuration.")
         default_config = create_default_config()
         
-        # ONLY save default config if absolutely no config exists
-        if not os.path.exists(RENDER_CONFIG_PATH):
-            save_config(default_config)
+        # ONLY save default config if no valid config exists
+        save_config(default_config)
         
         return default_config
     
     except Exception as e:
         logging.error(f"Unexpected error loading configuration: {str(e)}")
-        return create_default_config()
+        default_config = create_default_config()
+        save_config(default_config)
+        return default_config
 def save_config(config):
+    
     """Save configuration ONLY to Render persistent storage"""
     try:
         # Ensure directory exists and is clean
