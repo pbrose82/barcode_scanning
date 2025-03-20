@@ -16,6 +16,7 @@ ALCHEMY_REFRESH_TOKEN = os.getenv('ALCHEMY_REFRESH_TOKEN')
 ALCHEMY_REFRESH_URL = os.getenv('ALCHEMY_REFRESH_URL', 'https://core-production.alchemy.cloud/core/api/v2/refresh-token')
 ALCHEMY_API_URL = os.getenv('ALCHEMY_API_URL', 'https://core-production.alchemy.cloud/core/api/v2/update-record')
 ALCHEMY_FILTER_URL = os.getenv('ALCHEMY_FILTER_URL', 'https://core-production.alchemy.cloud/core/api/v2/filter-records')
+ALCHEMY_FIND_RECORDS_URL = os.getenv('ALCHEMY_FIND_RECORDS_URL', 'https://core-production.alchemy.cloud/core/api/v2/find-records')
 ALCHEMY_BASE_URL = os.getenv('ALCHEMY_BASE_URL', 'https://app.alchemy.cloud/productcaseelnlims4uat/record/')
 ALCHEMY_TENANT_NAME = os.getenv('ALCHEMY_TENANT_NAME', 'productcaseelnlims4uat')
 
@@ -470,8 +471,57 @@ def extract_sublocations_improved(location):
     
     return sublocations
 
+# Function to find record ID by scanned barcode
+def find_record_id_by_barcode(barcode, access_token):
+    """Find Alchemy record ID using barcode as the Result.Code"""
+    try:
+        # Prepare find request payload
+        find_payload = {
+            "queryTerm": f"Result.Code == '{barcode}'",
+            "recordTemplateIdentifier": "AC_Study_LabTrial",
+            "lastChangedOnFrom": "2022-03-03T00:00:00Z",
+            "lastChangedOnTo": "2025-12-31T23:59:59Z"  # Extended date range to future
+        }
+        
+        # Send request to Alchemy API
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
+        
+        logging.info(f"Finding record for barcode '{barcode}': {json.dumps(find_payload)}")
+        response = requests.put(ALCHEMY_FIND_RECORDS_URL, headers=headers, json=find_payload)
+        
+        # Log response for debugging
+        logging.info(f"Find records API response status code: {response.status_code}")
+        
+        if not response.ok:
+            logging.error(f"Error finding record for barcode {barcode}: {response.text}")
+            return None
+        
+        # Process response
+        records = response.json()
+        
+        if not records or len(records) == 0:
+            logging.warning(f"No records found for barcode {barcode}")
+            return None
+        
+        # Get the first matching record ID
+        record_id = records[0].get('recordId') or records[0].get('id')
+        
+        if not record_id:
+            logging.error(f"Found record for barcode {barcode} but could not extract recordId")
+            return None
+            
+        logging.info(f"Found record ID {record_id} for barcode {barcode}")
+        return record_id
+        
+    except Exception as e:
+        logging.error(f"Error finding record for barcode {barcode}: {str(e)}")
+        return None
+
 # Route for updating record location in Alchemy
-@app.route('/update-location', methods=['put'])
+@app.route('/update-location', methods=['POST'])
 def update_location():
     data = request.json
     
@@ -479,12 +529,12 @@ def update_location():
         return jsonify({"status": "error", "message": "No data provided"}), 400
     
     try:
-        record_ids = data.get('recordIds', [])
+        barcode_codes = data.get('recordIds', [])  # These are actually barcode codes now, not record IDs
         location_id = data.get('locationId', '')
         sublocation_id = data.get('sublocationId', '')
         
-        if not record_ids:
-            return jsonify({"status": "error", "message": "No record IDs provided"}), 400
+        if not barcode_codes:
+            return jsonify({"status": "error", "message": "No barcode codes provided"}), 400
         
         if not location_id:
             return jsonify({"status": "error", "message": "No location ID provided"}), 400
@@ -501,9 +551,19 @@ def update_location():
         success_records = []
         failed_records = []
         
-        for record_id in record_ids:
+        for barcode in barcode_codes:
             try:
-                # Format data for Alchemy API
+                # First, find the record ID from the barcode
+                record_id = find_record_id_by_barcode(barcode, access_token)
+                
+                if not record_id:
+                    failed_records.append({
+                        "id": barcode,
+                        "error": "Record not found for this barcode"
+                    })
+                    continue
+                
+                # Format data for Alchemy API update
                 alchemy_payload = {
                     "recordId": int(record_id),
                     "fields": [
@@ -541,13 +601,13 @@ def update_location():
                         ]
                     })
                 
-                # Send to Alchemy API
+                # Send update to Alchemy API
                 headers = {
                     "Authorization": f"Bearer {access_token}",
                     "Content-Type": "application/json"
                 }
                 
-                logging.info(f"Sending update for record {record_id} to Alchemy: {json.dumps(alchemy_payload)}")
+                logging.info(f"Sending update for record {record_id} (barcode: {barcode}) to Alchemy: {json.dumps(alchemy_payload)}")
                 response = requests.put(ALCHEMY_API_URL, headers=headers, json=alchemy_payload)
                 
                 # Log response for debugging
@@ -557,25 +617,25 @@ def update_location():
                 
                 # Check if the request was successful
                 if response.ok:
-                    success_records.append(record_id)
+                    success_records.append(barcode)
                 else:
-                    logging.error(f"Error updating record {record_id}: {response.text}")
+                    logging.error(f"Error updating record {record_id} (barcode: {barcode}): {response.text}")
                     failed_records.append({
-                        "id": record_id,
+                        "id": barcode,
                         "error": f"API returned status code {response.status_code}"
                     })
                 
             except Exception as e:
-                logging.error(f"Error processing record {record_id}: {str(e)}")
+                logging.error(f"Error processing barcode {barcode}: {str(e)}")
                 failed_records.append({
-                    "id": record_id,
+                    "id": barcode,
                     "error": str(e)
                 })
         
         # Return results
         return jsonify({
             "status": "success" if not failed_records else "partial",
-            "message": f"Updated {len(success_records)} of {len(record_ids)} records",
+            "message": f"Updated {len(success_records)} of {len(barcode_codes)} records",
             "successful": success_records,
             "failed": failed_records
         })
