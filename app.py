@@ -170,18 +170,39 @@ def save_config(config):
             logging.error("Attempted to save invalid configuration")
             return False
         
+        # Log the directory and file path
+        logging.info(f"Attempting to save config to directory: {RENDER_CONFIG_DIR}")
+        logging.info(f"Full config path: {RENDER_CONFIG_PATH}")
+        
+        # Check directory permissions
+        try:
+            dir_stat = os.stat(RENDER_CONFIG_DIR)
+            logging.info(f"Config directory permissions: {oct(dir_stat.st_mode)}")
+        except Exception as dir_stat_error:
+            logging.error(f"Error getting directory stats: {dir_stat_error}")
+        
         # Explicitly create the file ONLY in Render path
-        with open(RENDER_CONFIG_PATH, 'w') as f:
-            json.dump(config, f, indent=2)
+        try:
+            with open(RENDER_CONFIG_PATH, 'w') as f:
+                json.dump(config, f, indent=2)
+        except PermissionError:
+            logging.error(f"Permission denied when writing to {RENDER_CONFIG_PATH}")
+            return False
+        except IOError as io_error:
+            logging.error(f"IO Error when saving config: {io_error}")
+            return False
         
         # Set appropriate file permissions
-        os.chmod(RENDER_CONFIG_PATH, 0o644)
+        try:
+            os.chmod(RENDER_CONFIG_PATH, 0o644)
+        except Exception as chmod_error:
+            logging.error(f"Error setting file permissions: {chmod_error}")
         
-        logging.info(f"Configuration saved ONLY to {RENDER_CONFIG_PATH}")
+        logging.info(f"Configuration successfully saved to {RENDER_CONFIG_PATH}")
         logging.info(f"Saved config contents: {json.dumps(config, indent=2)}")
         return True
     except Exception as e:
-        logging.error(f"Error saving configuration: {str(e)}")
+        logging.error(f"Unexpected error saving configuration: {str(e)}")
         logging.error(f"Current directory structure: {os.listdir(os.path.dirname(RENDER_CONFIG_PATH))}")
         return False
 
@@ -419,9 +440,8 @@ def get_fallback_locations():
     ]
 
 # Configuration Management Routes
-@app.route('/admin/update-tenant-token', methods=['POST'])  # Kept as POST for admin route
+@app.route('/admin/update-tenant-token', methods=['POST'])
 def update_tenant_token():
-    # Existing implementation...
     """Update refresh token for a tenant directly in the config"""
     try:
         data = request.json
@@ -441,9 +461,8 @@ def update_tenant_token():
                 "message": f"Tenant {tenant_id} not found"
             }), 404
         
-        # Debugging: log the full response if something goes wrong
+        # Verify token by calling Alchemy's token validation/refresh endpoint
         try:
-            # Verify token by calling Alchemy's token validation/refresh endpoint
             response = requests.put(
                 DEFAULT_URLS['refresh_url'], 
                 json={"refreshToken": refresh_token},
@@ -467,6 +486,40 @@ def update_tenant_token():
                 "status": "error", 
                 "message": f"Token verification error: {str(verify_error)}"
             }), 500
+        
+        # Update token in config
+        try:
+            # Directly modify the global CONFIG
+            CONFIG["tenants"][tenant_id]["stored_refresh_token"] = refresh_token
+            
+            # Attempt to save configuration
+            save_result = save_config(CONFIG)
+            
+            if not save_result:
+                logging.error(f"Failed to save configuration for tenant {tenant_id}")
+                return jsonify({
+                    "status": "error", 
+                    "message": "Failed to save configuration"
+                }), 500
+        except Exception as config_error:
+            logging.error(f"Error updating configuration: {config_error}")
+            return jsonify({
+                "status": "error", 
+                "message": f"Configuration update error: {str(config_error)}"
+            }), 500
+        
+        # Clear the token cache for this tenant
+        if tenant_id in token_cache:
+            del token_cache[tenant_id]
+        
+        return jsonify({
+            "status": "success", 
+            "message": f"Refresh token updated for tenant {tenant_id}"
+        })
+        
+    except Exception as e:
+        logging.error(f"Unexpected error updating tenant token: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
             
         # Update token in config
         CONFIG["tenants"][tenant_id]["stored_refresh_token"] = refresh_token
