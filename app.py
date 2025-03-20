@@ -11,67 +11,106 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # Flask Application Setup
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
-# Default Alchemy Configuration
-DEFAULT_REFRESH_TOKEN = os.getenv('ALCHEMY_REFRESH_TOKEN')
-DEFAULT_REFRESH_URL = 'https://core-production.alchemy.cloud/core/api/v2/refresh-token'
-DEFAULT_API_URL = 'https://core-production.alchemy.cloud/core/api/v2/update-record'
-DEFAULT_FILTER_URL = 'https://core-production.alchemy.cloud/core/api/v2/filter-records'
-DEFAULT_FIND_RECORDS_URL = 'https://core-production.alchemy.cloud/core/api/v2/find-records'
-DEFAULT_BASE_URL = 'https://app.alchemy.cloud/'
-DEFAULT_TENANT_NAME = 'productcaseelnlims4uat'
+# Load configuration from file
+def load_config():
+    try:
+        config_path = os.path.join(os.path.dirname(__file__), 'config.json')
+        if os.path.exists(config_path):
+            with open(config_path, 'r') as f:
+                return json.load(f)
+        else:
+            logging.warning(f"Config file not found at {config_path}, using default configuration")
+            return create_default_config()
+    except Exception as e:
+        logging.error(f"Error loading configuration: {str(e)}")
+        return create_default_config()
 
-# Define tenant configurations
-TENANT_CONFIGS = {
-    'default': {
-        'tenant_name': DEFAULT_TENANT_NAME,
-        'refresh_token': DEFAULT_REFRESH_TOKEN,
-        'refresh_url': DEFAULT_REFRESH_URL,
-        'api_url': DEFAULT_API_URL,
-        'filter_url': DEFAULT_FILTER_URL,
-        'find_records_url': DEFAULT_FIND_RECORDS_URL,
-        'base_url': DEFAULT_BASE_URL
-    },
-    'tenant1': {
-        'tenant_name': os.getenv('TENANT1_NAME', 'tenant1'),
-        'refresh_token': os.getenv('TENANT1_REFRESH_TOKEN'),
-        'refresh_url': os.getenv('TENANT1_REFRESH_URL', DEFAULT_REFRESH_URL),
-        'api_url': os.getenv('TENANT1_API_URL', DEFAULT_API_URL),
-        'filter_url': os.getenv('TENANT1_FILTER_URL', DEFAULT_FILTER_URL),
-        'find_records_url': os.getenv('TENANT1_FIND_RECORDS_URL', DEFAULT_FIND_RECORDS_URL),
-        'base_url': os.getenv('TENANT1_BASE_URL', DEFAULT_BASE_URL)
-    },
-    'tenant2': {
-        'tenant_name': os.getenv('TENANT2_NAME', 'tenant2'),
-        'refresh_token': os.getenv('TENANT2_REFRESH_TOKEN'),
-        'refresh_url': os.getenv('TENANT2_REFRESH_URL', DEFAULT_REFRESH_URL),
-        'api_url': os.getenv('TENANT2_API_URL', DEFAULT_API_URL),
-        'filter_url': os.getenv('TENANT2_FILTER_URL', DEFAULT_FILTER_URL),
-        'find_records_url': os.getenv('TENANT2_FIND_RECORDS_URL', DEFAULT_FIND_RECORDS_URL),
-        'base_url': os.getenv('TENANT2_BASE_URL', DEFAULT_BASE_URL)
+def create_default_config():
+    """Create a default configuration if the config file is not found"""
+    return {
+        "default_tenant": "default",
+        "default_urls": {
+            "refresh_url": "https://core-production.alchemy.cloud/core/api/v2/refresh-token",
+            "api_url": "https://core-production.alchemy.cloud/core/api/v2/update-record",
+            "filter_url": "https://core-production.alchemy.cloud/core/api/v2/filter-records",
+            "find_records_url": "https://core-production.alchemy.cloud/core/api/v2/find-records",
+            "base_url": "https://app.alchemy.cloud/"
+        },
+        "tenants": {
+            "default": {
+                "tenant_name": "productcaseelnlims4uat",
+                "display_name": "Default Tenant",
+                "description": "Primary Alchemy environment",
+                "button_class": "primary",
+                "env_token_var": "ALCHEMY_REFRESH_TOKEN",
+                "use_custom_urls": False
+            }
+        }
     }
-    # Add more tenants as needed
-}
 
-# Global Token Cache for each tenant
+# Load configuration
+CONFIG = load_config()
+DEFAULT_URLS = CONFIG["default_urls"]
+DEFAULT_TENANT = CONFIG["default_tenant"]
+
+# Global Token Cache
 token_cache = {}
+
+# Get tenant configuration
+def get_tenant_config(tenant_id):
+    """Get tenant configuration from config file"""
+    if tenant_id not in CONFIG["tenants"]:
+        logging.error(f"Tenant {tenant_id} not found in configuration")
+        tenant_id = DEFAULT_TENANT
+    
+    tenant = CONFIG["tenants"][tenant_id]
+    
+    # Build the complete tenant configuration
+    tenant_config = {
+        "tenant_id": tenant_id,
+        "tenant_name": tenant.get("tenant_name"),
+        "display_name": tenant.get("display_name", tenant.get("tenant_name")),
+        "description": tenant.get("description", ""),
+        "button_class": tenant.get("button_class", "primary"),
+        "refresh_token": os.getenv(tenant.get("env_token_var"))
+    }
+    
+    # Add URLs based on config
+    if tenant.get("use_custom_urls") and "custom_urls" in tenant:
+        tenant_config.update({
+            "refresh_url": tenant["custom_urls"].get("refresh_url"),
+            "api_url": tenant["custom_urls"].get("api_url"),
+            "filter_url": tenant["custom_urls"].get("filter_url"),
+            "find_records_url": tenant["custom_urls"].get("find_records_url"),
+            "base_url": tenant["custom_urls"].get("base_url")
+        })
+    else:
+        tenant_config.update({
+            "refresh_url": DEFAULT_URLS["refresh_url"],
+            "api_url": DEFAULT_URLS["api_url"],
+            "filter_url": DEFAULT_URLS["filter_url"],
+            "find_records_url": DEFAULT_URLS["find_records_url"],
+            "base_url": DEFAULT_URLS["base_url"]
+        })
+    
+    return tenant_config
 
 # Route Handlers
 @app.route('/')
 def root():
-    # Redirect to default tenant
-    return redirect(url_for('index', tenant='default'))
+    # Show tenant selector page
+    return render_template('tenant_selector.html', tenants=CONFIG["tenants"])
 
 @app.route('/tenant/<tenant>')
 def index(tenant):
     # Validate tenant
-    if tenant not in TENANT_CONFIGS:
+    if tenant not in CONFIG["tenants"]:
         return render_template('error.html', message=f"Unknown tenant: {tenant}"), 404
     
-    tenant_config = TENANT_CONFIGS.get(tenant)
-    tenant_name = tenant_config.get('tenant_name')
+    tenant_config = get_tenant_config(tenant)
     
-    app.logger.info(f"Rendering index.html for tenant: {tenant} ({tenant_name})")
-    return render_template('index.html', tenant=tenant, tenant_name=tenant_name)
+    app.logger.info(f"Rendering index.html for tenant: {tenant} ({tenant_config['tenant_name']})")
+    return render_template('index.html', tenant=tenant, tenant_name=tenant_config['display_name'])
 
 @app.route('/static/<path:filename>')
 def serve_static(filename):
@@ -82,8 +121,10 @@ def debug_page(tenant):
     """Simple HTML debug page for locations without using templates"""
     try:
         # Validate tenant
-        if tenant not in TENANT_CONFIGS:
+        if tenant not in CONFIG["tenants"]:
             return render_template('error.html', message=f"Unknown tenant: {tenant}"), 404
+        
+        tenant_config = get_tenant_config(tenant)
         
         # Get test locations
         test_locations = get_fallback_locations()
@@ -93,12 +134,12 @@ def debug_page(tenant):
         <!DOCTYPE html>
         <html>
         <head>
-            <title>Location Debug - {tenant}</title>
+            <title>Location Debug - {tenant_config['display_name']}</title>
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
         </head>
         <body>
             <div class="container mt-4">
-                <h1>Location Debug - Tenant: {tenant}</h1>
+                <h1>Location Debug - Tenant: {tenant_config['display_name']}</h1>
                 
                 <div class="mb-4">
                     <button id="testBtn" class="btn btn-primary">Fetch Test Locations</button>
@@ -206,13 +247,15 @@ def debug_page(tenant):
     except Exception as e:
         return f"<h1>Error</h1><p>{str(e)}</p>"
 
-def get_tenant_config(tenant):
-    """Get the configuration for a specific tenant"""
-    return TENANT_CONFIGS.get(tenant, TENANT_CONFIGS['default'])
-
 def refresh_alchemy_token(tenant):
     """Refresh the Alchemy API token for a specific tenant"""
     global token_cache
+    
+    # Get tenant configuration
+    tenant_config = get_tenant_config(tenant)
+    refresh_token = tenant_config.get('refresh_token')
+    refresh_url = tenant_config.get('refresh_url')
+    tenant_name = tenant_config.get('tenant_name')
     
     # Create token cache entry for tenant if it doesn't exist
     if tenant not in token_cache:
@@ -220,11 +263,6 @@ def refresh_alchemy_token(tenant):
             "access_token": None,
             "expires_at": 0
         }
-    
-    tenant_config = get_tenant_config(tenant)
-    refresh_token = tenant_config.get('refresh_token')
-    refresh_url = tenant_config.get('refresh_url')
-    tenant_name = tenant_config.get('tenant_name')
     
     current_time = time.time()
     if (token_cache[tenant]["access_token"] and 
@@ -278,10 +316,14 @@ def refresh_alchemy_token(tenant):
 @app.route('/get-test-locations/<tenant>', methods=['GET'])
 def get_test_locations(tenant):
     """Return hardcoded test locations for debugging frontend"""
+    # Get tenant configuration
+    tenant_config = get_tenant_config(tenant)
+    tenant_display_name = tenant_config.get('display_name')
+    
     test_locations = [
         {
             "id": "1001",
-            "name": f"Warehouse A ({tenant})",
+            "name": f"Warehouse A ({tenant_display_name})",
             "sublocations": [
                 {"id": "sub1", "name": "Section A1"},
                 {"id": "sub2", "name": "Section A2"}
@@ -289,7 +331,7 @@ def get_test_locations(tenant):
         },
         {
             "id": "1002",
-            "name": f"Laboratory B ({tenant})",
+            "name": f"Laboratory B ({tenant_display_name})",
             "sublocations": [
                 {"id": "sub3", "name": "Lab Storage 1"},
                 {"id": "sub4", "name": "Lab Storage 2"}
@@ -297,7 +339,7 @@ def get_test_locations(tenant):
         },
         {
             "id": "1003",
-            "name": f"Office Building ({tenant})",
+            "name": f"Office Building ({tenant_display_name})",
             "sublocations": []
         }
     ]
@@ -382,7 +424,7 @@ def get_fallback_locations():
 def get_locations(tenant):
     try:
         # Check if tenant exists
-        if tenant not in TENANT_CONFIGS:
+        if tenant not in CONFIG["tenants"]:
             return jsonify({"error": f"Unknown tenant: {tenant}"}), 404
             
         tenant_config = get_tenant_config(tenant)
@@ -602,7 +644,7 @@ def update_location(tenant):
     
     try:
         # Check if tenant exists
-        if tenant not in TENANT_CONFIGS:
+        if tenant not in CONFIG["tenants"]:
             return jsonify({"status": "error", "message": f"Unknown tenant: {tenant}"}), 404
             
         tenant_config = get_tenant_config(tenant)
@@ -637,7 +679,7 @@ def update_location(tenant):
                 if not record_id:
                     failed_records.append({
                         "id": barcode,
-                        "error": f"Record not found for this barcode in tenant {tenant}"
+                        "error": f"Record not found for this barcode in tenant {tenant_config['display_name']}"
                     })
                     continue
                 
@@ -714,7 +756,7 @@ def update_location(tenant):
         # Return results
         return jsonify({
             "status": "success" if not failed_records else "partial",
-            "message": f"Updated {len(success_records)} of {len(barcode_codes)} records in tenant {tenant}",
+            "message": f"Updated {len(success_records)} of {len(barcode_codes)} records in tenant {tenant_config['display_name']}",
             "successful": success_records,
             "failed": failed_records
         })
