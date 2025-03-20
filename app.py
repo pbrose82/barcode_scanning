@@ -159,7 +159,6 @@ DEFAULT_TENANT = CONFIG["default_tenant"]
 # Global Token Cache
 token_cache = {}
 
-# Get tenant configuration
 def get_tenant_config(tenant_id):
     """Get tenant configuration from config file"""
     if tenant_id not in CONFIG["tenants"]:
@@ -175,8 +174,14 @@ def get_tenant_config(tenant_id):
         "display_name": tenant.get("display_name", tenant.get("tenant_name")),
         "description": tenant.get("description", ""),
         "button_class": tenant.get("button_class", "primary"),
-        "refresh_token": os.getenv(tenant.get("env_token_var"))
     }
+    
+    # Check for a directly stored refresh token first
+    if "stored_refresh_token" in tenant and tenant["stored_refresh_token"]:
+        tenant_config["refresh_token"] = tenant["stored_refresh_token"]
+    else:
+        # Fall back to environment variable
+        tenant_config["refresh_token"] = os.getenv(tenant.get("env_token_var"))
     
     # Add URLs based on config
     if tenant.get("use_custom_urls") and "custom_urls" in tenant:
@@ -197,6 +202,46 @@ def get_tenant_config(tenant_id):
         })
     
     return tenant_config
+
+@app.route('/api/update-tenant-token', methods=['POST'])
+def update_tenant_token():
+    """Update refresh token for a tenant directly in the config"""
+    try:
+        data = request.json
+        if not data or 'tenant_id' not in data or 'refresh_token' not in data:
+            return jsonify({
+                "status": "error", 
+                "message": "Missing tenant_id or refresh_token"
+            }), 400
+            
+        tenant_id = data['tenant_id']
+        refresh_token = data['refresh_token']
+        
+        # Check if tenant exists
+        if tenant_id not in CONFIG["tenants"]:
+            return jsonify({
+                "status": "error", 
+                "message": f"Tenant {tenant_id} not found"
+            }), 404
+            
+        # Update token in config
+        CONFIG["tenants"][tenant_id]["stored_refresh_token"] = refresh_token
+        
+        # Save the updated config
+        save_config()
+        
+        # Clear the token cache for this tenant
+        if tenant_id in token_cache:
+            del token_cache[tenant_id]
+        
+        return jsonify({
+            "status": "success", 
+            "message": f"Refresh token updated for tenant {tenant_id}"
+        })
+        
+    except Exception as e:
+        logging.error(f"Error updating tenant token: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 # Route Handlers
 @app.route('/')
