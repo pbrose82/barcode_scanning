@@ -41,8 +41,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const updateResults = document.getElementById('update-results');
     const resultsContent = document.getElementById('results-content');
 
-    // Set maximum number of barcodes that can be scanned
-    const MAX_BARCODES = 5;
+    // No maximum limit for barcodes
     
     // Flag to prevent automatic refocus during dropdown interaction
     let isSelectingLocation = false;
@@ -143,8 +142,8 @@ document.addEventListener('DOMContentLoaded', function() {
             barcodeInput.addEventListener('blur', function() {
                 // Short timeout to allow for button clicks
                 setTimeout(() => {
-                    // Only re-focus if we're not using dropdowns and not at max barcodes
-                    if (!isSelectingLocation && recordIds.length < MAX_BARCODES) {
+                    // Only re-focus if we're not using dropdowns
+                    if (!isSelectingLocation) {
                         console.log('Re-focusing barcode input');
                         barcodeInput.focus();
                     }
@@ -337,12 +336,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (!isValidRecordId(code)) {
             showNotification('Please enter a valid barcode format.', 'error');
-            return;
-        }
-        
-        // Check if we've reached the maximum
-        if (recordIds.length >= MAX_BARCODES) {
-            showNotification(`Maximum of ${MAX_BARCODES} barcodes reached. Remove some to scan more.`, 'error');
             return;
         }
         
