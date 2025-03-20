@@ -77,20 +77,12 @@
             </div>
             
             <div class="tenant-list">
-                <a href="/tenant/default" class="btn btn-outline-primary tenant-button">
-                    <div class="tenant-name">Default Tenant</div>
-                    <p class="tenant-description">Primary Alchemy environment</p>
+                {% for tenant_id, tenant_data in tenants.items() %}
+                <a href="/tenant/{{ tenant_id }}" class="btn btn-outline-{{ tenant_data.button_class }} tenant-button">
+                    <div class="tenant-name">{{ tenant_data.display_name }}</div>
+                    <p class="tenant-description">{{ tenant_data.description }}</p>
                 </a>
-                
-                <a href="/tenant/tenant1" class="btn btn-outline-secondary tenant-button">
-                    <div class="tenant-name">Tenant 1</div>
-                    <p class="tenant-description">Test environment</p>
-                </a>
-                
-                <a href="/tenant/tenant2" class="btn btn-outline-info tenant-button">
-                    <div class="tenant-name">Tenant 2</div>
-                    <p class="tenant-description">Production environment</p>
-                </a>
+                {% endfor %}
             </div>
         </div>
     </div>
