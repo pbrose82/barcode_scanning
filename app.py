@@ -129,7 +129,7 @@ def debug_page(tenant):
         # Get test locations
         test_locations = get_fallback_locations()
         
-        # Build HTML response
+        # Build HTML response - Use string concatenation for JS instead of template literals
         html = f"""
         <!DOCTYPE html>
         <html>
@@ -176,67 +176,67 @@ def debug_page(tenant):
                 
                 let locationData = [];
                 
-                function init() {
-                    testBtn.addEventListener('click', () => fetchLocations(`/get-test-locations/${tenant}`));
-                    realBtn.addEventListener('click', () => fetchLocations(`/get-locations/${tenant}`));
+                function init() {{
+                    testBtn.addEventListener('click', () => fetchLocations('/get-test-locations/' + tenant));
+                    realBtn.addEventListener('click', () => fetchLocations('/get-locations/' + tenant));
                     locationSelect.addEventListener('change', handleLocationChange);
                     
                     // Initial load of test locations
-                    fetchLocations(`/get-test-locations/${tenant}`);
-                }
+                    fetchLocations('/get-test-locations/' + tenant);
+                }}
                 
-                function fetchLocations(endpoint) {
+                function fetchLocations(endpoint) {{
                     status.textContent = 'Loading...';
                     locationSelect.innerHTML = '<option value="">Loading...</option>';
                     
                     fetch(endpoint)
                         .then(response => response.json())
-                        .then(data => {
-                            status.textContent = `Loaded ${data.length} locations`;
+                        .then(data => {{
+                            status.textContent = 'Loaded ' + data.length + ' locations';
                             output.textContent = JSON.stringify(data, null, 2);
                             locationData = data;
                             populateLocations(data);
-                        })
-                        .catch(error => {
-                            status.textContent = `Error: ${error.message}`;
+                        }})
+                        .catch(error => {{
+                            status.textContent = 'Error: ' + error.message;
                             output.textContent = error.toString();
-                        });
-                }
+                        }});
+                }}
                 
-                function populateLocations(locations) {
+                function populateLocations(locations) {{
                     locationSelect.innerHTML = '<option value="">-- Select Location --</option>';
                     
-                    locations.forEach(location => {
+                    locations.forEach(location => {{
                         const option = document.createElement('option');
                         option.value = location.id;
                         option.textContent = location.name || 'Unnamed Location';
                         locationSelect.appendChild(option);
-                    });
-                }
+                    }});
+                }}
                 
-                function handleLocationChange() {
+                function handleLocationChange() {{
                     const selectedId = locationSelect.value;
                     sublocationSelect.innerHTML = '<option value="">-- Select Sublocation --</option>';
                     
-                    if (!selectedId) {
+                    if (!selectedId) {{
                         sublocationSelect.disabled = true;
                         return;
-                    }
+                    }}
                     
                     const location = locationData.find(loc => loc.id === selectedId);
                     
-                    if (location && location.sublocations && location.sublocations.length) {
-                        location.sublocations.forEach(sub => {
+                    if (location && location.sublocations && location.sublocations.length) {{
+                        location.sublocations.forEach(sub => {{
                             const option = document.createElement('option');
                             option.value = sub.id;
                             option.textContent = sub.name;
                             sublocationSelect.appendChild(option);
-                        });
+                        }});
                         sublocationSelect.disabled = false;
-                    } else {
+                    }} else {{
                         sublocationSelect.disabled = true;
-                    }
-                }
+                    }}
+                }}
                 
                 init();
             </script>
