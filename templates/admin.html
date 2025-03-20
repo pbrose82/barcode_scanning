@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tenant Administration - Alchemy Barcode Scanner</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container py-5">
+        <h1 class="mb-4">Tenant Administration</h1>
+        
+        <div class="row mb-5">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Current Tenants</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Display Name</th>
+                                    <th>Actual Tenant Name</th>
+                                    <th>Description</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for tenant_id, tenant in tenants.items() %}
+                                <tr>
+                                    <td>{{ tenant_id }}</td>
+                                    <td>{{ tenant.display_name }}</td>
+                                    <td>{{ tenant.tenant_name }}</td>
+                                    <td>{{ tenant.description }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary">Edit</button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Add New Tenant</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="add-tenant-form">
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Tenant ID</label>
+                                    <input type="text" name="tenant_id" class="form-control" required>
+                                    <div class="form-text">Internal ID for the tenant (e.g., tenant1)</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Actual Tenant Name</label>
+                                    <input type="text" name="tenant_name" class="form-control" required>
+                                    <div class="form-text">Actual tenant name in Alchemy</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Display Name</label>
+                                    <input type="text" name="display_name" class="form-control" required>
+                                    <div class="form-text">Name shown to users</div>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Description</label>
+                                    <input type="text" name="description" class="form-control">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Button Class</label>
+                                    <select name="button_class" class="form-select">
+                                        <option value="primary">Primary</option>
+                                        <option value="secondary">Secondary</option>
+                                        <option value="success">Success</option>
+                                        <option value="info">Info</option>
+                                        <option value="warning">Warning</option>
+                                        <option value="danger">Danger</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Environment Variable</label>
+                                    <input type="text" name="env_token_var" class="form-control" required>
+                                    <div class="form-text">Env var for refresh token</div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="use_custom_urls" id="use_custom_urls">
+                                    <label class="form-check-label" for="use_custom_urls">
+                                        Use Custom URLs
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div id="custom_urls_section" style="display: none;">
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Refresh URL</label>
+                                        <input type="text" name="refresh_url" class="form-control">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">API URL</label>
+                                        <input type="text" name="api_url" class="form-control">
+                                    </div>
+                                </div>
+                                
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Filter URL</label>
+                                        <input type="text" name="filter_url" class="form-control">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Find Records URL</label>
+                                        <input type="text" name="find_records_url" class="form-control">
+                                    </div>
+                                </div>
+                                
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Base URL</label>
+                                        <input type="text" name="base_url" class="form-control">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-4">
+                                <button type="submit" class="btn btn-primary">Add Tenant</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Toggle custom URLs section
+            const useCustomUrlsCheckbox = document.getElementById('use_custom_urls');
+            const customUrlsSection = document.getElementById('custom_urls_section');
+            
+            useCustomUrlsCheckbox.addEventListener('change', function() {
+                customUrlsSection.style.display = this.checked ? 'block' : 'none';
+            });
+            
+            // Handle form submission
+            const form = document.getElementById('add-tenant-form');
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(form);
+                
+                fetch('/admin/add-tenant', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        alert(data.message);
+                        window.location.reload();
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    alert('Error: ' + error.message);
+                });
+            });
+        });
+    </script>
+</body>
+</html>
