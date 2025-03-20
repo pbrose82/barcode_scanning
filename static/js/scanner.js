@@ -10,6 +10,12 @@ console.log('Scanner.js is loading...');
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded, initializing application...');
     
+    // Get tenant information from the global variable (set in the HTML template)
+    const tenant = window.tenantInfo ? window.tenantInfo.tenant : 'default';
+    const tenantName = window.tenantInfo ? window.tenantInfo.tenantName : 'Default';
+    
+    console.log(`Running in tenant: ${tenant} (${tenantName})`);
+    
     // Debug check to see if elements are found correctly
     console.log('Elements check:', {
         'barcodeInput': document.getElementById('barcode-input'),
@@ -35,8 +41,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const updateResults = document.getElementById('update-results');
     const resultsContent = document.getElementById('results-content');
 
-    // Set maximum number of barcodes that can be scanned
-    const MAX_BARCODES = 5;
+    // No maximum limit for barcodes
     
     // Flag to prevent automatic refocus during dropdown interaction
     let isSelectingLocation = false;
@@ -137,8 +142,8 @@ document.addEventListener('DOMContentLoaded', function() {
             barcodeInput.addEventListener('blur', function() {
                 // Short timeout to allow for button clicks
                 setTimeout(() => {
-                    // Only re-focus if we're not using dropdowns and not at max barcodes
-                    if (!isSelectingLocation && recordIds.length < MAX_BARCODES) {
+                    // Only re-focus if we're not using dropdowns
+                    if (!isSelectingLocation) {
                         console.log('Re-focusing barcode input');
                         barcodeInput.focus();
                     }
@@ -169,7 +174,7 @@ document.addEventListener('DOMContentLoaded', function() {
         locationSelect.innerHTML = '<option value="">Loading locations...</option>';
         
         // Try both endpoints for reliability
-        fetch('/get-locations')
+        fetch(`/get-locations/${tenant}`)
             .then(response => {
                 console.log('Fetch response:', response);
                 if (!response.ok) {
@@ -197,7 +202,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Try fallback to test locations if real locations fail
                 console.log('Trying test locations instead...');
-                fetch('/get-test-locations')
+                fetch(`/get-test-locations/${tenant}`)
                     .then(response => response.json())
                     .then(data => {
                         console.log('Test locations fetched:', data);
@@ -334,12 +339,6 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Check if we've reached the maximum
-        if (recordIds.length >= MAX_BARCODES) {
-            showNotification(`Maximum of ${MAX_BARCODES} barcodes reached. Remove some to scan more.`, 'error');
-            return;
-        }
-        
         // Check for duplicates
         if (recordIds.includes(code)) {
             showNotification('This barcode has already been scanned.', 'warning');
@@ -464,7 +463,7 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Sending update data:', data);
         
         // Send update request to server
-        fetch('/update-location', {
+        fetch(`/update-location/${tenant}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
