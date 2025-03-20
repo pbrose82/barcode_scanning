@@ -15,7 +15,7 @@ def load_config():
     try:
         paths = [
             os.path.join(os.path.dirname(__file__), 'config.json'),
-            '/app/config.json',
+            '/barcode_scanning/config.json',
             os.path.join(os.path.dirname(__file__), '..', 'config.json')
         ]
         
