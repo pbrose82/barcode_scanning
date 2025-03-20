@@ -469,11 +469,11 @@ def update_tenant_token():
             
     
             
-        # Update token in config
+       # Update token in config
         CONFIG["tenants"][tenant_id]["stored_refresh_token"] = refresh_token
         
         # Save the updated config
-        save_config(CONFIG)
+        save_config()
         
         # Clear the token cache for this tenant
         if tenant_id in token_cache:
