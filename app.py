@@ -46,7 +46,7 @@ def ensure_config_file():
             "tenants": {
                 "default": {
                     "tenant_name": "productcaseelnlims4uat",
-                    "display_name": "Product Case ELN LIMS UAT",
+                    "display_name": "Product Case ELN&LIMS UAT",
                     "description": "Primary Alchemy environment",
                     "button_class": "primary",
                     "env_token_var": "DEFAULT_REFRESH_TOKEN",
@@ -54,9 +54,9 @@ def ensure_config_file():
                 },
                 "tenant1": {
                     "tenant_name": "caseelnlims4uat",
-                    "display_name": "CASE UAT",
+                    "display_name": "CASE ELN&LIMS UAT",
                     "description": "Test environment",
-                    "button_class": "secondary",
+                    "button_class": "primary",
                     "env_token_var": "TENANT1_REFRESH_TOKEN",
                     "use_custom_urls": False
                 },
