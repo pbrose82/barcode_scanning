@@ -304,6 +304,33 @@ def update_tenant_token():
                 "status": "error", 
                 "message": f"Tenant {tenant_id} not found"
             }), 404
+        
+        # Debugging: log the full response if something goes wrong
+        try:
+            # Verify token by calling Alchemy's token validation/refresh endpoint
+            response = requests.put(
+                DEFAULT_URLS['refresh_url'], 
+                json={"refreshToken": refresh_token},
+                headers={"Content-Type": "application/json"}
+            )
+            
+            # Log full response details
+            logging.info(f"Token verification response status: {response.status_code}")
+            logging.info(f"Response headers: {response.headers}")
+            
+            # If response is not successful, log the full text
+            if not response.ok:
+                logging.error(f"Token verification failed. Response text: {response.text}")
+                return jsonify({
+                    "status": "error", 
+                    "message": f"Token verification failed: {response.text}"
+                }), 400
+        except Exception as verify_error:
+            logging.error(f"Error verifying token: {verify_error}")
+            return jsonify({
+                "status": "error", 
+                "message": f"Token verification error: {str(verify_error)}"
+            }), 500
             
         # Update token in config
         CONFIG["tenants"][tenant_id]["stored_refresh_token"] = refresh_token
