@@ -173,8 +173,7 @@
         
         <div class="row mt-4">
             <div class="col-md-12">
-                <div class="d-flex justify-content-between">
-                    <button id="reload-config-btn" class="btn btn-info">Reload Config</button>
+                <div class="d-flex justify-content-end">
                     <a href="/" class="btn btn-secondary">Back to Home</a>
                 </div>
             </div>
@@ -250,6 +249,15 @@
                             <label class="form-label">Environment Variable Command</label>
                             <div class="alert alert-dark" id="env-var-command">
                                 export TOKEN_VAR="token_value"
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3 mt-4">
+                            <button type="button" class="btn btn-success" id="store-token-btn">
+                                Store Token in App Config
+                            </button>
+                            <div class="form-text">
+                                This will store the token directly in the application config so you don't need to set environment variables.
                             </div>
                         </div>
                     </div>
@@ -395,6 +403,16 @@
             // Token reset button click
             document.getElementById('token-reset-btn').addEventListener('click', function() {
                 resetTokenModal();
+            });
+            
+            // Store token button click
+            document.getElementById('store-token-btn').addEventListener('click', function() {
+                const refreshToken = document.getElementById('refresh-token-value').value;
+                if (refreshToken && currentTokenTenant && currentTokenTenant.id) {
+                    storeRefreshToken(currentTokenTenant.id, refreshToken);
+                } else {
+                    alert('Error: Missing token or tenant information');
+                }
             });
             
             // Copy token buttons
@@ -549,6 +567,43 @@
                 });
             }
             
+            // Store refresh token directly in the app config
+            function storeRefreshToken(tenantId, refreshToken) {
+                fetch('/api/update-tenant-token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        tenant_id: tenantId,
+                        refresh_token: refreshToken
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Add a success message in the token modal
+                        const resultDiv = document.getElementById('token-result');
+                        
+                        // Check if we already added a success message
+                        const existingMsg = resultDiv.querySelector('.token-stored-message');
+                        if (existingMsg) {
+                            existingMsg.textContent = 'Token successfully stored in application config!';
+                        } else {
+                            const successMsg = document.createElement('div');
+                            successMsg.className = 'alert alert-success mt-3 token-stored-message';
+                            successMsg.textContent = 'Token successfully stored in application config!';
+                            resultDiv.appendChild(successMsg);
+                        }
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    alert('Error storing token: ' + error.message);
+                });
+            }
+            
             // Copy to clipboard function
             function copyToClipboard(elementId) {
                 const element = document.getElementById(elementId);
@@ -562,25 +617,6 @@
                     event.target.textContent = originalButtonText;
                 }, 2000);
             }
-            
-            // Reload config button click
-            document.getElementById('reload-config-btn').addEventListener('click', function() {
-                fetch('/admin/reload-config', {
-                    method: 'POST'
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        alert(data.message);
-                        window.location.reload();
-                    } else {
-                        alert('Error: ' + data.message);
-                    }
-                })
-                .catch(error => {
-                    alert('Error: ' + error.message);
-                });
-            });
             
             // Reset form to add mode
             function resetForm() {
