@@ -33,6 +33,17 @@
         .header-btn {
             margin-right: 10px;
         }
+        .tree-node {
+            display: flex;
+            align-items: center;
+        }
+        .tree-icon {
+            margin-right: 5px;
+            color: #0047BB;
+        }
+        .indented {
+            margin-left: 25px;
+        }
     </style>
 </head>
 <body>
@@ -75,27 +86,59 @@
             const tenantSelector = document.getElementById('tenantSelector');
             const gridDiv = document.getElementById('locationGrid');
 
+            // Custom tree cell renderer that manually creates the tree look
+            function TreeCellRenderer() {}
+            
+            TreeCellRenderer.prototype.init = function(params) {
+                this.eGui = document.createElement('div');
+                this.eGui.className = 'tree-node';
+                
+                let html = '';
+                
+                // Add indentation and icons based on level
+                if (params.data.level > 0) {
+                    html += '<div class="indented">';
+                    html += '<i class="fas fa-arrow-right tree-icon"></i>';
+                }
+                
+                // Add location name with appropriate icon
+                if (params.data.isParent) {
+                    html += '<i class="fas fa-folder tree-icon"></i>';
+                } else {
+                    html += '<i class="fas fa-map-marker-alt tree-icon"></i>';
+                }
+                
+                html += params.value;
+                
+                if (params.data.level > 0) {
+                    html += '</div>';
+                }
+                
+                this.eGui.innerHTML = html;
+            };
+            
+            TreeCellRenderer.prototype.getGui = function() {
+                return this.eGui;
+            };
+
             // Define the columns for AG Grid
             const columnDefs = [
                 {
                     headerName: 'Location Hierarchy',
                     field: 'name',
-                    cellRenderer: 'agGroupCellRenderer',
-                    showRowGroup: true,
-                    cellRendererParams: {
-                        suppressCount: true,
-                        innerRenderer: function(params) {
-                            return params.data ? params.data.name : params.value;
-                        }
-                    },
+                    cellRenderer: 'treeCellRenderer',
                     flex: 2,
-                    minWidth: 250
+                    minWidth: 250,
+                    sortable: true,
+                    filter: true
                 },
                 {
                     headerName: 'Location ID',
                     field: 'id',
                     flex: 1,
-                    minWidth: 100
+                    minWidth: 100,
+                    sortable: true,
+                    filter: true
                 }
             ];
 
@@ -103,101 +146,64 @@
             const gridOptions = {
                 columnDefs: columnDefs,
                 defaultColDef: {
-                    sortable: true, 
-                    filter: true,
                     resizable: true
+                },
+                components: {
+                    treeCellRenderer: TreeCellRenderer
                 },
                 rowData: [],
                 pagination: true,
-                paginationPageSize: 20,
-                rowGroupPanelShow: 'never',
-                groupDefaultExpanded: 1,
-                autoGroupColumnDef: {
-                    headerName: 'Location Hierarchy',
-                    minWidth: 300,
-                    cellRendererParams: {
-                        suppressCount: true
-                    }
-                },
-                treeData: true,
-                groupDisplayType: 'groupRows',
-                getDataPath: function(data) {
-                    return data.path;
-                }
+                paginationPageSize: 20
             };
 
             // Initialize the grid
             new agGrid.Grid(gridDiv, gridOptions);
 
-            // Function to fetch and transform locations
+            // Function to fetch locations and transform them into a hierarchical structure
             function fetchLocations(tenant) {
                 fetch(`/get-locations/${tenant}`)
                     .then(response => response.json())
                     .then(locations => {
-                        console.log('Raw location data:', locations);
+                        console.log('Raw locations:', locations);
                         
-                        // Create a proper hierarchical structure
-                        const treeNodes = [];
-                        const locationMap = {};
+                        // Flatten the hierarchy for display
+                        const flattenedData = [];
                         
-                        // First pass: create a lookup map of all locations by ID
-                        locations.forEach(location => {
-                            locationMap[location.id] = {
-                                ...location,
-                                children: []
-                            };
-                        });
+                        // Add parent nodes first (sorting alphabetically)
+                        const sortedLocations = [...locations].sort((a, b) => 
+                            a.name.localeCompare(b.name)
+                        );
                         
-                        // Second pass: create parent-child relationships
-                        locations.forEach(location => {
-                            if (location.sublocations && location.sublocations.length > 0) {
-                                location.sublocations.forEach(sublocation => {
-                                    // Find the sublocation in our map
-                                    if (locationMap[sublocation.id]) {
-                                        // Add this sublocation as a child to the parent location
-                                        locationMap[location.id].children.push(locationMap[sublocation.id]);
-                                    }
-                                });
-                            }
-                        });
-                        
-                        // Now flatten the tree for AG-Grid
-                        function addLocationNode(location, path = []) {
-                            const currentPath = [...path, location.name];
-                            
-                            // Add the current node
-                            treeNodes.push({
+                        // Add parent locations
+                        sortedLocations.forEach(location => {
+                            flattenedData.push({
                                 id: location.id,
                                 name: location.name,
-                                path: currentPath
+                                level: 0,
+                                isParent: location.sublocations && location.sublocations.length > 0
                             });
                             
-                            // Add all child nodes
-                            if (location.children && location.children.length > 0) {
-                                location.children.forEach(child => {
-                                    addLocationNode(child, currentPath);
+                            // Add child locations
+                            if (location.sublocations && location.sublocations.length > 0) {
+                                const sortedSublocations = [...location.sublocations].sort((a, b) => 
+                                    a.name.localeCompare(b.name)
+                                );
+                                
+                                sortedSublocations.forEach(sublocation => {
+                                    flattenedData.push({
+                                        id: sublocation.id,
+                                        name: sublocation.name,
+                                        level: 1,
+                                        isParent: false,
+                                        parentId: location.id,
+                                        parentName: location.name
+                                    });
                                 });
-                            }
-                        }
-                        
-                        // Add all root nodes (those with no parent)
-                        locations.forEach(location => {
-                            // Check if this location is a child of any other location
-                            const isChild = locations.some(parentLoc => 
-                                parentLoc.sublocations && 
-                                parentLoc.sublocations.some(sub => sub.id === location.id)
-                            );
-                            
-                            // If it's not a child, it's a root node
-                            if (!isChild) {
-                                addLocationNode(locationMap[location.id]);
                             }
                         });
                         
-                        console.log('Tree nodes:', treeNodes);
-                        
-                        // Update the grid with our tree data
-                        gridOptions.api.setRowData(treeNodes);
+                        console.log('Flattened data for grid:', flattenedData);
+                        gridOptions.api.setRowData(flattenedData);
                     })
                     .catch(error => {
                         console.error('Error fetching locations:', error);
