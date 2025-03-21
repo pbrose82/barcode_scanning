@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Location Tracking - Alchemy Barcode Scanner</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- AG Grid CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.0/styles/ag-grid.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.0/styles/ag-theme-alpine.css">
+    
+    <style>
+        body {
+            background-color: #f4f6f9;
+        }
+        .grid-container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-top: 20px;
+        }
+        #locationGrid {
+            height: 600px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center p-3 bg-white shadow-sm mb-3">
+                    <h3 class="mb-0">Location Tracking</h3>
+                    <div>
+                        <select id="tenantSelector" class="form-select">
+                            {% for tenant in tenants %}
+                            <option value="{{ tenant }}">{{ tenant }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-12">
+                <div class="grid-container">
+                    <div id="locationGrid" class="ag-theme-alpine"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AG Grid Community -->
+    <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.0/dist/ag-grid-community.min.js"></script>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const tenantSelector = document.getElementById('tenantSelector');
+            const gridDiv = document.getElementById('locationGrid');
+
+            // AG Grid column definitions
+            const columnDefs = [
+                { 
+                    headerName: 'Location ID', 
+                    field: 'id',
+                    filter: true,
+                    sortable: true
+                },
+                { 
+                    headerName: 'Location Name', 
+                    field: 'name',
+                    filter: true,
+                    sortable: true
+                },
+                { 
+                    headerName: 'Sublocation(s)', 
+                    field: 'sublocations',
+                    cellRenderer: function(params) {
+                        if (params.value && params.value.length > 0) {
+                            return params.value.map(sub => sub.name).join(', ');
+                        }
+                        return 'No sublocations';
+                    },
+                    sortable: true,
+                    filter: true
+                },
+                { 
+                    headerName: 'Scanned Barcodes', 
+                    field: 'barcodes',
+                    cellRenderer: function(params) {
+                        if (params.value && params.value.length > 0) {
+                            return params.value.join(', ');
+                        }
+                        return 'No barcodes';
+                    },
+                    sortable: true,
+                    filter: true
+                }
+            ];
+
+            // AG Grid options
+            const gridOptions = {
+                columnDefs: columnDefs,
+                defaultColDef: {
+                    flex: 1,
+                    minWidth: 150,
+                    resizable: true,
+                },
+                pagination: true,
+                paginationPageSize: 20,
+                domLayout: 'autoHeight',
+                rowSelection: 'multiple',
+                enableRangeSelection: true,
+                enableCharts: true,
+            };
+
+            // Initialize grid
+            const grid = new agGrid.Grid(gridDiv, gridOptions);
+
+            // Function to fetch locations for a tenant
+            function fetchLocations(tenant) {
+                fetch(`/get-locations/${tenant}`)
+                    .then(response => response.json())
+                    .then(locations => {
+                        // Placeholder for fetching barcodes - you'll need to implement this
+                        const locationsWithBarcodes = locations.map(location => ({
+                            ...location,
+                            barcodes: [] // This would be populated from your barcode tracking system
+                        }));
+                        gridOptions.api.setRowData(locationsWithBarcodes);
+                    })
+                    .catch(error => {
+                        console.error('Error fetching locations:', error);
+                        gridOptions.api.setRowData([]);
+                    });
+            }
+
+            // Initial load
+            fetchLocations(tenantSelector.value);
+
+            // Tenant selection change event
+            tenantSelector.addEventListener('change', function() {
+                fetchLocations(this.value);
+            });
+        });
+    </script>
+</body>
+</html>
