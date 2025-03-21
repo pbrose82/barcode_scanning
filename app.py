@@ -1,9 +1,12 @@
-from flask import Flask, request, jsonify, render_template, send_from_directory, redirect, url_for, Response
+from flask import Flask, request, jsonify, render_template, send_from_directory
+from flask import redirect, url_for, Response, session
 import os
 import logging
 import json
 import requests
 import time
+import secrets
+from datetime import datetime, timedelta
 
 # Persistent config paths for Render
 RENDER_CONFIG_DIR = '/opt/render/project/config'
@@ -12,8 +15,21 @@ RENDER_CONFIG_PATH = os.path.join(RENDER_CONFIG_DIR, 'config.json')
 # Logging Configuration
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Flask Application Setup
+# Flask Application Setup - use your existing templates
 app = Flask(__name__, static_folder='static', template_folder='templates')
+
+# Secret key for sessions - use environment variable or generate a secure one
+app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(16))
+
+# Set session timeout (1 hour)
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=1)
+
+# AG-Grid route
+@app.route('/location-tracking')
+def location_tracking():
+    """Render location tracking page with AG Grid"""
+    tenants = list(CONFIG["tenants"].keys())
+    return render_template('location_tracking.html', tenants=tenants)
 
 def ensure_config_directory():
     """Ensure the configuration directory exists and is not a file"""
@@ -247,14 +263,32 @@ def authenticate(username, password):
 
 @app.before_request
 def require_auth():
-    """Require authentication for admin routes"""
-    if request.path.startswith('/admin'):
-        auth = request.authorization
-        if not auth or not authenticate(auth.username, auth.password):
-            return Response(
-                'Could not verify your access level for that URL.\n'
-                'You have to login with proper credentials', 401,
-                {'WWW-Authenticate': 'Basic realm="Admin Access"'})
+    """
+    Require authentication for admin routes with session timeout
+    Sessions expire after 1 hour of inactivity
+    """
+    if request.path.startswith('/admin') and not request.path.startswith('/admin/login'):
+        # Skip authentication for the login page itself
+        if request.path == '/admin/login':
+            return None
+            
+        # Check if user is already authenticated and session is still valid
+        if 'admin_authenticated' in session and session['admin_authenticated']:
+            # Check if last activity was recorded 
+            if 'last_activity' in session:
+                # If more than 1 hour since last activity, invalidate the session
+                last_activity = datetime.fromisoformat(session['last_activity'])
+                if datetime.utcnow() - last_activity > timedelta(hours=1):
+                    session.pop('admin_authenticated', None)
+                    session.pop('last_activity', None)
+                    return redirect(url_for('admin_login'))
+                
+            # Update last activity time
+            session['last_activity'] = datetime.utcnow().isoformat()
+            return None
+        else:
+            # Not authenticated, redirect to login page
+            return redirect(url_for('admin_login'))
 
 def get_tenant_config(tenant_id):
     """Get tenant configuration from config file"""
@@ -439,6 +473,36 @@ def get_fallback_locations():
         }
     ]
 
+# Admin login routes
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    """Admin login page"""
+    error = None
+    
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        if authenticate(username, password):
+            # Set session as authenticated
+            session['admin_authenticated'] = True
+            session['last_activity'] = datetime.utcnow().isoformat()
+            session.permanent = True  # Use the permanent session lifetime
+            
+            # Redirect to the admin panel
+            return redirect(url_for('admin_panel'))
+        else:
+            error = "Invalid credentials. Please try again."
+    
+    return render_template('admin_login.html', error=error)
+
+@app.route('/admin/logout')
+def admin_logout():
+    """Admin logout"""
+    session.pop('admin_authenticated', None)
+    session.pop('last_activity', None)
+    return redirect(url_for('admin_login'))
+
 # Configuration Management Routes
 @app.route('/api/update-tenant-token', methods=['POST'])
 def update_tenant_token():
@@ -519,25 +583,6 @@ def update_tenant_token():
         
     except Exception as e:
         logging.error(f"Unexpected error updating tenant token: {str(e)}")
-        return jsonify({"status": "error", "message": str(e)}), 500
-            
-        # Update token in config
-        CONFIG["tenants"][tenant_id]["stored_refresh_token"] = refresh_token
-        
-        # Save the updated config (IMPORTANT: pass CONFIG as argument)
-        save_config(CONFIG)
-        
-        # Clear the token cache for this tenant
-        if tenant_id in token_cache:
-            del token_cache[tenant_id]
-        
-        return jsonify({
-            "status": "success", 
-            "message": f"Refresh token updated for tenant {tenant_id}"
-        })
-        
-    except Exception as e:
-        logging.error(f"Error updating tenant token: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/admin/add-tenant', methods=['POST'])
@@ -682,103 +727,6 @@ def reload_config_route():
         logging.error(f"Error reloading configuration: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
-# Create a simple error.html template
-@app.route('/create-error-template')
-def create_error_template():
-    """Create error.html template if it doesn't exist"""
-    try:
-        template_path = os.path.join(app.template_folder, 'error.html')
-        
-        # Check if template already exists
-        if os.path.exists(template_path):
-            return "Error template already exists."
-        
-        # Create templates directory if it doesn't exist
-        if not os.path.exists(app.template_folder):
-            os.makedirs(app.template_folder)
-        
-        # Write error template
-        error_html = """<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Error - Alchemy Barcode Scanner</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-            padding: 30px;
-        }
-        .error-container {
-            max-width: 600px;
-            margin: 50px auto;
-            text-align: center;
-        }
-        .error-icon {
-            font-size: 64px;
-            color: #dc3545;
-            margin-bottom: 20px;
-        }
-        .btn-home {
-            margin-top: 20px;
-        }
-    </style>
-</head>
-<body>
-    <div class="error-container">
-        <div class="error-icon">⚠️</div>
-        <h1 class="mb-3">Error</h1>
-        <div class="alert alert-danger">
-            {{ message }}
-        </div>
-        <a href="/" class="btn btn-primary btn-home">Go to Homepage</a>
-    </div>
-</body>
-</html>"""
-        
-        with open(template_path, 'w') as f:
-            f.write(error_html)
-            
-        return "Error template created successfully."
-    except Exception as e:
-        return f"Error creating template: {str(e)}"
-
-# Route for getting test locations (reliable hardcoded data)
-@app.route('/get-test-locations/<tenant>', methods=['GET'])
-def get_test_locations(tenant):
-    """Return hardcoded test locations for debugging frontend"""
-    # Get tenant configuration
-    tenant_config = get_tenant_config(tenant)
-    tenant_display_name = tenant_config.get('display_name')
-    
-    test_locations = [
-        {
-            "id": "1001",
-            "name": f"Warehouse A ({tenant_display_name})",
-            "sublocations": [
-                {"id": "sub1", "name": "Section A1"},
-                {"id": "sub2", "name": "Section A2"}
-            ]
-        },
-        {
-            "id": "1002",
-            "name": f"Laboratory B ({tenant_display_name})",
-            "sublocations": [
-                {"id": "sub3", "name": "Lab Storage 1"},
-                {"id": "sub4", "name": "Lab Storage 2"}
-            ]
-        },
-        {
-            "id": "1003",
-            "name": f"Office Building ({tenant_display_name})",
-            "sublocations": []
-        }
-    ]
-    return jsonify(test_locations)
-
 # Function to find record ID by scanned barcode
 def find_record_id_by_barcode(barcode, access_token, tenant):
     """Find Alchemy record ID using barcode as the Result.Code"""
@@ -902,6 +850,39 @@ def extract_sublocations_improved(location):
                             })
     
     return sublocations
+
+# Route for getting test locations (reliable hardcoded data)
+@app.route('/get-test-locations/<tenant>', methods=['GET'])
+def get_test_locations(tenant):
+    """Return hardcoded test locations for debugging frontend"""
+    # Get tenant configuration
+    tenant_config = get_tenant_config(tenant)
+    tenant_display_name = tenant_config.get('display_name')
+    
+    test_locations = [
+        {
+            "id": "1001",
+            "name": f"Warehouse A ({tenant_display_name})",
+            "sublocations": [
+                {"id": "sub1", "name": "Section A1"},
+                {"id": "sub2", "name": "Section A2"}
+            ]
+        },
+        {
+            "id": "1002",
+            "name": f"Laboratory B ({tenant_display_name})",
+            "sublocations": [
+                {"id": "sub3", "name": "Lab Storage 1"},
+                {"id": "sub4", "name": "Lab Storage 2"}
+            ]
+        },
+        {
+            "id": "1003",
+            "name": f"Office Building ({tenant_display_name})",
+            "sublocations": []
+        }
+    ]
+    return jsonify(test_locations)
 
 # Route for getting locations from Alchemy API
 @app.route('/get-locations/<tenant>', methods=['GET'])
@@ -1181,13 +1162,6 @@ def update_location(tenant):
             "status": "error", 
             "message": str(e)
         }), 500
-
-# Configuration Initialization
-ensure_config_directory()
-ensure_config_file()
-CONFIG = load_config()
-DEFAULT_URLS = CONFIG["default_urls"]
-DEFAULT_TENANT = CONFIG["default_tenant"]
 
 # Main Application Runner
 if __name__ == '__main__':
