@@ -91,17 +91,20 @@
                     sortable: true
                 },
                 { 
-                    headerName: 'Sublocation(s)', 
-                    field: 'sublocations',
-                    cellRenderer: function(params) {
-                        if (params.value && params.value.length > 0) {
-                            return params.value.map(sub => sub.name).join(', ');
-                        }
-                        return 'No sublocations';
-                    },
-                    sortable: true,
-                    filter: true
-                },
+    headerName: 'Sublocation(s)', 
+    field: 'sublocations',
+    cellRenderer: function(params) {
+        if (params.value && params.value.length > 0) {
+            // Create a formatted list of sublocations
+            return params.value.map(sub => sub.name).join('<br>');
+        }
+        return 'No sublocations';
+    },
+    sortable: true,
+    filter: true,
+    cellStyle: {'white-space': 'normal'}, // Allow text wrapping
+    autoHeight: true // Adjust row height based on content
+}
                 { 
                     headerName: 'Scanned Barcodes', 
                     field: 'barcodes',
