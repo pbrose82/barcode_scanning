@@ -24,12 +24,29 @@ app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(16))
 # Set session timeout (1 hour)
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=1)
 
-# AG-Grid route
+# AG-Grid route with mode parameter
 @app.route('/location-tracking')
-def location_tracking():
+@app.route('/location-tracking/<tenant>')
+def location_tracking(tenant=None):
     """Render location tracking page with AG Grid"""
+    # Get all tenants for admin mode
     tenants = list(CONFIG["tenants"].keys())
-    return render_template('location_tracking.html', tenants=tenants)
+    
+    # Determine if we're in admin mode or scanner mode
+    admin_mode = tenant is not None
+    
+    # If not in admin mode, use the current session tenant if available
+    if not admin_mode and 'tenant' in session:
+        tenant = session.get('tenant')
+    
+    # Always default to the default tenant if none specified
+    if not tenant:
+        tenant = DEFAULT_TENANT
+    
+    return render_template('location_tracking.html', 
+                           tenants=tenants, 
+                           current_tenant=tenant,
+                           admin_mode=admin_mode)
 
 def ensure_config_directory():
     """Ensure the configuration directory exists and is not a file"""
