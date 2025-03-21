@@ -810,40 +810,51 @@ def extract_location_name_improved(location):
 def extract_sublocations_improved(location):
     """Improved function to extract sublocations from Alchemy API response"""
     sublocations = []
-    location_id = location.get("recordId") or location.get("id", "unknown")
     
-    # Look for Item field which might contain sublocation references
+    # Look for Item field which might contain direct sublocation references
     if "fields" in location:
         item_fields = [field for field in location["fields"] if field.get("identifier") == "Item"]
         for item_field in item_fields:
             for row in item_field.get("rows", []):
-                if row.get("values") and len(row["values"]) > 0:
+                if row.get("values") and len(row["values"]) > 0 and row["values"][0].get("value"):
                     value = row["values"][0].get("value")
-                    if value and isinstance(value, dict) and "name" in value:
+                    if isinstance(value, dict) and "recordId" in value and "name" in value:
+                        # This is likely a sublocation reference
                         sublocations.append({
-                            "id": str(value.get("recordId", f"sub_{len(sublocations)}")),
-                            "name": value.get("name", "Unnamed Sublocation")
+                            "id": str(value.get("recordId")),
+                            "name": value.get("name")
                         })
     
-    # Check the fieldGroups for potential sublocations
+    # For the actual locations data, we're accessing from the first document, 
+    # we need to check the locationList fieldGroups for the SubLocations
     if "fieldGroups" in location:
         for group in location["fieldGroups"]:
             if group.get("identifier") == "LocationList":
-                sub_fields = [field for field in group.get("fields", []) if field.get("identifier") == "SubLocations"]
-                for field in sub_fields:
-                    for row in field.get("rows", []):
-                        if row.get("values") and len(row["values"]) > 0:
-                            value = row["values"][0].get("value")
-                            if value and isinstance(value, dict) and "name" in value:
-                                # Check if this sublocation is not already in the list
-                                sub_id = str(value.get("recordId", f"sub_{len(sublocations)}"))
-                                if not any(sub["id"] == sub_id for sub in sublocations):
-                                    sublocations.append({
-                                        "id": sub_id,
-                                        "name": value.get("name", "Unnamed Sublocation")
-                                    })
+                for field in group.get("fields", []):
+                    if field.get("identifier") == "SubLocations":
+                        for row in field.get("rows", []):
+                            if row.get("values") and len(row["values"]) > 0 and row["values"][0].get("value"):
+                                value = row["values"][0].get("value")
+                                # Make sure it's a valid location reference
+                                if isinstance(value, dict) and "recordId" in value and "name" in value:
+                                    subloc_id = str(value.get("recordId"))
+                                    # Check if this sublocation is not already in our list
+                                    if not any(sub.get("id") == subloc_id for sub in sublocations):
+                                        sublocations.append({
+                                            "id": subloc_id,
+                                            "name": value.get("name")
+                                        })
     
-    return sublocations
+    # Remove any duplicates based on ID
+    unique_sublocations = []
+    seen_ids = set()
+    for subloc in sublocations:
+        if subloc["id"] not in seen_ids:
+            seen_ids.add(subloc["id"])
+            unique_sublocations.append(subloc)
+    
+    logging.info(f"Found {len(unique_sublocations)} sublocations for location {location.get('name', 'unknown')}")
+    return unique_sublocations
 
 # Route for getting test locations (reliable hardcoded data)
 @app.route('/get-test-locations/<tenant>', methods=['GET'])
