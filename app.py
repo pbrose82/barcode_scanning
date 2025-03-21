@@ -11,12 +11,15 @@ from datetime import datetime, timedelta
 # Persistent config paths for Render
 RENDER_CONFIG_DIR = '/opt/render/project/config'
 RENDER_CONFIG_PATH = os.path.join(RENDER_CONFIG_DIR, 'config.json')
+RENDER_TEMPLATES_DIR = os.path.join(RENDER_CONFIG_DIR, 'templates')  # New persistent templates directory
 
 # Logging Configuration
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Flask Application Setup - MOVED TO TOP
-app = Flask(__name__, static_folder='static', template_folder='templates')
+app = Flask(__name__, 
+           static_folder='static', 
+           template_folder=RENDER_TEMPLATES_DIR if os.path.exists(RENDER_TEMPLATES_DIR) else 'templates')
 
 # Secret key for sessions
 app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(16))
@@ -30,6 +33,17 @@ def location_tracking():
     """Render location tracking page with AG Grid"""
     tenants = list(CONFIG["tenants"].keys())
     return render_template('location_tracking.html', tenants=tenants)
+
+def ensure_templates_directory():
+    """Ensure the persistent templates directory exists"""
+    try:
+        if not os.path.exists(RENDER_TEMPLATES_DIR):
+            os.makedirs(RENDER_TEMPLATES_DIR, exist_ok=True)
+            logging.info(f"Created persistent templates directory at {RENDER_TEMPLATES_DIR}")
+        return True
+    except Exception as e:
+        logging.error(f"Error creating templates directory: {str(e)}")
+        return False
 
 def ensure_config_directory():
     """Ensure the configuration directory exists and is not a file"""
@@ -794,9 +808,12 @@ def create_error_template():
 # Create admin login template
 @app.route('/create-admin-login-template')
 def create_admin_login_template():
-    """Create admin login template if it doesn't exist"""
-    try:
-        template_path = os.path.join(app.template_folder, 'admin_login.html')
+    # Ensure the templates directory exists
+    ensure_templates_directory()
+    
+    # Use RENDER_TEMPLATES_DIR instead of app.template_folder
+    template_path = os.path.join(RENDER_TEMPLATES_DIR, 'admin_login.html')
+    # ... rest of the function remains the same
         
         # Check if template already exists
         if os.path.exists(template_path):
