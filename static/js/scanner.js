@@ -264,60 +264,68 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Handle location change
-    function handleLocationChange() {
-        console.log('Location changed to:', locationSelect.value);
-        const selectedLocationId = locationSelect.value;
-        
-        if (!sublocationSelect) {
-            console.error('Cannot handle location change: sublocationSelect element not found');
-            return;
-        }
-        
-        // Clear sublocation dropdown
-        sublocationSelect.innerHTML = '';
-        const defaultSubOption = document.createElement('option');
-        defaultSubOption.value = '';
-        defaultSubOption.textContent = '-- Select Sublocation --';
-        sublocationSelect.appendChild(defaultSubOption);
-        
-        // Disable sublocation dropdown if no location selected
-        if (!selectedLocationId) {
-            sublocationSelect.disabled = true;
-            return;
-        }
-        
-        // Find selected location
-        const selectedLocation = locationData.find(loc => loc.id === selectedLocationId);
-        console.log('Selected location:', selectedLocation);
-        
-        // If location has sublocations, populate and enable the dropdown
-        if (selectedLocation && selectedLocation.sublocations && Array.isArray(selectedLocation.sublocations) && selectedLocation.sublocations.length > 0) {
-            console.log('Populating', selectedLocation.sublocations.length, 'sublocations');
-            
-            selectedLocation.sublocations.forEach(sublocation => {
-                if (sublocation && sublocation.id && sublocation.name) {
-                    const option = document.createElement('option');
-                    option.value = sublocation.id;
-                    option.textContent = sublocation.name;
-                    sublocationSelect.appendChild(option);
-                } else {
-                    console.warn('Invalid sublocation data:', sublocation);
-                }
-            });
-            sublocationSelect.disabled = false;
-        } else {
-            console.log('No sublocations available for this location');
-            const noSublocationsOption = document.createElement('option');
-            noSublocationsOption.value = '';
-            noSublocationsOption.textContent = 'No sublocations available';
-            noSublocationsOption.disabled = true;
-            sublocationSelect.appendChild(noSublocationsOption);
-            sublocationSelect.disabled = true;
-        }
-        
-        // Update UI based on current state
-        updateUI();
+function handleLocationChange() {
+    console.log('Location changed to:', locationSelect.value);
+    const selectedLocationId = locationSelect.value;
+    
+    if (!sublocationSelect) {
+        console.error('Cannot handle location change: sublocationSelect element not found');
+        return;
     }
+    
+    // Clear sublocation dropdown
+    sublocationSelect.innerHTML = '';
+    const defaultSubOption = document.createElement('option');
+    defaultSubOption.value = '';
+    defaultSubOption.textContent = '-- Select Sublocation --';
+    sublocationSelect.appendChild(defaultSubOption);
+    
+    // Disable sublocation dropdown if no location selected
+    if (!selectedLocationId) {
+        sublocationSelect.disabled = true;
+        return;
+    }
+    
+    // Find selected location
+    const selectedLocation = locationData.find(loc => loc.id === selectedLocationId);
+    console.log('Selected location:', selectedLocation);
+    
+    // If location has sublocations, populate and enable the dropdown
+    if (selectedLocation && selectedLocation.sublocations && 
+        Array.isArray(selectedLocation.sublocations) && 
+        selectedLocation.sublocations.length > 0) {
+        
+        console.log('Populating', selectedLocation.sublocations.length, 'sublocations for', selectedLocation.name);
+        
+        // Sort sublocations alphabetically by name for better UX
+        const sortedSublocations = [...selectedLocation.sublocations].sort((a, b) => 
+            a.name.localeCompare(b.name)
+        );
+        
+        sortedSublocations.forEach(sublocation => {
+            if (sublocation && sublocation.id && sublocation.name) {
+                const option = document.createElement('option');
+                option.value = sublocation.id;
+                option.textContent = sublocation.name;
+                sublocationSelect.appendChild(option);
+            } else {
+                console.warn('Invalid sublocation data:', sublocation);
+            }
+        });
+        sublocationSelect.disabled = false;
+    } else {
+        console.log('No sublocations available for this location');
+        const noSublocationsOption = document.createElement('option');
+        noSublocationsOption.value = '';
+        noSublocationsOption.textContent = 'No sublocations available';
+        noSublocationsOption.disabled = true;
+        sublocationSelect.appendChild(noSublocationsOption);
+        sublocationSelect.disabled = true;
+    }
+    
+    // Update UI based on current state
+    updateUI();
+}
     
     // Add a barcode to the list
     function addBarcode() {
