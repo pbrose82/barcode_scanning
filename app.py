@@ -810,44 +810,38 @@ def extract_location_name_improved(location):
 def extract_sublocations_improved(location):
     """Improved function to extract sublocations from Alchemy API response"""
     sublocations = []
+    location_id = location.get("recordId") or location.get("id", "unknown")
     
-    # Check for sublocations in fieldGroups
+    # Look for Item field which might contain sublocation references
+    if "fields" in location:
+        item_fields = [field for field in location["fields"] if field.get("identifier") == "Item"]
+        for item_field in item_fields:
+            for row in item_field.get("rows", []):
+                if row.get("values") and len(row["values"]) > 0:
+                    value = row["values"][0].get("value")
+                    if value and isinstance(value, dict) and "name" in value:
+                        sublocations.append({
+                            "id": str(value.get("recordId", f"sub_{len(sublocations)}")),
+                            "name": value.get("name", "Unnamed Sublocation")
+                        })
+    
+    # Check the fieldGroups for potential sublocations
     if "fieldGroups" in location:
         for group in location["fieldGroups"]:
-            group_id = group.get("identifier", "")
-            if "Location" in group_id or "SubLocation" in group_id:
-                for field in group.get("fields", []):
-                    field_id = field.get("identifier", "")
-                    if "SubLocation" in field_id or "Sublocation" in field_id:
-                        for idx, row in enumerate(field.get("rows", [])):
-                            if row.get("values") and len(row["values"]) > 0:
-                                value = row["values"][0].get("value")
-                                if value:
-                                    # Handle both string and object values
-                                    if isinstance(value, dict) and "name" in value:
-                                        sublocations.append({
-                                            "id": str(value.get("recordId", f"sub_{idx}")),
-                                            "name": value.get("name", "Unnamed Sublocation")
-                                        })
-                                    elif isinstance(value, str) and value.strip():
-                                        sublocations.append({
-                                            "id": f"sub_{location.get('recordId', location.get('id', 'unknown'))}_{idx}",
-                                            "name": value
-                                        })
-    
-    # If no sublocations found in fieldGroups, check fields directly
-    if not sublocations and "fields" in location:
-        for field in location["fields"]:
-            field_id = field.get("identifier", "")
-            if "SubLocation" in field_id or "Sublocation" in field_id:
-                for idx, row in enumerate(field.get("rows", [])):
-                    if row.get("values") and len(row["values"]) > 0:
-                        value = row["values"][0].get("value")
-                        if value and isinstance(value, str) and value.strip():
-                            sublocations.append({
-                                "id": f"sub_{location.get('recordId', location.get('id', 'unknown'))}_{idx}",
-                                "name": value
-                            })
+            if group.get("identifier") == "LocationList":
+                sub_fields = [field for field in group.get("fields", []) if field.get("identifier") == "SubLocations"]
+                for field in sub_fields:
+                    for row in field.get("rows", []):
+                        if row.get("values") and len(row["values"]) > 0:
+                            value = row["values"][0].get("value")
+                            if value and isinstance(value, dict) and "name" in value:
+                                # Check if this sublocation is not already in the list
+                                sub_id = str(value.get("recordId", f"sub_{len(sublocations)}"))
+                                if not any(sub["id"] == sub_id for sub in sublocations):
+                                    sublocations.append({
+                                        "id": sub_id,
+                                        "name": value.get("name", "Unnamed Sublocation")
+                                    })
     
     return sublocations
 
