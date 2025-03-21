@@ -42,7 +42,6 @@
                 <div class="d-flex justify-content-between align-items-center p-3 bg-white shadow-sm mb-3">
                     <h3 class="mb-0">Location Tracking</h3>
                     <div class="d-flex align-items-center">
-                        <!-- Added Back to Admin button -->
                         <a href="/admin" class="btn btn-outline-primary btn-sm header-btn">
                             <i class="fas fa-arrow-left"></i> Back to Admin
                         </a>
@@ -76,89 +75,129 @@
             const tenantSelector = document.getElementById('tenantSelector');
             const gridDiv = document.getElementById('locationGrid');
 
-            // AG Grid column definitions
+            // Define the columns for AG Grid
             const columnDefs = [
-                { 
+                {
+                    headerName: 'Location Hierarchy',
                     field: 'name',
-                    headerName: 'Location',
-                    filter: true,
-                    sortable: true,
                     cellRenderer: 'agGroupCellRenderer',
+                    showRowGroup: true,
                     cellRendererParams: {
+                        suppressCount: true,
                         innerRenderer: function(params) {
-                            return params.value;
+                            return params.data ? params.data.name : params.value;
                         }
                     },
-                    flex: 2
+                    flex: 2,
+                    minWidth: 250
                 },
-                { 
+                {
+                    headerName: 'Location ID',
                     field: 'id',
-                    headerName: 'Location ID', 
-                    filter: true,
-                    sortable: true,
-                    flex: 1
+                    flex: 1,
+                    minWidth: 100
                 }
             ];
 
-            // AG Grid options
+            // Create the grid options
             const gridOptions = {
                 columnDefs: columnDefs,
                 defaultColDef: {
-                    flex: 1,
-                    minWidth: 150,
-                    resizable: true,
-                    filter: true
+                    sortable: true, 
+                    filter: true,
+                    resizable: true
                 },
+                rowData: [],
                 pagination: true,
                 paginationPageSize: 20,
-                domLayout: 'autoHeight',
-                rowSelection: 'multiple',
-                enableRangeSelection: true,
-                treeData: true,
-                animateRows: true,
-                getDataPath: function(data) {
-                    return data.treePath;
-                },
+                rowGroupPanelShow: 'never',
+                groupDefaultExpanded: 1,
                 autoGroupColumnDef: {
                     headerName: 'Location Hierarchy',
                     minWidth: 300,
-                    flex: 2
+                    cellRendererParams: {
+                        suppressCount: true
+                    }
+                },
+                treeData: true,
+                groupDisplayType: 'groupRows',
+                getDataPath: function(data) {
+                    return data.path;
                 }
             };
 
-            // Initialize grid
+            // Initialize the grid
             new agGrid.Grid(gridDiv, gridOptions);
 
-            // Function to fetch locations for a tenant
+            // Function to fetch and transform locations
             function fetchLocations(tenant) {
                 fetch(`/get-locations/${tenant}`)
                     .then(response => response.json())
                     .then(locations => {
-                        // Transform the data for tree view
-                        const treeData = [];
+                        console.log('Raw location data:', locations);
                         
-                        // First, add all locations as root nodes
+                        // Create a proper hierarchical structure
+                        const treeNodes = [];
+                        const locationMap = {};
+                        
+                        // First pass: create a lookup map of all locations by ID
                         locations.forEach(location => {
-                            treeData.push({
-                                id: location.id,
-                                name: location.name,
-                                treePath: [location.name]
-                            });
-                            
-                            // Add sublocations as children
+                            locationMap[location.id] = {
+                                ...location,
+                                children: []
+                            };
+                        });
+                        
+                        // Second pass: create parent-child relationships
+                        locations.forEach(location => {
                             if (location.sublocations && location.sublocations.length > 0) {
                                 location.sublocations.forEach(sublocation => {
-                                    treeData.push({
-                                        id: sublocation.id,
-                                        name: sublocation.name,
-                                        treePath: [location.name, sublocation.name]
-                                    });
+                                    // Find the sublocation in our map
+                                    if (locationMap[sublocation.id]) {
+                                        // Add this sublocation as a child to the parent location
+                                        locationMap[location.id].children.push(locationMap[sublocation.id]);
+                                    }
                                 });
                             }
                         });
                         
-                        // Set the row data with the tree structure
-                        gridOptions.api.setRowData(treeData);
+                        // Now flatten the tree for AG-Grid
+                        function addLocationNode(location, path = []) {
+                            const currentPath = [...path, location.name];
+                            
+                            // Add the current node
+                            treeNodes.push({
+                                id: location.id,
+                                name: location.name,
+                                path: currentPath
+                            });
+                            
+                            // Add all child nodes
+                            if (location.children && location.children.length > 0) {
+                                location.children.forEach(child => {
+                                    addLocationNode(child, currentPath);
+                                });
+                            }
+                        }
+                        
+                        // Add all root nodes (those with no parent)
+                        locations.forEach(location => {
+                            // Check if this location is a child of any other location
+                            const isChild = locations.some(parentLoc => 
+                                parentLoc.sublocations && 
+                                parentLoc.sublocations.some(sub => sub.id === location.id)
+                            );
+                            
+                            // If it's not a child, it's a root node
+                            if (!isChild) {
+                                addLocationNode(locationMap[location.id]);
+                            }
+                        });
+                        
+                        console.log('Tree nodes:', treeNodes);
+                        
+                        // Update the grid with our tree data
+                        gridOptions.api.setRowData(treeNodes);
                     })
                     .catch(error => {
                         console.error('Error fetching locations:', error);
