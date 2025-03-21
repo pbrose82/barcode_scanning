@@ -3,174 +3,222 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Location Dropdown Test</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Location Tracking - Alchemy Barcode Scanner</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- AG Grid CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.0/styles/ag-grid.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.0/styles/ag-theme-alpine.css">
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
-        body { 
+        body {
+            background-color: #f4f6f9;
+        }
+        .grid-container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             padding: 20px;
-            font-family: Arial, sans-serif;
-        }
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-        }
-        #api-response {
-            background-color: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            padding: 15px;
             margin-top: 20px;
-            max-height: 300px;
-            overflow: auto;
-            font-family: monospace;
-            white-space: pre-wrap;
+        }
+        #locationGrid {
+            height: 600px;
+            width: 100%;
+        }
+        .header-btn {
+            margin-right: 10px;
+        }
+        .tree-node {
+            display: flex;
+            align-items: center;
+        }
+        .tree-icon {
+            margin-right: 5px;
+            color: #0047BB;
+        }
+        .indented {
+            margin-left: 25px;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2>Location Dropdown Test</h2>
-        
-        <div class="mb-3">
-            <button id="fetch-test" class="btn btn-primary me-2">Fetch Test Locations</button>
-            <button id="fetch-real" class="btn btn-secondary">Fetch Real Locations</button>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center p-3 bg-white shadow-sm mb-3">
+                    <h3 class="mb-0">Location Tracking</h3>
+                    <div class="d-flex align-items-center">
+                        <a href="/admin" class="btn btn-outline-primary btn-sm header-btn">
+                            <i class="fas fa-arrow-left"></i> Back to Admin
+                        </a>
+                        <select id="tenantSelector" class="form-select">
+                            {% for tenant in tenants %}
+                            <option value="{{ tenant }}">{{ tenant }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
         </div>
         
-        <div class="mb-3">
-            <label for="location-select" class="form-label">Select Location</label>
-            <select class="form-select" id="location-select">
-                <option value="">-- Select Location --</option>
-            </select>
-        </div>
-        
-        <div class="mb-3">
-            <label for="sublocation-select" class="form-label">Select Sublocation</label>
-            <select class="form-select" id="sublocation-select" disabled>
-                <option value="">-- Select Sublocation --</option>
-            </select>
-        </div>
-        
-        <div class="alert alert-info" id="status">Ready to test...</div>
-        
-        <div>
-            <h4>API Response (Raw)</h4>
-            <div id="api-response"></div>
+        <div class="row">
+            <div class="col-12">
+                <div class="grid-container">
+                    <div id="locationGrid" class="ag-theme-alpine"></div>
+                </div>
+            </div>
         </div>
     </div>
+
+    <!-- AG Grid Community -->
+    <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.0/dist/ag-grid-community.min.js"></script>
     
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
     <script>
-        // Get elements
-        const locationSelect = document.getElementById('location-select');
-        const sublocationSelect = document.getElementById('sublocation-select');
-        const status = document.getElementById('status');
-        const apiResponse = document.getElementById('api-response');
-        const fetchTestBtn = document.getElementById('fetch-test');
-        const fetchRealBtn = document.getElementById('fetch-real');
-        
-        // Store location data
-        let locationData = [];
-        
-        // Initialize test
         document.addEventListener('DOMContentLoaded', function() {
-            // Add event listeners
-            fetchTestBtn.addEventListener('click', () => fetchLocations('/get-test-locations'));
-            fetchRealBtn.addEventListener('click', () => fetchLocations('/get-locations'));
-            locationSelect.addEventListener('change', handleLocationChange);
-        });
-        
-        // Fetch locations
-        function fetchLocations(endpoint) {
-            status.textContent = "Loading locations...";
-            locationSelect.innerHTML = '<option value="">Loading...</option>';
-            sublocationSelect.innerHTML = '<option value="">-- Select Sublocation --</option>';
-            sublocationSelect.disabled = true;
+            const tenantSelector = document.getElementById('tenantSelector');
+            const gridDiv = document.getElementById('locationGrid');
+
+            // Custom tree cell renderer that manually creates the tree look
+            function TreeCellRenderer() {}
             
-            fetch(endpoint)
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Locations fetched:', data);
-                    
-                    // Show raw response
-                    apiResponse.textContent = JSON.stringify(data, null, 2);
-                    
-                    status.textContent = `Loaded ${data.length} locations`;
-                    
-                    // Store location data globally
-                    locationData = data;
-                    
-                    // Populate dropdown
-                    populateLocations(data);
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    status.textContent = `Error: ${error.message}`;
-                    locationSelect.innerHTML = '<option value="">Failed to load locations</option>';
-                    apiResponse.textContent = error.toString();
-                });
-        }
-        
-        // Populate the location dropdown
-        function populateLocations(locations) {
-            // Clear existing options
-            locationSelect.innerHTML = '';
+            TreeCellRenderer.prototype.init = function(params) {
+                this.eGui = document.createElement('div');
+                this.eGui.className = 'tree-node';
+                
+                let html = '';
+                
+                // Add indentation and icons based on level
+                if (params.data.level > 0) {
+                    html += '<div class="indented">';
+                    html += '<i class="fas fa-arrow-right tree-icon"></i>';
+                }
+                
+                // Add location name with appropriate icon
+                if (params.data.isParent) {
+                    html += '<i class="fas fa-folder tree-icon"></i>';
+                } else {
+                    html += '<i class="fas fa-map-marker-alt tree-icon"></i>';
+                }
+                
+                html += params.value;
+                
+                if (params.data.level > 0) {
+                    html += '</div>';
+                }
+                
+                this.eGui.innerHTML = html;
+            };
             
-            // Add default option
-            const defaultOption = document.createElement('option');
-            defaultOption.value = '';
-            defaultOption.textContent = '-- Select Location --';
-            locationSelect.appendChild(defaultOption);
-            
-            // Add location options
-            locations.forEach(location => {
-                const option = document.createElement('option');
-                option.value = location.id;
-                option.textContent = location.name || 'Unnamed Location';
-                locationSelect.appendChild(option);
+            TreeCellRenderer.prototype.getGui = function() {
+                return this.eGui;
+            };
+
+            // Define the columns for AG Grid
+            const columnDefs = [
+                {
+                    headerName: 'Location Hierarchy',
+                    field: 'name',
+                    cellRenderer: 'treeCellRenderer',
+                    flex: 2,
+                    minWidth: 250,
+                    sortable: true,
+                    filter: true
+                },
+                {
+                    headerName: 'Location ID',
+                    field: 'id',
+                    flex: 1,
+                    minWidth: 100,
+                    sortable: true,
+                    filter: true
+                }
+            ];
+
+            // Create the grid options
+            const gridOptions = {
+                columnDefs: columnDefs,
+                defaultColDef: {
+                    resizable: true
+                },
+                components: {
+                    treeCellRenderer: TreeCellRenderer
+                },
+                rowData: [],
+                pagination: true,
+                paginationPageSize: 20
+            };
+
+            // Initialize the grid
+            new agGrid.Grid(gridDiv, gridOptions);
+
+            // Function to fetch locations and transform them into a hierarchical structure
+            function fetchLocations(tenant) {
+                fetch(`/get-locations/${tenant}`)
+                    .then(response => response.json())
+                    .then(locations => {
+                        console.log('Raw locations:', locations);
+                        
+                        // Flatten the hierarchy for display
+                        const flattenedData = [];
+                        
+                        // Add parent nodes first (sorting alphabetically)
+                        const sortedLocations = [...locations].sort((a, b) => 
+                            a.name.localeCompare(b.name)
+                        );
+                        
+                        // Add parent locations
+                        sortedLocations.forEach(location => {
+                            flattenedData.push({
+                                id: location.id,
+                                name: location.name,
+                                level: 0,
+                                isParent: location.sublocations && location.sublocations.length > 0
+                            });
+                            
+                            // Add child locations
+                            if (location.sublocations && location.sublocations.length > 0) {
+                                const sortedSublocations = [...location.sublocations].sort((a, b) => 
+                                    a.name.localeCompare(b.name)
+                                );
+                                
+                                sortedSublocations.forEach(sublocation => {
+                                    flattenedData.push({
+                                        id: sublocation.id,
+                                        name: sublocation.name,
+                                        level: 1,
+                                        isParent: false,
+                                        parentId: location.id,
+                                        parentName: location.name
+                                    });
+                                });
+                            }
+                        });
+                        
+                        console.log('Flattened data for grid:', flattenedData);
+                        gridOptions.api.setRowData(flattenedData);
+                    })
+                    .catch(error => {
+                        console.error('Error fetching locations:', error);
+                        gridOptions.api.setRowData([]);
+                    });
+            }
+
+            // Initial load
+            fetchLocations(tenantSelector.value);
+
+            // Tenant selection change event
+            tenantSelector.addEventListener('change', function() {
+                fetchLocations(this.value);
             });
-            
-            console.log(`Added ${locations.length} locations to dropdown`);
-        }
-        
-        // Handle location change
-        function handleLocationChange() {
-            const selectedLocationId = locationSelect.value;
-            
-            // Clear sublocation dropdown
-            sublocationSelect.innerHTML = '';
-            const defaultOption = document.createElement('option');
-            defaultOption.value = '';
-            defaultOption.textContent = '-- Select Sublocation --';
-            sublocationSelect.appendChild(defaultOption);
-            
-            // Disable sublocation dropdown if no location selected
-            if (!selectedLocationId) {
-                sublocationSelect.disabled = true;
-                return;
-            }
-            
-            // Find selected location
-            const selectedLocation = locationData.find(loc => loc.id === selectedLocationId);
-            
-            // If location has sublocations, populate and enable the dropdown
-            if (selectedLocation && selectedLocation.sublocations && selectedLocation.sublocations.length > 0) {
-                selectedLocation.sublocations.forEach(sublocation => {
-                    const option = document.createElement('option');
-                    option.value = sublocation.id;
-                    option.textContent = sublocation.name || 'Unnamed Sublocation';
-                    sublocationSelect.appendChild(option);
-                });
-                sublocationSelect.disabled = false;
-                status.textContent = `Found ${selectedLocation.sublocations.length} sublocations for ${selectedLocation.name}`;
-            } else {
-                const noSubOption = document.createElement('option');
-                noSubOption.value = '';
-                noSubOption.textContent = 'No sublocations available';
-                noSubOption.disabled = true;
-                sublocationSelect.appendChild(noSubOption);
-                sublocationSelect.disabled = true;
-                status.textContent = `No sublocations found for ${selectedLocation?.name || 'selected location'}`;
-            }
-        }
+        });
     </script>
 </body>
 </html>
