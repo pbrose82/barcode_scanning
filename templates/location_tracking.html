@@ -1,63 +1,169 @@
-// Handle location change
-function handleLocationChange() {
-    console.log('Location changed to:', locationSelect.value);
-    const selectedLocationId = locationSelect.value;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Location Tracking - Alchemy Barcode Scanner</title>
     
-    if (!sublocationSelect) {
-        console.error('Cannot handle location change: sublocationSelect element not found');
-        return;
-    }
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     
-    // Clear sublocation dropdown
-    sublocationSelect.innerHTML = '';
-    const defaultSubOption = document.createElement('option');
-    defaultSubOption.value = '';
-    defaultSubOption.textContent = '-- Select Sublocation --';
-    sublocationSelect.appendChild(defaultSubOption);
+    <!-- AG Grid CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.0/styles/ag-grid.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.0/styles/ag-theme-alpine.css">
     
-    // Disable sublocation dropdown if no location selected
-    if (!selectedLocationId) {
-        sublocationSelect.disabled = true;
-        return;
-    }
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    // Find selected location
-    const selectedLocation = locationData.find(loc => loc.id === selectedLocationId);
-    console.log('Selected location:', selectedLocation);
-    
-    // If location has sublocations, populate and enable the dropdown
-    if (selectedLocation && selectedLocation.sublocations && 
-        Array.isArray(selectedLocation.sublocations) && 
-        selectedLocation.sublocations.length > 0) {
+    <style>
+        body {
+            background-color: #f4f6f9;
+        }
+        .grid-container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-top: 20px;
+        }
+        #locationGrid {
+            height: 600px;
+            width: 100%;
+        }
+        .header-btn {
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center p-3 bg-white shadow-sm mb-3">
+                    <h3 class="mb-0">Location Tracking</h3>
+                    <div class="d-flex align-items-center">
+                        <!-- Added Back to Admin button -->
+                        <a href="/admin" class="btn btn-outline-primary btn-sm header-btn">
+                            <i class="fas fa-arrow-left"></i> Back to Admin
+                        </a>
+                        <select id="tenantSelector" class="form-select">
+                            {% for tenant in tenants %}
+                            <option value="{{ tenant }}">{{ tenant }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
         
-        console.log('Populating', selectedLocation.sublocations.length, 'sublocations for', selectedLocation.name);
-        
-        // Sort sublocations alphabetically by name for better UX
-        const sortedSublocations = [...selectedLocation.sublocations].sort((a, b) => 
-            a.name.localeCompare(b.name)
-        );
-        
-        sortedSublocations.forEach(sublocation => {
-            if (sublocation && sublocation.id && sublocation.name) {
-                const option = document.createElement('option');
-                option.value = sublocation.id;
-                option.textContent = sublocation.name;
-                sublocationSelect.appendChild(option);
-            } else {
-                console.warn('Invalid sublocation data:', sublocation);
+        <div class="row">
+            <div class="col-12">
+                <div class="grid-container">
+                    <div id="locationGrid" class="ag-theme-alpine"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AG Grid Community -->
+    <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.0/dist/ag-grid-community.min.js"></script>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const tenantSelector = document.getElementById('tenantSelector');
+            const gridDiv = document.getElementById('locationGrid');
+
+            // AG Grid column definitions
+            const columnDefs = [
+                { 
+                    headerName: 'Location ID', 
+                    field: 'id',
+                    filter: true,
+                    sortable: true
+                },
+                { 
+                    headerName: 'Location Name', 
+                    field: 'name',
+                    filter: true,
+                    sortable: true
+                },
+                { 
+                    headerName: 'Sublocation(s)', 
+                    field: 'sublocations',
+                    cellRenderer: function(params) {
+                        if (params.value && params.value.length > 0) {
+                            // Create a formatted list of sublocations with line breaks
+                            return params.value.map(sub => sub.name).join('<br>');
+                        }
+                        return 'No sublocations';
+                    },
+                    sortable: true,
+                    filter: true,
+                    cellStyle: {'white-space': 'normal'}, // Allow text wrapping
+                    autoHeight: true // Adjust row height based on content
+                },
+                { 
+                    headerName: 'Scanned Barcodes', 
+                    field: 'barcodes',
+                    cellRenderer: function(params) {
+                        if (params.value && params.value.length > 0) {
+                            return params.value.join(', ');
+                        }
+                        return 'No barcodes';
+                    },
+                    sortable: true,
+                    filter: true
+                }
+            ];
+
+            // AG Grid options
+            const gridOptions = {
+                columnDefs: columnDefs,
+                defaultColDef: {
+                    flex: 1,
+                    minWidth: 150,
+                    resizable: true,
+                },
+                pagination: true,
+                paginationPageSize: 20,
+                domLayout: 'autoHeight',
+                rowSelection: 'multiple',
+                enableRangeSelection: true,
+                enableCharts: true,
+            };
+
+            // Initialize grid
+            const grid = new agGrid.Grid(gridDiv, gridOptions);
+
+            // Function to fetch locations for a tenant
+            function fetchLocations(tenant) {
+                fetch(`/get-locations/${tenant}`)
+                    .then(response => response.json())
+                    .then(locations => {
+                        // Placeholder for fetching barcodes - you'll need to implement this
+                        const locationsWithBarcodes = locations.map(location => ({
+                            ...location,
+                            barcodes: [] // This would be populated from your barcode tracking system
+                        }));
+                        gridOptions.api.setRowData(locationsWithBarcodes);
+                    })
+                    .catch(error => {
+                        console.error('Error fetching locations:', error);
+                        gridOptions.api.setRowData([]);
+                    });
             }
+
+            // Initial load
+            fetchLocations(tenantSelector.value);
+
+            // Tenant selection change event
+            tenantSelector.addEventListener('change', function() {
+                fetchLocations(this.value);
+            });
         });
-        sublocationSelect.disabled = false;
-    } else {
-        console.log('No sublocations available for this location');
-        const noSublocationsOption = document.createElement('option');
-        noSublocationsOption.value = '';
-        noSublocationsOption.textContent = 'No sublocations available';
-        noSublocationsOption.disabled = true;
-        sublocationSelect.appendChild(noSublocationsOption);
-        sublocationSelect.disabled = true;
-    }
-    
-    // Update UI based on current state
-    updateUI();
-}
+    </script>
+</body>
+</html>
