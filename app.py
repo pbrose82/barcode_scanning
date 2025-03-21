@@ -805,23 +805,19 @@ def create_error_template():
     except Exception as e:
         return f"Error creating template: {str(e)}"
 
-# Create admin login template
+## Fixed create_admin_login_template function
 @app.route('/create-admin-login-template')
 def create_admin_login_template():
-    # Ensure the templates directory exists
-    ensure_templates_directory()
-    
-    # Use RENDER_TEMPLATES_DIR instead of app.template_folder
-    template_path = os.path.join(RENDER_TEMPLATES_DIR, 'admin_login.html')
-    # ... rest of the function remains the same
+    """Create admin login template in persistent storage"""
+    try:
+        # Ensure the templates directory exists
+        ensure_templates_directory()
+        
+        template_path = os.path.join(RENDER_TEMPLATES_DIR, 'admin_login.html')
         
         # Check if template already exists
         if os.path.exists(template_path):
             return "Admin login template already exists."
-        
-        # Create templates directory if it doesn't exist
-        if not os.path.exists(app.template_folder):
-            os.makedirs(app.template_folder)
         
         # Write login template
         login_html = """<!DOCTYPE html>
@@ -942,7 +938,70 @@ def create_admin_login_template():
         with open(template_path, 'w') as f:
             f.write(login_html)
             
-        return "Admin login template created successfully."
+        return f"Admin login template created successfully in {template_path}."
+    except Exception as e:
+        return f"Error creating template: {str(e)}"
+
+# Similarly fixed create_error_template function
+@app.route('/create-error-template')
+def create_error_template():
+    """Create error.html template in persistent storage"""
+    try:
+        # Ensure the templates directory exists
+        ensure_templates_directory()
+        
+        template_path = os.path.join(RENDER_TEMPLATES_DIR, 'error.html')
+        
+        # Check if template already exists
+        if os.path.exists(template_path):
+            return "Error template already exists."
+        
+        # Write error template
+        error_html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error - Alchemy Barcode Scanner</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            padding: 30px;
+        }
+        .error-container {
+            max-width: 600px;
+            margin: 50px auto;
+            text-align: center;
+        }
+        .error-icon {
+            font-size: 64px;
+            color: #dc3545;
+            margin-bottom: 20px;
+        }
+        .btn-home {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-icon">⚠️</div>
+        <h1 class="mb-3">Error</h1>
+        <div class="alert alert-danger">
+            {{ message }}
+        </div>
+        <a href="/" class="btn btn-primary btn-home">Go to Homepage</a>
+    </div>
+</body>
+</html>"""
+        
+        with open(template_path, 'w') as f:
+            f.write(error_html)
+            
+        return f"Error template created successfully in {template_path}."
     except Exception as e:
         return f"Error creating template: {str(e)}"
 
