@@ -33,17 +33,6 @@
         .header-btn {
             margin-right: 10px;
         }
-        .tree-node {
-            display: flex;
-            align-items: center;
-        }
-        .tree-icon {
-            margin-right: 5px;
-            color: #0047BB;
-        }
-        .indented {
-            margin-left: 25px;
-        }
     </style>
 </head>
 <body>
@@ -53,6 +42,7 @@
                 <div class="d-flex justify-content-between align-items-center p-3 bg-white shadow-sm mb-3">
                     <h3 class="mb-0">Location Tracking</h3>
                     <div class="d-flex align-items-center">
+                        <!-- Added Back to Admin button -->
                         <a href="/admin" class="btn btn-outline-primary btn-sm header-btn">
                             <i class="fas fa-arrow-left"></i> Back to Admin
                         </a>
@@ -86,124 +76,72 @@
             const tenantSelector = document.getElementById('tenantSelector');
             const gridDiv = document.getElementById('locationGrid');
 
-            // Custom tree cell renderer that manually creates the tree look
-            function TreeCellRenderer() {}
-            
-            TreeCellRenderer.prototype.init = function(params) {
-                this.eGui = document.createElement('div');
-                this.eGui.className = 'tree-node';
-                
-                let html = '';
-                
-                // Add indentation and icons based on level
-                if (params.data.level > 0) {
-                    html += '<div class="indented">';
-                    html += '<i class="fas fa-arrow-right tree-icon"></i>';
-                }
-                
-                // Add location name with appropriate icon
-                if (params.data.isParent) {
-                    html += '<i class="fas fa-folder tree-icon"></i>';
-                } else {
-                    html += '<i class="fas fa-map-marker-alt tree-icon"></i>';
-                }
-                
-                html += params.value;
-                
-                if (params.data.level > 0) {
-                    html += '</div>';
-                }
-                
-                this.eGui.innerHTML = html;
-            };
-            
-            TreeCellRenderer.prototype.getGui = function() {
-                return this.eGui;
-            };
-
-            // Define the columns for AG Grid
+            // AG Grid column definitions
             const columnDefs = [
-                {
-                    headerName: 'Location Hierarchy',
+                { 
+                    headerName: 'Location Name', 
                     field: 'name',
-                    cellRenderer: 'treeCellRenderer',
-                    flex: 2,
-                    minWidth: 250,
+                    filter: true,
                     sortable: true,
-                    filter: true
+                    flex: 1.5
                 },
-                {
-                    headerName: 'Location ID',
+                { 
+                    headerName: 'Location ID', 
                     field: 'id',
-                    flex: 1,
-                    minWidth: 100,
+                    filter: true,
                     sortable: true,
-                    filter: true
+                    width: 120
+                },
+                { 
+                    headerName: 'Sublocation(s)', 
+                    field: 'sublocations',
+                    cellRenderer: function(params) {
+                        if (params.value && params.value.length > 0) {
+                            // Create a formatted list of sublocations with line breaks
+                            return params.value.map(sub => sub.name).join('<br>');
+                        }
+                        return 'No sublocations';
+                    },
+                    sortable: true,
+                    filter: true,
+                    cellStyle: {'white-space': 'normal'}, // Allow text wrapping
+                    autoHeight: true, // Adjust row height based on content
+                    flex: 2
                 }
             ];
 
-            // Create the grid options
+            // AG Grid options
             const gridOptions = {
                 columnDefs: columnDefs,
                 defaultColDef: {
-                    resizable: true
+                    flex: 1,
+                    minWidth: 150,
+                    resizable: true,
                 },
-                components: {
-                    treeCellRenderer: TreeCellRenderer
-                },
-                rowData: [],
                 pagination: true,
-                paginationPageSize: 20
+                paginationPageSize: 20,
+                domLayout: 'autoHeight',
+                rowSelection: 'multiple',
+                enableRangeSelection: true,
+                enableCharts: true,
             };
 
-            // Initialize the grid
+            // Initialize grid
             new agGrid.Grid(gridDiv, gridOptions);
 
-            // Function to fetch locations and transform them into a hierarchical structure
+            // Function to fetch locations for a tenant
             function fetchLocations(tenant) {
                 fetch(`/get-locations/${tenant}`)
                     .then(response => response.json())
                     .then(locations => {
-                        console.log('Raw locations:', locations);
+                        console.log('Locations data:', locations);
                         
-                        // Flatten the hierarchy for display
-                        const flattenedData = [];
-                        
-                        // Add parent nodes first (sorting alphabetically)
+                        // Sort locations alphabetically
                         const sortedLocations = [...locations].sort((a, b) => 
                             a.name.localeCompare(b.name)
                         );
                         
-                        // Add parent locations
-                        sortedLocations.forEach(location => {
-                            flattenedData.push({
-                                id: location.id,
-                                name: location.name,
-                                level: 0,
-                                isParent: location.sublocations && location.sublocations.length > 0
-                            });
-                            
-                            // Add child locations
-                            if (location.sublocations && location.sublocations.length > 0) {
-                                const sortedSublocations = [...location.sublocations].sort((a, b) => 
-                                    a.name.localeCompare(b.name)
-                                );
-                                
-                                sortedSublocations.forEach(sublocation => {
-                                    flattenedData.push({
-                                        id: sublocation.id,
-                                        name: sublocation.name,
-                                        level: 1,
-                                        isParent: false,
-                                        parentId: location.id,
-                                        parentName: location.name
-                                    });
-                                });
-                            }
-                        });
-                        
-                        console.log('Flattened data for grid:', flattenedData);
-                        gridOptions.api.setRowData(flattenedData);
+                        gridOptions.api.setRowData(sortedLocations);
                     })
                     .catch(error => {
                         console.error('Error fetching locations:', error);
