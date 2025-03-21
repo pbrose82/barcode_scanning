@@ -806,55 +806,48 @@ def extract_location_name_improved(location):
     # If no suitable name found, return the default
     return default_name
 
-# Sublocation extraction helper
 def extract_sublocations_improved(location):
     """Improved function to extract sublocations from Alchemy API response"""
     sublocations = []
+    location_id = location.get("recordId") or location.get("id", "unknown")
     
-    # Look for Item field which might contain direct sublocation references
+    # The primary issue is likely here - we need to be more selective about which sublocations we extract
+    # For a given location, we only want its direct children, not all related locations
+    
+    # In your first document's data structure, sublocations are typically found in the "Item" field
     if "fields" in location:
-        item_fields = [field for field in location["fields"] if field.get("identifier") == "Item"]
-        for item_field in item_fields:
-            for row in item_field.get("rows", []):
-                if row.get("values") and len(row["values"]) > 0 and row["values"][0].get("value"):
-                    value = row["values"][0].get("value")
-                    if isinstance(value, dict) and "recordId" in value and "name" in value:
-                        # This is likely a sublocation reference
-                        sublocations.append({
-                            "id": str(value.get("recordId")),
-                            "name": value.get("name")
-                        })
+        for field in location["fields"]:
+            if field.get("identifier") == "Item":
+                for row in field.get("rows", []):
+                    if row.get("values") and len(row["values"]) > 0:
+                        value = row["values"][0].get("value")
+                        if isinstance(value, dict) and "recordId" in value and "name" in value:
+                            sublocation = {
+                                "id": str(value.get("recordId")),
+                                "name": value.get("name")
+                            }
+                            # Check if this sublocation is not already in the list
+                            if not any(sub["id"] == sublocation["id"] for sub in sublocations):
+                                sublocations.append(sublocation)
     
-    # For the actual locations data, we're accessing from the first document, 
-    # we need to check the locationList fieldGroups for the SubLocations
-    if "fieldGroups" in location:
-        for group in location["fieldGroups"]:
-            if group.get("identifier") == "LocationList":
-                for field in group.get("fields", []):
-                    if field.get("identifier") == "SubLocations":
-                        for row in field.get("rows", []):
-                            if row.get("values") and len(row["values"]) > 0 and row["values"][0].get("value"):
-                                value = row["values"][0].get("value")
-                                # Make sure it's a valid location reference
-                                if isinstance(value, dict) and "recordId" in value and "name" in value:
-                                    subloc_id = str(value.get("recordId"))
-                                    # Check if this sublocation is not already in our list
-                                    if not any(sub.get("id") == subloc_id for sub in sublocations):
-                                        sublocations.append({
-                                            "id": subloc_id,
-                                            "name": value.get("name")
-                                        })
+    # Check if there are any LocatedAt references - these might be parent-child relationships
+    if "fields" in location:
+        for field in location["fields"]:
+            if field.get("identifier") == "LocatedAt":
+                for row in field.get("rows", []):
+                    if row.get("values") and len(row["values"]) > 0:
+                        value = row["values"][0].get("value")
+                        if isinstance(value, dict) and "recordId" in value and "name" in value:
+                            parent_id = str(value.get("recordId"))
+                            # This location is located at another location - might be useful for hierarchy
+                            logging.info(f"Location {location.get('name')} is located at {value.get('name')}")
     
-    # Remove any duplicates based on ID
-    unique_sublocations = []
-    seen_ids = set()
-    for subloc in sublocations:
-        if subloc["id"] not in seen_ids:
-            seen_ids.add(subloc["id"])
-            unique_sublocations.append(subloc)
+    # Debug log to track what we're extracting
+    logging.info(f"Found {len(sublocations)} sublocations for location {location.get('name', 'unknown')} (ID: {location_id})")
+    if sublocations:
+        logging.info(f"Sublocations for {location.get('name')}: {[sub['name'] for sub in sublocations]}")
     
-    logging.info(f"Found {len(unique_sublocations)} sublocations for location {location.get('name', 'unknown')}")
-    return unique_sublocations
+    return sublocations
 
 # Route for getting test locations (reliable hardcoded data)
 @app.route('/get-test-locations/<tenant>', methods=['GET'])
