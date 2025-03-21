@@ -33,6 +33,17 @@
         .header-btn {
             margin-right: 10px;
         }
+        .tree-node {
+            display: flex;
+            align-items: center;
+        }
+        .tree-icon {
+            margin-right: 5px;
+            color: #0047BB;
+        }
+        .indented {
+            margin-left: 25px;
+        }
     </style>
 </head>
 <body>
@@ -42,15 +53,20 @@
                 <div class="d-flex justify-content-between align-items-center p-3 bg-white shadow-sm mb-3">
                     <h3 class="mb-0">Location Tracking</h3>
                     <div class="d-flex align-items-center">
-                        <!-- Added Back to Admin button -->
+                        {% if admin_mode %}
                         <a href="/admin" class="btn btn-outline-primary btn-sm header-btn">
                             <i class="fas fa-arrow-left"></i> Back to Admin
                         </a>
                         <select id="tenantSelector" class="form-select">
                             {% for tenant in tenants %}
-                            <option value="{{ tenant }}">{{ tenant }}</option>
+                            <option value="{{ tenant }}" {% if tenant == current_tenant %}selected{% endif %}>{{ tenant }}</option>
                             {% endfor %}
                         </select>
+                        {% else %}
+                        <a href="/tenant/{{ current_tenant }}" class="btn btn-outline-primary btn-sm header-btn">
+                            <i class="fas fa-arrow-left"></i> Back to Scanner
+                        </a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -73,79 +89,140 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const tenantSelector = document.getElementById('tenantSelector');
             const gridDiv = document.getElementById('locationGrid');
+            
+            {% if admin_mode %}
+            const tenantSelector = document.getElementById('tenantSelector');
+            {% endif %}
+            
+            // Set current tenant
+            let currentTenant = "{{ current_tenant }}";
+            
+            // Admin mode flag
+            const adminMode = {% if admin_mode %}true{% else %}false{% endif %};
 
-            // AG Grid column definitions
+            // Custom tree cell renderer that manually creates the tree look
+            function TreeCellRenderer() {}
+            
+            TreeCellRenderer.prototype.init = function(params) {
+                this.eGui = document.createElement('div');
+                this.eGui.className = 'tree-node';
+                
+                let html = '';
+                
+                // Add indentation and icons based on level
+                if (params.data.level > 0) {
+                    html += '<div class="indented">';
+                    html += '<i class="fas fa-arrow-right tree-icon"></i>';
+                }
+                
+                // Add location name with appropriate icon
+                if (params.data.isParent) {
+                    html += '<i class="fas fa-folder tree-icon"></i>';
+                } else {
+                    html += '<i class="fas fa-map-marker-alt tree-icon"></i>';
+                }
+                
+                html += params.value;
+                
+                if (params.data.level > 0) {
+                    html += '</div>';
+                }
+                
+                this.eGui.innerHTML = html;
+            };
+            
+            TreeCellRenderer.prototype.getGui = function() {
+                return this.eGui;
+            };
+
+            // Define the columns for AG Grid based on mode
             const columnDefs = [
-                { 
-                    headerName: 'Location ID', 
-                    field: 'id',
-                    filter: true,
-                    sortable: true
-                },
-                { 
-                    headerName: 'Location Name', 
+                {
+                    headerName: 'Location Hierarchy',
                     field: 'name',
-                    filter: true,
-                    sortable: true
-                },
-                { 
-                    headerName: 'Sublocation(s)', 
-                    field: 'sublocations',
-                    cellRenderer: function(params) {
-                        if (params.value && params.value.length > 0) {
-                            return params.value.map(sub => sub.name).join(', ');
-                        }
-                        return 'No sublocations';
-                    },
-                    sortable: true,
-                    filter: true
-                },
-                { 
-                    headerName: 'Scanned Barcodes', 
-                    field: 'barcodes',
-                    cellRenderer: function(params) {
-                        if (params.value && params.value.length > 0) {
-                            return params.value.join(', ');
-                        }
-                        return 'No barcodes';
-                    },
+                    cellRenderer: 'treeCellRenderer',
+                    flex: 2,
+                    minWidth: 250,
                     sortable: true,
                     filter: true
                 }
             ];
+            
+            // Only add the ID column in admin mode
+            if (adminMode) {
+                columnDefs.push({
+                    headerName: 'Location ID',
+                    field: 'id',
+                    flex: 1,
+                    minWidth: 100,
+                    sortable: true,
+                    filter: true
+                });
+            }
 
-            // AG Grid options
+            // Create the grid options
             const gridOptions = {
                 columnDefs: columnDefs,
                 defaultColDef: {
-                    flex: 1,
-                    minWidth: 150,
-                    resizable: true,
+                    resizable: true
                 },
+                components: {
+                    treeCellRenderer: TreeCellRenderer
+                },
+                rowData: [],
                 pagination: true,
-                paginationPageSize: 20,
-                domLayout: 'autoHeight',
-                rowSelection: 'multiple',
-                enableRangeSelection: true,
-                enableCharts: true,
+                paginationPageSize: 20
             };
 
-            // Initialize grid
-            const grid = new agGrid.Grid(gridDiv, gridOptions);
+            // Initialize the grid
+            new agGrid.Grid(gridDiv, gridOptions);
 
-            // Function to fetch locations for a tenant
+            // Function to fetch locations and transform them into a hierarchical structure
             function fetchLocations(tenant) {
                 fetch(`/get-locations/${tenant}`)
                     .then(response => response.json())
                     .then(locations => {
-                        // Placeholder for fetching barcodes - you'll need to implement this
-                        const locationsWithBarcodes = locations.map(location => ({
-                            ...location,
-                            barcodes: [] // This would be populated from your barcode tracking system
-                        }));
-                        gridOptions.api.setRowData(locationsWithBarcodes);
+                        console.log('Raw locations:', locations);
+                        
+                        // Flatten the hierarchy for display
+                        const flattenedData = [];
+                        
+                        // Add parent nodes first (sorting alphabetically)
+                        const sortedLocations = [...locations].sort((a, b) => 
+                            a.name.localeCompare(b.name)
+                        );
+                        
+                        // Add parent locations
+                        sortedLocations.forEach(location => {
+                            flattenedData.push({
+                                id: location.id,
+                                name: location.name,
+                                level: 0,
+                                isParent: location.sublocations && location.sublocations.length > 0
+                            });
+                            
+                            // Add child locations
+                            if (location.sublocations && location.sublocations.length > 0) {
+                                const sortedSublocations = [...location.sublocations].sort((a, b) => 
+                                    a.name.localeCompare(b.name)
+                                );
+                                
+                                sortedSublocations.forEach(sublocation => {
+                                    flattenedData.push({
+                                        id: sublocation.id,
+                                        name: sublocation.name,
+                                        level: 1,
+                                        isParent: false,
+                                        parentId: location.id,
+                                        parentName: location.name
+                                    });
+                                });
+                            }
+                        });
+                        
+                        console.log('Flattened data for grid:', flattenedData);
+                        gridOptions.api.setRowData(flattenedData);
                     })
                     .catch(error => {
                         console.error('Error fetching locations:', error);
@@ -154,12 +231,15 @@
             }
 
             // Initial load
-            fetchLocations(tenantSelector.value);
+            fetchLocations(currentTenant);
 
-            // Tenant selection change event
+            // Tenant selection change event - only in admin mode
+            {% if admin_mode %}
             tenantSelector.addEventListener('change', function() {
-                fetchLocations(this.value);
+                currentTenant = this.value;
+                fetchLocations(currentTenant);
             });
+            {% endif %}
         });
     </script>
 </body>

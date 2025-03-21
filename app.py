@@ -24,12 +24,31 @@ app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(16))
 # Set session timeout (1 hour)
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=1)
 
-# AG-Grid route
+# AG-Grid route with mode parameter
 @app.route('/location-tracking')
-def location_tracking():
+@app.route('/location-tracking/<tenant>')
+@app.route('/admin/location-tracking')
+@app.route('/admin/location-tracking/<tenant>')
+def location_tracking(tenant=None):
     """Render location tracking page with AG Grid"""
+    # Get all tenants for admin mode
     tenants = list(CONFIG["tenants"].keys())
-    return render_template('location_tracking.html', tenants=tenants)
+    
+    # Determine if we're in admin mode based on the URL path
+    admin_mode = request.path.startswith('/admin/')
+    
+    # If not in admin mode, use the current session tenant if available
+    if not admin_mode and 'tenant' in session:
+        tenant = session.get('tenant')
+    
+    # Always default to the default tenant if none specified
+    if not tenant:
+        tenant = DEFAULT_TENANT
+    
+    return render_template('location_tracking.html', 
+                           tenants=tenants, 
+                           current_tenant=tenant,
+                           admin_mode=admin_mode)
 
 def ensure_config_directory():
     """Ensure the configuration directory exists and is not a file"""
@@ -806,48 +825,46 @@ def extract_location_name_improved(location):
     # If no suitable name found, return the default
     return default_name
 
-# Sublocation extraction helper
 def extract_sublocations_improved(location):
     """Improved function to extract sublocations from Alchemy API response"""
     sublocations = []
+    location_id = location.get("recordId") or location.get("id", "unknown")
     
-    # Check for sublocations in fieldGroups
-    if "fieldGroups" in location:
-        for group in location["fieldGroups"]:
-            group_id = group.get("identifier", "")
-            if "Location" in group_id or "SubLocation" in group_id:
-                for field in group.get("fields", []):
-                    field_id = field.get("identifier", "")
-                    if "SubLocation" in field_id or "Sublocation" in field_id:
-                        for idx, row in enumerate(field.get("rows", [])):
-                            if row.get("values") and len(row["values"]) > 0:
-                                value = row["values"][0].get("value")
-                                if value:
-                                    # Handle both string and object values
-                                    if isinstance(value, dict) and "name" in value:
-                                        sublocations.append({
-                                            "id": str(value.get("recordId", f"sub_{idx}")),
-                                            "name": value.get("name", "Unnamed Sublocation")
-                                        })
-                                    elif isinstance(value, str) and value.strip():
-                                        sublocations.append({
-                                            "id": f"sub_{location.get('recordId', location.get('id', 'unknown'))}_{idx}",
-                                            "name": value
-                                        })
+    # The primary issue is likely here - we need to be more selective about which sublocations we extract
+    # For a given location, we only want its direct children, not all related locations
     
-    # If no sublocations found in fieldGroups, check fields directly
-    if not sublocations and "fields" in location:
+    # In your first document's data structure, sublocations are typically found in the "Item" field
+    if "fields" in location:
         for field in location["fields"]:
-            field_id = field.get("identifier", "")
-            if "SubLocation" in field_id or "Sublocation" in field_id:
-                for idx, row in enumerate(field.get("rows", [])):
+            if field.get("identifier") == "Item":
+                for row in field.get("rows", []):
                     if row.get("values") and len(row["values"]) > 0:
                         value = row["values"][0].get("value")
-                        if value and isinstance(value, str) and value.strip():
-                            sublocations.append({
-                                "id": f"sub_{location.get('recordId', location.get('id', 'unknown'))}_{idx}",
-                                "name": value
-                            })
+                        if isinstance(value, dict) and "recordId" in value and "name" in value:
+                            sublocation = {
+                                "id": str(value.get("recordId")),
+                                "name": value.get("name")
+                            }
+                            # Check if this sublocation is not already in the list
+                            if not any(sub["id"] == sublocation["id"] for sub in sublocations):
+                                sublocations.append(sublocation)
+    
+    # Check if there are any LocatedAt references - these might be parent-child relationships
+    if "fields" in location:
+        for field in location["fields"]:
+            if field.get("identifier") == "LocatedAt":
+                for row in field.get("rows", []):
+                    if row.get("values") and len(row["values"]) > 0:
+                        value = row["values"][0].get("value")
+                        if isinstance(value, dict) and "recordId" in value and "name" in value:
+                            parent_id = str(value.get("recordId"))
+                            # This location is located at another location - might be useful for hierarchy
+                            logging.info(f"Location {location.get('name')} is located at {value.get('name')}")
+    
+    # Debug log to track what we're extracting
+    logging.info(f"Found {len(sublocations)} sublocations for location {location.get('name', 'unknown')} (ID: {location_id})")
+    if sublocations:
+        logging.info(f"Sublocations for {location.get('name')}: {[sub['name'] for sub in sublocations]}")
     
     return sublocations
 
