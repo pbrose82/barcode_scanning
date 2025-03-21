@@ -15,16 +15,16 @@ RENDER_CONFIG_PATH = os.path.join(RENDER_CONFIG_DIR, 'config.json')
 # Logging Configuration
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Flask Application Setup - MOVED TO TOP
+# Flask Application Setup - use your existing templates
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
-# Secret key for sessions
+# Secret key for sessions - use environment variable or generate a secure one
 app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(16))
 
 # Set session timeout (1 hour)
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=1)
 
-# AG-Grid - MOVED AFTER APP DEFINITION
+# AG-Grid route
 @app.route('/location-tracking')
 def location_tracking():
     """Render location tracking page with AG Grid"""
@@ -727,241 +727,6 @@ def reload_config_route():
         logging.error(f"Error reloading configuration: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
-# Create a simple error.html template
-@app.route('/create-error-template')
-def create_error_template():
-    """Create error.html template if it doesn't exist"""
-    try:
-        template_path = os.path.join(app.template_folder, 'error.html')
-        
-        # Check if template already exists
-        if os.path.exists(template_path):
-            return "Error template already exists."
-        
-        # Create templates directory if it doesn't exist
-        if not os.path.exists(app.template_folder):
-            os.makedirs(app.template_folder)
-        
-        # Write error template
-        error_html = """<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Error - Alchemy Barcode Scanner</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-            padding: 30px;
-        }
-        .error-container {
-            max-width: 600px;
-            margin: 50px auto;
-            text-align: center;
-        }
-        .error-icon {
-            font-size: 64px;
-            color: #dc3545;
-            margin-bottom: 20px;
-        }
-        .btn-home {
-            margin-top: 20px;
-        }
-    </style>
-</head>
-<body>
-    <div class="error-container">
-        <div class="error-icon">⚠️</div>
-        <h1 class="mb-3">Error</h1>
-        <div class="alert alert-danger">
-            {{ message }}
-        </div>
-        <a href="/" class="btn btn-primary btn-home">Go to Homepage</a>
-    </div>
-</body>
-</html>"""
-        
-        with open(template_path, 'w') as f:
-            f.write(error_html)
-            
-        return "Error template created successfully."
-    except Exception as e:
-        return f"Error creating template: {str(e)}"
-
-# Create admin login template
-@app.route('/create-admin-login-template')
-def create_admin_login_template():
-    """Create admin login template if it doesn't exist"""
-    try:
-        template_path = os.path.join(app.template_folder, 'admin_login.html')
-        
-        # Check if template already exists
-        if os.path.exists(template_path):
-            return "Admin login template already exists."
-        
-        # Create templates directory if it doesn't exist
-        if not os.path.exists(app.template_folder):
-            os.makedirs(app.template_folder)
-        
-        # Write login template
-        login_html = """<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Login - Alchemy Barcode Scanner</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        :root {
-            --alchemy-blue: #0047BB;
-            --alchemy-light-blue: #3F88F6;
-            --alchemy-dark: #001952;
-        }
-        
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f8f9fa;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 20px;
-        }
-        
-        .login-container {
-            max-width: 400px;
-            width: 100%;
-        }
-        
-        .card {
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            border: none;
-        }
-        
-        .card-header {
-            background-color: white;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-            padding: 20px;
-            text-align: center;
-        }
-        
-        .header-logo {
-            height: 40px;
-            margin-bottom: 15px;
-        }
-        
-        .card-header h5 {
-            color: var(--alchemy-dark);
-            font-weight: 600;
-            margin: 0;
-        }
-        
-        .card-body {
-            padding: 20px;
-        }
-        
-        .btn-primary {
-            background-color: var(--alchemy-blue);
-            border-color: var(--alchemy-blue);
-            width: 100%;
-            padding: 10px;
-        }
-        
-        .btn-primary:hover {
-            background-color: var(--alchemy-light-blue);
-            border-color: var(--alchemy-light-blue);
-        }
-        
-        .form-label {
-            color: var(--alchemy-dark);
-            font-weight: 500;
-        }
-        
-        .alert-danger {
-            border-radius: 6px;
-        }
-    </style>
-</head>
-<body>
-    <div class="login-container">
-        <div class="card">
-            <div class="card-header">
-                <img src="{{ url_for('static', filename='Alchemy-logo.svg') }}" alt="Alchemy Cloud Logo" class="header-logo">
-                <h5>Admin Login</h5>
-            </div>
-            <div class="card-body">
-                {% if error %}
-                <div class="alert alert-danger" role="alert">
-                    {{ error }}
-                </div>
-                {% endif %}
-                
-                <form method="post" action="{{ url_for('admin_login') }}">
-                    <div class="mb-3">
-                        <label for="username" class="form-label">Username</label>
-                        <input type="text" class="form-control" id="username" name="username" required autofocus>
-                    </div>
-                    <div class="mb-3">
-                        <label for="password" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="password" name="password" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Login</button>
-                </form>
-                
-                <div class="text-center mt-3">
-                    <a href="/" class="text-decoration-none">Back to Home</a>
-                </div>
-            </div>
-        </div>
-    </div>
-</body>
-</html>"""
-        
-        with open(template_path, 'w') as f:
-            f.write(login_html)
-            
-        return "Admin login template created successfully."
-    except Exception as e:
-        return f"Error creating template: {str(e)}"
-
-# Route for getting test locations (reliable hardcoded data)
-@app.route('/get-test-locations/<tenant>', methods=['GET'])
-def get_test_locations(tenant):
-    """Return hardcoded test locations for debugging frontend"""
-    # Get tenant configuration
-    tenant_config = get_tenant_config(tenant)
-    tenant_display_name = tenant_config.get('display_name')
-    
-    test_locations = [
-        {
-            "id": "1001",
-            "name": f"Warehouse A ({tenant_display_name})",
-            "sublocations": [
-                {"id": "sub1", "name": "Section A1"},
-                {"id": "sub2", "name": "Section A2"}
-            ]
-        },
-        {
-            "id": "1002",
-            "name": f"Laboratory B ({tenant_display_name})",
-            "sublocations": [
-                {"id": "sub3", "name": "Lab Storage 1"},
-                {"id": "sub4", "name": "Lab Storage 2"}
-            ]
-        },
-        {
-            "id": "1003",
-            "name": f"Office Building ({tenant_display_name})",
-            "sublocations": []
-        }
-    ]
-    return jsonify(test_locations)
-
 # Function to find record ID by scanned barcode
 def find_record_id_by_barcode(barcode, access_token, tenant):
     """Find Alchemy record ID using barcode as the Result.Code"""
@@ -1085,6 +850,39 @@ def extract_sublocations_improved(location):
                             })
     
     return sublocations
+
+# Route for getting test locations (reliable hardcoded data)
+@app.route('/get-test-locations/<tenant>', methods=['GET'])
+def get_test_locations(tenant):
+    """Return hardcoded test locations for debugging frontend"""
+    # Get tenant configuration
+    tenant_config = get_tenant_config(tenant)
+    tenant_display_name = tenant_config.get('display_name')
+    
+    test_locations = [
+        {
+            "id": "1001",
+            "name": f"Warehouse A ({tenant_display_name})",
+            "sublocations": [
+                {"id": "sub1", "name": "Section A1"},
+                {"id": "sub2", "name": "Section A2"}
+            ]
+        },
+        {
+            "id": "1002",
+            "name": f"Laboratory B ({tenant_display_name})",
+            "sublocations": [
+                {"id": "sub3", "name": "Lab Storage 1"},
+                {"id": "sub4", "name": "Lab Storage 2"}
+            ]
+        },
+        {
+            "id": "1003",
+            "name": f"Office Building ({tenant_display_name})",
+            "sublocations": []
+        }
+    ]
+    return jsonify(test_locations)
 
 # Route for getting locations from Alchemy API
 @app.route('/get-locations/<tenant>', methods=['GET'])
