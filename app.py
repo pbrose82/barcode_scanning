@@ -12,6 +12,13 @@ RENDER_CONFIG_PATH = os.path.join(RENDER_CONFIG_DIR, 'config.json')
 # Logging Configuration
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+# AG-Grid
+@app.route('/location-tracking')
+def location_tracking():
+    """Render location tracking page with AG Grid"""
+    tenants = list(CONFIG["tenants"].keys())
+    return render_template('location_tracking.html', tenants=tenants)
+
 # Flask Application Setup
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
