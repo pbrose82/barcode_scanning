@@ -32,8 +32,11 @@ def location_tracking(tenant=None):
     # Get all tenants for admin mode
     tenants = list(CONFIG["tenants"].keys())
     
-    # Determine if we're in admin mode or scanner mode
-    admin_mode = tenant is not None
+    # Check if user is authenticated as admin (session check)
+    admin_authenticated = session.get('admin_authenticated', False)
+    
+    # Set admin mode if coming from admin session OR tenant is explicitly specified
+    admin_mode = admin_authenticated or tenant is not None
     
     # If not in admin mode, use the current session tenant if available
     if not admin_mode and 'tenant' in session:
