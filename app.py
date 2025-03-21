@@ -27,16 +27,15 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=1)
 # AG-Grid route with mode parameter
 @app.route('/location-tracking')
 @app.route('/location-tracking/<tenant>')
+@app.route('/admin/location-tracking')
+@app.route('/admin/location-tracking/<tenant>')
 def location_tracking(tenant=None):
     """Render location tracking page with AG Grid"""
     # Get all tenants for admin mode
     tenants = list(CONFIG["tenants"].keys())
     
-    # Check if user is authenticated as admin (session check)
-    admin_authenticated = session.get('admin_authenticated', False)
-    
-    # Set admin mode if coming from admin session OR tenant is explicitly specified
-    admin_mode = admin_authenticated or tenant is not None
+    # Determine if we're in admin mode based on the URL path
+    admin_mode = request.path.startswith('/admin/')
     
     # If not in admin mode, use the current session tenant if available
     if not admin_mode and 'tenant' in session:
