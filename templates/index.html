@@ -31,9 +31,7 @@
         .header {
             background-color: white;
             padding: 15px 0;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.15); /* Stronger shadow */
-            position: relative;
-            z-index: 10; /* Ensure shadow appears above content */
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         
         .header-container {
@@ -64,7 +62,6 @@
             background-color: var(--alchemy-blue-bg);
             padding: 12px 0;
             position: relative;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05); /* Light shadow for banner */
         }
         
         .tenant-container {
@@ -114,24 +111,23 @@
         .main-content {
             flex: 1;
             display: flex;
+            justify-content: center;
             padding: 30px 20px;
-            max-width: 1200px;
             margin: 0 auto;
-            gap: 30px;
-            justify-content: center; /* Center the content horizontally */
+            gap: 50px; /* Increased gap between form and tips */
+            max-width: 1300px; /* Slightly larger to accommodate better spacing */
         }
         
         /* Scanner section styles */
         .scanner-section {
-            flex: 1;
+            width: 500px; /* Fixed width instead of flex: 1 */
             background-color: white;
             border-radius: 8px;
             padding: 30px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            max-width: 790px; /* Adjust width for better layout */
         }
         
-        /* Tips section styles - moved to right side */
+        /* Tips section styles */
         .tips-section {
             width: 250px;
             background-color: var(--alchemy-blue-bg);
@@ -139,7 +135,7 @@
             padding: 15px 20px;
             height: auto;
             align-self: flex-start;
-            order: 2; /* Ensure tips section appears after scanner section */
+            margin-right: 20px; /* Push a bit to the right */
         }
         
         .tips-title {
@@ -270,7 +266,7 @@
         }
         
         .btn-update {
-            background-color: var(--alchemy-blue);
+            background-color: #cccccc; /* Gray for disabled state */
             color: white;
             border: none;
             border-radius: 4px;
@@ -367,7 +363,6 @@
             border-top: 1px solid rgba(0, 0, 0, 0.08);
             text-align: center;
             margin-top: auto;
-            box-shadow: 0 -1px 3px rgba(0,0,0,0.05); /* Light shadow for footer */
         }
         
         .footer-content {
@@ -397,8 +392,8 @@
             }
             
             .scanner-section {
-                max-width: 100%;
                 width: 100%;
+                max-width: 500px;
             }
             
             .tips-section {
@@ -406,6 +401,7 @@
                 order: -1; /* Show tips at the top on mobile */
                 align-self: center;
                 max-width: 450px;
+                margin-right: 0;
             }
         }
         
