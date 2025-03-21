@@ -11,12 +11,26 @@ from datetime import datetime, timedelta
 # Persistent config paths for Render
 RENDER_CONFIG_DIR = '/opt/render/project/config'
 RENDER_CONFIG_PATH = os.path.join(RENDER_CONFIG_DIR, 'config.json')
-RENDER_TEMPLATES_DIR = os.path.join(RENDER_CONFIG_DIR, 'templates')  # Persistent templates directory
 
 # Logging Configuration
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Ensure directories exist
+# Flask Application Setup - MOVED TO TOP
+app = Flask(__name__, static_folder='static', template_folder='templates')
+
+# Secret key for sessions
+app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(16))
+
+# Set session timeout (1 hour)
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=1)
+
+# AG-Grid - MOVED AFTER APP DEFINITION
+@app.route('/location-tracking')
+def location_tracking():
+    """Render location tracking page with AG Grid"""
+    tenants = list(CONFIG["tenants"].keys())
+    return render_template('location_tracking.html', tenants=tenants)
+
 def ensure_config_directory():
     """Ensure the configuration directory exists and is not a file"""
     try:
@@ -47,29 +61,6 @@ def ensure_config_directory():
         logging.info(f"Ensuring config directory exists: {RENDER_CONFIG_DIR}")
     except Exception as e:
         logging.error(f"Error creating config directory: {str(e)}")
-
-def ensure_templates_directory():
-    """Ensure the persistent templates directory exists"""
-    try:
-        if not os.path.exists(RENDER_TEMPLATES_DIR):
-            os.makedirs(RENDER_TEMPLATES_DIR, exist_ok=True)
-            logging.info(f"Created persistent templates directory at {RENDER_TEMPLATES_DIR}")
-        return True
-    except Exception as e:
-        logging.error(f"Error creating templates directory: {str(e)}")
-        return False
-
-# Flask Application Setup - with persistent templates
-ensure_templates_directory()  # Ensure templates dir exists before app initialization
-app = Flask(__name__, 
-           static_folder='static', 
-           template_folder=RENDER_TEMPLATES_DIR if os.path.exists(RENDER_TEMPLATES_DIR) else 'templates')
-
-# Secret key for sessions
-app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(16))
-
-# Set session timeout (1 hour)
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=1)
 
 def ensure_config_file():
     """Create config.json if it doesn't exist"""
@@ -482,393 +473,6 @@ def get_fallback_locations():
         }
     ]
 
-# Template creation routes - ONLY ONE IMPLEMENTATION OF EACH
-@app.route('/create-admin-login-template')
-def create_admin_login_template():
-    """Create admin login template in persistent storage"""
-    try:
-        # Ensure the templates directory exists
-        ensure_templates_directory()
-        
-        template_path = os.path.join(RENDER_TEMPLATES_DIR, 'admin_login.html')
-        
-        # Check if template already exists
-        if os.path.exists(template_path):
-            return "Admin login template already exists."
-        
-        # Write login template
-        login_html = """<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Login - Alchemy Barcode Scanner</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        :root {
-            --alchemy-blue: #0047BB;
-            --alchemy-light-blue: #3F88F6;
-            --alchemy-dark: #001952;
-        }
-        
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f8f9fa;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 20px;
-        }
-        
-        .login-container {
-            max-width: 400px;
-            width: 100%;
-        }
-        
-        .card {
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            border: none;
-        }
-        
-        .card-header {
-            background-color: white;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-            padding: 20px;
-            text-align: center;
-        }
-        
-        .header-logo {
-            height: 40px;
-            margin-bottom: 15px;
-        }
-        
-        .card-header h5 {
-            color: var(--alchemy-dark);
-            font-weight: 600;
-            margin: 0;
-        }
-        
-        .card-body {
-            padding: 20px;
-        }
-        
-        .btn-primary {
-            background-color: var(--alchemy-blue);
-            border-color: var(--alchemy-blue);
-            width: 100%;
-            padding: 10px;
-        }
-        
-        .btn-primary:hover {
-            background-color: var(--alchemy-light-blue);
-            border-color: var(--alchemy-light-blue);
-        }
-        
-        .form-label {
-            color: var(--alchemy-dark);
-            font-weight: 500;
-        }
-        
-        .alert-danger {
-            border-radius: 6px;
-        }
-    </style>
-</head>
-<body>
-    <div class="login-container">
-        <div class="card">
-            <div class="card-header">
-                <img src="{{ url_for('static', filename='Alchemy-logo.svg') }}" alt="Alchemy Cloud Logo" class="header-logo">
-                <h5>Admin Login</h5>
-            </div>
-            <div class="card-body">
-                {% if error %}
-                <div class="alert alert-danger" role="alert">
-                    {{ error }}
-                </div>
-                {% endif %}
-                
-                <form method="post" action="{{ url_for('admin_login') }}">
-                    <div class="mb-3">
-                        <label for="username" class="form-label">Username</label>
-                        <input type="text" class="form-control" id="username" name="username" required autofocus>
-                    </div>
-                    <div class="mb-3">
-                        <label for="password" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="password" name="password" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Login</button>
-                </form>
-                
-                <div class="text-center mt-3">
-                    <a href="/" class="text-decoration-none">Back to Home</a>
-                </div>
-            </div>
-        </div>
-    </div>
-</body>
-</html>"""
-        
-        with open(template_path, 'w') as f:
-            f.write(login_html)
-            
-        return f"Admin login template created successfully in {template_path}."
-    except Exception as e:
-        return f"Error creating template: {str(e)}"
-
-@app.route('/create-error-template')
-def create_error_template():
-    """Create error.html template in persistent storage"""
-    try:
-        # Ensure the templates directory exists
-        ensure_templates_directory()
-        
-        template_path = os.path.join(RENDER_TEMPLATES_DIR, 'error.html')
-        
-        # Check if template already exists
-        if os.path.exists(template_path):
-            return "Error template already exists."
-        
-        # Write error template
-        error_html = """<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Error - Alchemy Barcode Scanner</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-            padding: 30px;
-        }
-        .error-container {
-            max-width: 600px;
-            margin: 50px auto;
-            text-align: center;
-        }
-        .error-icon {
-            font-size: 64px;
-            color: #dc3545;
-            margin-bottom: 20px;
-        }
-        .btn-home {
-            margin-top: 20px;
-        }
-    </style>
-</head>
-<body>
-    <div class="error-container">
-        <div class="error-icon">⚠️</div>
-        <h1 class="mb-3">Error</h1>
-        <div class="alert alert-danger">
-            {{ message }}
-        </div>
-        <a href="/" class="btn btn-primary btn-home">Go to Homepage</a>
-    </div>
-</body>
-</html>"""
-        
-        with open(template_path, 'w') as f:
-            f.write(error_html)
-            
-        return f"Error template created successfully in {template_path}."
-    except Exception as e:
-        return f"Error creating template: {str(e)}"
-
-@app.route('/create-location-tracking-template')
-def create_location_tracking_template():
-    """Create location_tracking.html template in persistent storage"""
-    try:
-        # Ensure the templates directory exists
-        ensure_templates_directory()
-        
-        template_path = os.path.join(RENDER_TEMPLATES_DIR, 'location_tracking.html')
-        
-        # Check if template already exists
-        if os.path.exists(template_path):
-            return "Location tracking template already exists."
-        
-        # Write location tracking template
-        tracking_html = """<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Location Tracking - Alchemy Barcode Scanner</title>
-    
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <!-- AG Grid CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.0/styles/ag-grid.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.0/styles/ag-theme-alpine.css">
-    
-    <!-- Font Awesome for icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <style>
-        body {
-            background-color: #f4f6f9;
-        }
-        .grid-container {
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            padding: 20px;
-            margin-top: 20px;
-        }
-        #locationGrid {
-            height: 600px;
-            width: 100%;
-        }
-        .header-btn {
-            margin-right: 10px;
-        }
-    </style>
-</head>
-<body>
-    <div class="container-fluid">
-        <div class="row">
-            <div class="col-12">
-                <div class="d-flex justify-content-between align-items-center p-3 bg-white shadow-sm mb-3">
-                    <h3 class="mb-0">Location Tracking</h3>
-                    <div class="d-flex align-items-center">
-                        <!-- Added Back to Admin button -->
-                        <a href="/admin" class="btn btn-outline-primary btn-sm header-btn">
-                            <i class="fas fa-arrow-left"></i> Back to Admin
-                        </a>
-                        <select id="tenantSelector" class="form-select">
-                            {% for tenant in tenants %}
-                            <option value="{{ tenant }}">{{ tenant }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="row">
-            <div class="col-12">
-                <div class="grid-container">
-                    <div id="locationGrid" class="ag-theme-alpine"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- AG Grid Community -->
-    <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.0/dist/ag-grid-community.min.js"></script>
-    
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const tenantSelector = document.getElementById('tenantSelector');
-            const gridDiv = document.getElementById('locationGrid');
-
-            // AG Grid column definitions
-            const columnDefs = [
-                { 
-                    headerName: 'Location ID', 
-                    field: 'id',
-                    filter: true,
-                    sortable: true
-                },
-                { 
-                    headerName: 'Location Name', 
-                    field: 'name',
-                    filter: true,
-                    sortable: true
-                },
-                { 
-                    headerName: 'Sublocation(s)', 
-                    field: 'sublocations',
-                    cellRenderer: function(params) {
-                        if (params.value && params.value.length > 0) {
-                            return params.value.map(sub => sub.name).join(', ');
-                        }
-                        return 'No sublocations';
-                    },
-                    sortable: true,
-                    filter: true
-                },
-                { 
-                    headerName: 'Scanned Barcodes', 
-                    field: 'barcodes',
-                    cellRenderer: function(params) {
-                        if (params.value && params.value.length > 0) {
-                            return params.value.join(', ');
-                        }
-                        return 'No barcodes';
-                    },
-                    sortable: true,
-                    filter: true
-                }
-            ];
-
-            // AG Grid options
-            const gridOptions = {
-                columnDefs: columnDefs,
-                defaultColDef: {
-                    flex: 1,
-                    minWidth: 150,
-                    resizable: true,
-                },
-                pagination: true,
-                paginationPageSize: 20,
-                domLayout: 'autoHeight',
-                rowSelection: 'multiple',
-                enableRangeSelection: true,
-                enableCharts: true,
-            };
-
-            // Initialize grid
-            const grid = new agGrid.Grid(gridDiv, gridOptions);
-
-            // Function to fetch locations for a tenant
-            function fetchLocations(tenant) {
-                fetch(`/get-locations/${tenant}`)
-                    .then(response => response.json())
-                    .then(locations => {
-                        // Placeholder for fetching barcodes - you'll need to implement this
-                        const locationsWithBarcodes = locations.map(location => ({
-                            ...location,
-                            barcodes: [] // This would be populated from your barcode tracking system
-                        }));
-                        gridOptions.api.setRowData(locationsWithBarcodes);
-                    })
-                    .catch(error => {
-                        console.error('Error fetching locations:', error);
-                        gridOptions.api.setRowData([]);
-                    });
-            }
-
-            // Initial load
-            fetchLocations(tenantSelector.value);
-
-            // Tenant selection change event
-            tenantSelector.addEventListener('change', function() {
-                fetchLocations(this.value);
-            });
-        });
-    </script>
-</body>
-</html>"""
-        
-        with open(template_path, 'w') as f:
-            f.write(tracking_html)
-            
-        return f"Location tracking template created successfully in {template_path}."
-    except Exception as e:
-        return f"Error creating template: {str(e)}"
-
 # Admin login routes
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
@@ -898,13 +502,6 @@ def admin_logout():
     session.pop('admin_authenticated', None)
     session.pop('last_activity', None)
     return redirect(url_for('admin_login'))
-
-# AG-Grid route
-@app.route('/location-tracking')
-def location_tracking():
-    """Render location tracking page with AG Grid"""
-    tenants = list(CONFIG["tenants"].keys())
-    return render_template('location_tracking.html', tenants=tenants)
 
 # Configuration Management Routes
 @app.route('/api/update-tenant-token', methods=['POST'])
@@ -1130,6 +727,241 @@ def reload_config_route():
         logging.error(f"Error reloading configuration: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
+# Create a simple error.html template
+@app.route('/create-error-template')
+def create_error_template():
+    """Create error.html template if it doesn't exist"""
+    try:
+        template_path = os.path.join(app.template_folder, 'error.html')
+        
+        # Check if template already exists
+        if os.path.exists(template_path):
+            return "Error template already exists."
+        
+        # Create templates directory if it doesn't exist
+        if not os.path.exists(app.template_folder):
+            os.makedirs(app.template_folder)
+        
+        # Write error template
+        error_html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error - Alchemy Barcode Scanner</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            padding: 30px;
+        }
+        .error-container {
+            max-width: 600px;
+            margin: 50px auto;
+            text-align: center;
+        }
+        .error-icon {
+            font-size: 64px;
+            color: #dc3545;
+            margin-bottom: 20px;
+        }
+        .btn-home {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-icon">⚠️</div>
+        <h1 class="mb-3">Error</h1>
+        <div class="alert alert-danger">
+            {{ message }}
+        </div>
+        <a href="/" class="btn btn-primary btn-home">Go to Homepage</a>
+    </div>
+</body>
+</html>"""
+        
+        with open(template_path, 'w') as f:
+            f.write(error_html)
+            
+        return "Error template created successfully."
+    except Exception as e:
+        return f"Error creating template: {str(e)}"
+
+# Create admin login template
+@app.route('/create-admin-login-template')
+def create_admin_login_template():
+    """Create admin login template if it doesn't exist"""
+    try:
+        template_path = os.path.join(app.template_folder, 'admin_login.html')
+        
+        # Check if template already exists
+        if os.path.exists(template_path):
+            return "Admin login template already exists."
+        
+        # Create templates directory if it doesn't exist
+        if not os.path.exists(app.template_folder):
+            os.makedirs(app.template_folder)
+        
+        # Write login template
+        login_html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login - Alchemy Barcode Scanner</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --alchemy-blue: #0047BB;
+            --alchemy-light-blue: #3F88F6;
+            --alchemy-dark: #001952;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f8f9fa;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .login-container {
+            max-width: 400px;
+            width: 100%;
+        }
+        
+        .card {
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: none;
+        }
+        
+        .card-header {
+            background-color: white;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .header-logo {
+            height: 40px;
+            margin-bottom: 15px;
+        }
+        
+        .card-header h5 {
+            color: var(--alchemy-dark);
+            font-weight: 600;
+            margin: 0;
+        }
+        
+        .card-body {
+            padding: 20px;
+        }
+        
+        .btn-primary {
+            background-color: var(--alchemy-blue);
+            border-color: var(--alchemy-blue);
+            width: 100%;
+            padding: 10px;
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--alchemy-light-blue);
+            border-color: var(--alchemy-light-blue);
+        }
+        
+        .form-label {
+            color: var(--alchemy-dark);
+            font-weight: 500;
+        }
+        
+        .alert-danger {
+            border-radius: 6px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="card">
+            <div class="card-header">
+                <img src="{{ url_for('static', filename='Alchemy-logo.svg') }}" alt="Alchemy Cloud Logo" class="header-logo">
+                <h5>Admin Login</h5>
+            </div>
+            <div class="card-body">
+                {% if error %}
+                <div class="alert alert-danger" role="alert">
+                    {{ error }}
+                </div>
+                {% endif %}
+                
+                <form method="post" action="{{ url_for('admin_login') }}">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="username" name="username" required autofocus>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Login</button>
+                </form>
+                
+                <div class="text-center mt-3">
+                    <a href="/" class="text-decoration-none">Back to Home</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>"""
+        
+        with open(template_path, 'w') as f:
+            f.write(login_html)
+            
+        return "Admin login template created successfully."
+    except Exception as e:
+        return f"Error creating template: {str(e)}"
+
+# Route for getting test locations (reliable hardcoded data)
+@app.route('/get-test-locations/<tenant>', methods=['GET'])
+def get_test_locations(tenant):
+    """Return hardcoded test locations for debugging frontend"""
+    # Get tenant configuration
+    tenant_config = get_tenant_config(tenant)
+    tenant_display_name = tenant_config.get('display_name')
+    
+    test_locations = [
+        {
+            "id": "1001",
+            "name": f"Warehouse A ({tenant_display_name})",
+            "sublocations": [
+                {"id": "sub1", "name": "Section A1"},
+                {"id": "sub2", "name": "Section A2"}
+            ]
+        },
+        {
+            "id": "1002",
+            "name": f"Laboratory B ({tenant_display_name})",
+            "sublocations": [
+                {"id": "sub3", "name": "Lab Storage 1"},
+                {"id": "sub4", "name": "Lab Storage 2"}
+            ]
+        },
+        {
+            "id": "1003",
+            "name": f"Office Building ({tenant_display_name})",
+            "sublocations": []
+        }
+    ]
+    return jsonify(test_locations)
+
 # Function to find record ID by scanned barcode
 def find_record_id_by_barcode(barcode, access_token, tenant):
     """Find Alchemy record ID using barcode as the Result.Code"""
@@ -1253,39 +1085,6 @@ def extract_sublocations_improved(location):
                             })
     
     return sublocations
-
-# Route for getting test locations (reliable hardcoded data)
-@app.route('/get-test-locations/<tenant>', methods=['GET'])
-def get_test_locations(tenant):
-    """Return hardcoded test locations for debugging frontend"""
-    # Get tenant configuration
-    tenant_config = get_tenant_config(tenant)
-    tenant_display_name = tenant_config.get('display_name')
-    
-    test_locations = [
-        {
-            "id": "1001",
-            "name": f"Warehouse A ({tenant_display_name})",
-            "sublocations": [
-                {"id": "sub1", "name": "Section A1"},
-                {"id": "sub2", "name": "Section A2"}
-            ]
-        },
-        {
-            "id": "1002",
-            "name": f"Laboratory B ({tenant_display_name})",
-            "sublocations": [
-                {"id": "sub3", "name": "Lab Storage 1"},
-                {"id": "sub4", "name": "Lab Storage 2"}
-            ]
-        },
-        {
-            "id": "1003",
-            "name": f"Office Building ({tenant_display_name})",
-            "sublocations": []
-        }
-    ]
-    return jsonify(test_locations)
 
 # Route for getting locations from Alchemy API
 @app.route('/get-locations/<tenant>', methods=['GET'])
