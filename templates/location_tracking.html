@@ -53,14 +53,20 @@
                 <div class="d-flex justify-content-between align-items-center p-3 bg-white shadow-sm mb-3">
                     <h3 class="mb-0">Location Tracking</h3>
                     <div class="d-flex align-items-center">
+                        {% if admin_mode %}
                         <a href="/admin" class="btn btn-outline-primary btn-sm header-btn">
                             <i class="fas fa-arrow-left"></i> Back to Admin
                         </a>
                         <select id="tenantSelector" class="form-select">
                             {% for tenant in tenants %}
-                            <option value="{{ tenant }}">{{ tenant }}</option>
+                            <option value="{{ tenant }}" {% if tenant == current_tenant %}selected{% endif %}>{{ tenant }}</option>
                             {% endfor %}
                         </select>
+                        {% else %}
+                        <a href="/tenant/{{ current_tenant }}" class="btn btn-outline-primary btn-sm header-btn">
+                            <i class="fas fa-arrow-left"></i> Back to Scanner
+                        </a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -83,8 +89,17 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const tenantSelector = document.getElementById('tenantSelector');
             const gridDiv = document.getElementById('locationGrid');
+            
+            {% if admin_mode %}
+            const tenantSelector = document.getElementById('tenantSelector');
+            {% endif %}
+            
+            // Set current tenant
+            let currentTenant = "{{ current_tenant }}";
+            
+            // Admin mode flag
+            const adminMode = {% if admin_mode %}true{% else %}false{% endif %};
 
             // Custom tree cell renderer that manually creates the tree look
             function TreeCellRenderer() {}
@@ -121,7 +136,7 @@
                 return this.eGui;
             };
 
-            // Define the columns for AG Grid
+            // Define the columns for AG Grid based on mode
             const columnDefs = [
                 {
                     headerName: 'Location Hierarchy',
@@ -131,16 +146,20 @@
                     minWidth: 250,
                     sortable: true,
                     filter: true
-                },
-                {
+                }
+            ];
+            
+            // Only add the ID column in admin mode
+            if (adminMode) {
+                columnDefs.push({
                     headerName: 'Location ID',
                     field: 'id',
                     flex: 1,
                     minWidth: 100,
                     sortable: true,
                     filter: true
-                }
-            ];
+                });
+            }
 
             // Create the grid options
             const gridOptions = {
@@ -212,12 +231,15 @@
             }
 
             // Initial load
-            fetchLocations(tenantSelector.value);
+            fetchLocations(currentTenant);
 
-            // Tenant selection change event
+            // Tenant selection change event - only in admin mode
+            {% if admin_mode %}
             tenantSelector.addEventListener('change', function() {
-                fetchLocations(this.value);
+                currentTenant = this.value;
+                fetchLocations(currentTenant);
             });
+            {% endif %}
         });
     </script>
 </body>
