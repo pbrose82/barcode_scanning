@@ -1,9 +1,12 @@
-from flask import Flask, request, jsonify, render_template, send_from_directory, redirect, url_for, Response
+from flask import Flask, request, jsonify, render_template, send_from_directory
+from flask import redirect, url_for, Response, session
 import os
 import logging
 import json
 import requests
 import time
+import secrets
+from datetime import datetime, timedelta
 
 # Persistent config paths for Render
 RENDER_CONFIG_DIR = '/opt/render/project/config'
@@ -12,8 +15,21 @@ RENDER_CONFIG_PATH = os.path.join(RENDER_CONFIG_DIR, 'config.json')
 # Logging Configuration
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Flask Application Setup
+# Flask Application Setup - MOVED TO TOP
 app = Flask(__name__, static_folder='static', template_folder='templates')
+
+# Secret key for sessions
+app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(16))
+
+# Set session timeout (1 hour)
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=1)
+
+# AG-Grid - MOVED AFTER APP DEFINITION
+@app.route('/location-tracking')
+def location_tracking():
+    """Render location tracking page with AG Grid"""
+    tenants = list(CONFIG["tenants"].keys())
+    return render_template('location_tracking.html', tenants=tenants)
 
 def ensure_config_directory():
     """Ensure the configuration directory exists and is not a file"""
@@ -238,13 +254,6 @@ DEFAULT_TENANT = CONFIG["default_tenant"]
 # Global Token Cache
 token_cache = {}
 
-# AG-Grid
-@app.route('/location-tracking')
-def location_tracking():
-    """Render location tracking page with AG Grid"""
-    tenants = list(CONFIG["tenants"].keys())
-    return render_template('location_tracking.html', tenants=tenants)
-
 # Authentication for admin routes
 def authenticate(username, password):
     """Validate admin credentials"""
@@ -254,14 +263,32 @@ def authenticate(username, password):
 
 @app.before_request
 def require_auth():
-    """Require authentication for admin routes"""
-    if request.path.startswith('/admin'):
-        auth = request.authorization
-        if not auth or not authenticate(auth.username, auth.password):
-            return Response(
-                'Could not verify your access level for that URL.\n'
-                'You have to login with proper credentials', 401,
-                {'WWW-Authenticate': 'Basic realm="Admin Access"'})
+    """
+    Require authentication for admin routes with session timeout
+    Sessions expire after 1 hour of inactivity
+    """
+    if request.path.startswith('/admin') and not request.path.startswith('/admin/login'):
+        # Skip authentication for the login page itself
+        if request.path == '/admin/login':
+            return None
+            
+        # Check if user is already authenticated and session is still valid
+        if 'admin_authenticated' in session and session['admin_authenticated']:
+            # Check if last activity was recorded 
+            if 'last_activity' in session:
+                # If more than 1 hour since last activity, invalidate the session
+                last_activity = datetime.fromisoformat(session['last_activity'])
+                if datetime.utcnow() - last_activity > timedelta(hours=1):
+                    session.pop('admin_authenticated', None)
+                    session.pop('last_activity', None)
+                    return redirect(url_for('admin_login'))
+                
+            # Update last activity time
+            session['last_activity'] = datetime.utcnow().isoformat()
+            return None
+        else:
+            # Not authenticated, redirect to login page
+            return redirect(url_for('admin_login'))
 
 def get_tenant_config(tenant_id):
     """Get tenant configuration from config file"""
@@ -446,6 +473,36 @@ def get_fallback_locations():
         }
     ]
 
+# Admin login routes
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    """Admin login page"""
+    error = None
+    
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        if authenticate(username, password):
+            # Set session as authenticated
+            session['admin_authenticated'] = True
+            session['last_activity'] = datetime.utcnow().isoformat()
+            session.permanent = True  # Use the permanent session lifetime
+            
+            # Redirect to the admin panel
+            return redirect(url_for('admin_panel'))
+        else:
+            error = "Invalid credentials. Please try again."
+    
+    return render_template('admin_login.html', error=error)
+
+@app.route('/admin/logout')
+def admin_logout():
+    """Admin logout"""
+    session.pop('admin_authenticated', None)
+    session.pop('last_activity', None)
+    return redirect(url_for('admin_login'))
+
 # Configuration Management Routes
 @app.route('/api/update-tenant-token', methods=['POST'])
 def update_tenant_token():
@@ -526,25 +583,6 @@ def update_tenant_token():
         
     except Exception as e:
         logging.error(f"Unexpected error updating tenant token: {str(e)}")
-        return jsonify({"status": "error", "message": str(e)}), 500
-            
-        # Update token in config
-        CONFIG["tenants"][tenant_id]["stored_refresh_token"] = refresh_token
-        
-        # Save the updated config (IMPORTANT: pass CONFIG as argument)
-        save_config(CONFIG)
-        
-        # Clear the token cache for this tenant
-        if tenant_id in token_cache:
-            del token_cache[tenant_id]
-        
-        return jsonify({
-            "status": "success", 
-            "message": f"Refresh token updated for tenant {tenant_id}"
-        })
-        
-    except Exception as e:
-        logging.error(f"Error updating tenant token: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/admin/add-tenant', methods=['POST'])
@@ -750,6 +788,144 @@ def create_error_template():
             f.write(error_html)
             
         return "Error template created successfully."
+    except Exception as e:
+        return f"Error creating template: {str(e)}"
+
+# Create admin login template
+@app.route('/create-admin-login-template')
+def create_admin_login_template():
+    """Create admin login template if it doesn't exist"""
+    try:
+        template_path = os.path.join(app.template_folder, 'admin_login.html')
+        
+        # Check if template already exists
+        if os.path.exists(template_path):
+            return "Admin login template already exists."
+        
+        # Create templates directory if it doesn't exist
+        if not os.path.exists(app.template_folder):
+            os.makedirs(app.template_folder)
+        
+        # Write login template
+        login_html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login - Alchemy Barcode Scanner</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --alchemy-blue: #0047BB;
+            --alchemy-light-blue: #3F88F6;
+            --alchemy-dark: #001952;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f8f9fa;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .login-container {
+            max-width: 400px;
+            width: 100%;
+        }
+        
+        .card {
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: none;
+        }
+        
+        .card-header {
+            background-color: white;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .header-logo {
+            height: 40px;
+            margin-bottom: 15px;
+        }
+        
+        .card-header h5 {
+            color: var(--alchemy-dark);
+            font-weight: 600;
+            margin: 0;
+        }
+        
+        .card-body {
+            padding: 20px;
+        }
+        
+        .btn-primary {
+            background-color: var(--alchemy-blue);
+            border-color: var(--alchemy-blue);
+            width: 100%;
+            padding: 10px;
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--alchemy-light-blue);
+            border-color: var(--alchemy-light-blue);
+        }
+        
+        .form-label {
+            color: var(--alchemy-dark);
+            font-weight: 500;
+        }
+        
+        .alert-danger {
+            border-radius: 6px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="card">
+            <div class="card-header">
+                <img src="{{ url_for('static', filename='Alchemy-logo.svg') }}" alt="Alchemy Cloud Logo" class="header-logo">
+                <h5>Admin Login</h5>
+            </div>
+            <div class="card-body">
+                {% if error %}
+                <div class="alert alert-danger" role="alert">
+                    {{ error }}
+                </div>
+                {% endif %}
+                
+                <form method="post" action="{{ url_for('admin_login') }}">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="username" name="username" required autofocus>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Login</button>
+                </form>
+                
+                <div class="text-center mt-3">
+                    <a href="/" class="text-decoration-none">Back to Home</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>"""
+        
+        with open(template_path, 'w') as f:
+            f.write(login_html)
+            
+        return "Admin login template created successfully."
     except Exception as e:
         return f"Error creating template: {str(e)}"
 
@@ -1188,13 +1364,6 @@ def update_location(tenant):
             "status": "error", 
             "message": str(e)
         }), 500
-
-# Configuration Initialization
-ensure_config_directory()
-ensure_config_file()
-CONFIG = load_config()
-DEFAULT_URLS = CONFIG["default_urls"]
-DEFAULT_TENANT = CONFIG["default_tenant"]
 
 # Main Application Runner
 if __name__ == '__main__':
