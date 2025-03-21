@@ -61,12 +61,11 @@
         .tenant-banner {
             background-color: var(--alchemy-blue-bg);
             padding: 12px 0;
+            position: relative;
         }
         
         .tenant-container {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+            text-align: center;
             max-width: 1200px;
             margin: 0 auto;
             padding: 0 20px;
@@ -82,6 +81,10 @@
         }
         
         .back-button {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
             display: flex;
             align-items: center;
             padding: 6px 12px;
@@ -125,24 +128,24 @@
         
         /* Tips section styles */
         .tips-section {
-            width: 300px;
+            width: 230px;
             background-color: var(--alchemy-blue-bg);
             border-radius: 8px;
-            padding: 20px;
+            padding: 15px;
         }
         
         .tips-title {
             color: var(--alchemy-blue);
             font-weight: 600;
-            font-size: 16px;
-            margin-bottom: 15px;
+            font-size: 15px;
+            margin-bottom: 10px;
             display: flex;
             align-items: center;
         }
         
         .tips-title i {
             margin-right: 10px;
-            font-size: 20px;
+            font-size: 18px;
         }
         
         .tips-list {
@@ -151,8 +154,8 @@
         }
         
         .tips-list li {
-            margin-bottom: 10px;
-            font-size: 14px;
+            margin-bottom: 8px;
+            font-size: 13px;
             color: var(--alchemy-dark);
         }
         
@@ -384,9 +387,15 @@
         }
         
         @media (max-width: 768px) {
-            .tenant-container {
-                flex-direction: column;
-                gap: 10px;
+            .tenant-banner {
+                padding: 12px 20px 45px 20px;
+            }
+            
+            .back-button {
+                top: auto;
+                bottom: 10px;
+                right: 50%;
+                transform: translateX(50%);
             }
             
             .button-group {
@@ -414,10 +423,10 @@
             <div class="tenant-info">
                 All scanned data will be sent to <span class="tenant-name">{{ tenant_name }}</span>.
             </div>
-            <a href="/" class="back-button">
-                <i class="fas fa-arrow-left"></i> BACK TO TENANTS
-            </a>
         </div>
+        <a href="/" class="back-button">
+            <i class="fas fa-arrow-left"></i> BACK TO TENANTS
+        </a>
     </div>
     
     <!-- Main Content -->
