@@ -347,7 +347,7 @@ def save_locations_to_cache(tenant, locations):
             "status": "success",
             "timestamp": time.time(),
             "message": f"Successfully cached {len(locations)} locations",
-            "formatted_time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            "formatted_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
         save_cache_metadata(metadata)
         
@@ -360,7 +360,7 @@ def save_locations_to_cache(tenant, locations):
             "status": "error",
             "timestamp": time.time(),
             "message": f"Error caching locations: {str(e)}",
-            "formatted_time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            "formatted_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
         save_cache_metadata(metadata)
         
@@ -392,7 +392,7 @@ def refresh_location_cache(tenant):
             "status": "refreshing",
             "timestamp": time.time(),
             "message": "Refresh in progress...",
-            "formatted_time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            "formatted_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
         save_cache_metadata(metadata)
         
@@ -406,7 +406,7 @@ def refresh_location_cache(tenant):
                 "status": "error",
                 "timestamp": time.time(),
                 "message": f"Failed to get access token for tenant {tenant}",
-                "formatted_time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                "formatted_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             }
             save_cache_metadata(metadata)
             logging.error(f"Failed to refresh location cache: Unable to get access token for tenant {tenant}")
@@ -442,7 +442,7 @@ def refresh_location_cache(tenant):
                 "status": "error",
                 "timestamp": time.time(),
                 "message": f"API returned status code {response.status_code}",
-                "formatted_time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                "formatted_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             }
             save_cache_metadata(metadata)
             
@@ -490,7 +490,7 @@ def refresh_location_cache(tenant):
                 "status": "error",
                 "timestamp": time.time(),
                 "message": "No valid locations found in API response",
-                "formatted_time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                "formatted_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             }
             save_cache_metadata(metadata)
             
@@ -504,7 +504,7 @@ def refresh_location_cache(tenant):
             "status": "error",
             "timestamp": time.time(),
             "message": f"Error refreshing cache: {str(e)}",
-            "formatted_time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            "formatted_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
         save_cache_metadata(metadata)
         
@@ -1375,8 +1375,8 @@ def admin_location_cache_status():
             
             # Format last refreshed time
             if last_refreshed > 0:
-                formatted_time = datetime.datetime.fromtimestamp(last_refreshed).strftime("%Y-%m-%d %H:%M:%S")
-                next_refresh = datetime.datetime.fromtimestamp(last_refreshed + CACHE_REFRESH_INTERVAL).strftime("%Y-%m-%d %H:%M:%S")
+                formatted_time = datetime.fromtimestamp(last_refreshed).strftime("%Y-%m-%d %H:%M:%S")
+                next_refresh = datetime.fromtimestamp(last_refreshed + CACHE_REFRESH_INTERVAL).strftime("%Y-%m-%d %H:%M:%S")
             else:
                 formatted_time = "Never"
                 next_refresh = "Unknown"
