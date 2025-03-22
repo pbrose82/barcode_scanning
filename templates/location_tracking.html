@@ -80,6 +80,68 @@
             font-weight: 500;
             width: 200px;
         }
+        
+        /* Card View Styles */
+        .location-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 15px 0;
+        }
+        .location-category {
+            border-radius: 8px;
+            padding: 15px;
+            height: 100%;
+        }
+        .location-card {
+            background-color: white;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .location-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        /* Muted color scheme for category backgrounds */
+        .standalone-category {
+            background-color: #E8EEF4;
+        }
+        .lab-a1-category {
+            background-color: #E3F2E3;
+        }
+        .lab-center-category {
+            background-color: #FFF8E6;
+        }
+        .manufacturing-category {
+            background-color: #F8EAEA;
+        }
+        .shelf-category {
+            background-color: #ECE8F8;
+        }
+        
+        /* Nav tab styling */
+        .nav-tabs .nav-link {
+            color: #495057;
+            border: 1px solid transparent;
+            border-top-left-radius: 0.25rem;
+            border-top-right-radius: 0.25rem;
+            padding: 0.5rem 1rem;
+            font-weight: 500;
+        }
+        .nav-tabs .nav-link.active {
+            color: #0047BB;
+            background-color: #fff;
+            border-color: #dee2e6 #dee2e6 #fff;
+            font-weight: 600;
+        }
+        .nav-tabs .nav-link:hover {
+            border-color: #e9ecef #e9ecef #dee2e6;
+        }
     </style>
 </head>
 <body>
@@ -138,7 +200,34 @@
         <div class="row">
             <div class="col-12">
                 <div class="grid-container">
-                    <div id="locationGrid" class="ag-theme-alpine"></div>
+                    <!-- Tab navigation -->
+                    <ul class="nav nav-tabs mb-3" id="locationViewTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="tree-tab" data-bs-toggle="tab" data-bs-target="#tree-view" type="button" role="tab" aria-controls="tree-view" aria-selected="true">
+                                <i class="fas fa-sitemap me-1"></i> Tree View
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="card-tab" data-bs-toggle="tab" data-bs-target="#card-view" type="button" role="tab" aria-controls="card-view" aria-selected="false">
+                                <i class="fas fa-th-large me-1"></i> Card View
+                            </button>
+                        </li>
+                    </ul>
+                    
+                    <!-- Tab content -->
+                    <div class="tab-content" id="locationViewTabsContent">
+                        <!-- Tree View Tab -->
+                        <div class="tab-pane fade show active" id="tree-view" role="tabpanel" aria-labelledby="tree-tab">
+                            <div id="locationGrid" class="ag-theme-alpine"></div>
+                        </div>
+                        
+                        <!-- Card View Tab -->
+                        <div class="tab-pane fade" id="card-view" role="tabpanel" aria-labelledby="card-tab">
+                            <div id="locationCards" class="location-cards">
+                                <!-- Cards will be generated dynamically with JavaScript -->
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -153,6 +242,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const gridDiv = document.getElementById('locationGrid');
+            const locationCardsContainer = document.getElementById('locationCards');
             
             {% if admin_mode %}
             const tenantSelector = document.getElementById('tenantSelector');
@@ -171,6 +261,9 @@
             
             // Cache status toggle
             let statusVisible = false;
+            
+            // Data storage for cards view
+            let locationData = [];
 
             // Custom tree cell renderer that manually creates the tree look
             function TreeCellRenderer() {}
@@ -248,6 +341,107 @@
 
             // Initialize the grid
             new agGrid.Grid(gridDiv, gridOptions);
+            
+            // Function to generate card view
+            function generateCardView(data) {
+                // Clear existing cards
+                locationCardsContainer.innerHTML = '';
+                
+                // Group locations by parent
+                const locationsByParent = {};
+                
+                // First, identify parent locations (level 0)
+                data.forEach(location => {
+                    if (location.level === 0) {
+                        if (!locationsByParent[location.name]) {
+                            locationsByParent[location.name] = {
+                                parent: location,
+                                sublocations: []
+                            };
+                        }
+                    }
+                });
+                
+                // Now add sublocations to their parents
+                data.forEach(location => {
+                    if (location.level === 1 && location.parentName) {
+                        if (locationsByParent[location.parentName]) {
+                            locationsByParent[location.parentName].sublocations.push(location);
+                        }
+                    }
+                });
+                
+                // Standalone locations (those without parents or children)
+                const standaloneLocations = data.filter(location => 
+                    location.level === 0 && 
+                    !data.some(l => l.level === 1 && l.parentName === location.name) &&
+                    !data.some(l => l.parentName === location.name)
+                );
+                
+                // Create the standalone category if there are standalone locations
+                if (standaloneLocations.length > 0) {
+                    const standaloneDiv = document.createElement('div');
+                    standaloneDiv.className = 'location-category standalone-category';
+                    
+                    const categoryTitle = document.createElement('h5');
+                    categoryTitle.textContent = 'Standalone';
+                    categoryTitle.className = 'mb-3';
+                    standaloneDiv.appendChild(categoryTitle);
+                    
+                    standaloneLocations.forEach(location => {
+                        const card = document.createElement('div');
+                        card.className = 'location-card';
+                        card.innerHTML = `
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-map-marker-alt me-2 text-primary"></i>
+                                <span>${location.name}</span>
+                            </div>
+                        `;
+                        standaloneDiv.appendChild(card);
+                    });
+                    
+                    locationCardsContainer.appendChild(standaloneDiv);
+                }
+                
+                // Create category cards for each parent with sublocations
+                Object.keys(locationsByParent).forEach((parentName, index) => {
+                    const locationGroup = locationsByParent[parentName];
+                    if (locationGroup.sublocations.length > 0) {
+                        const categoryDiv = document.createElement('div');
+                        
+                        // Assign different background colors based on parent name or index
+                        // Using muted color classes defined in CSS
+                        const colorClasses = [
+                            'lab-a1-category', 
+                            'lab-center-category', 
+                            'manufacturing-category',
+                            'shelf-category'
+                        ];
+                        const colorClass = colorClasses[index % colorClasses.length];
+                        categoryDiv.className = `location-category ${colorClass}`;
+                        
+                        const categoryTitle = document.createElement('h5');
+                        categoryTitle.textContent = parentName;
+                        categoryTitle.className = 'mb-3';
+                        categoryDiv.appendChild(categoryTitle);
+                        
+                        // Add sublocation cards
+                        locationGroup.sublocations.forEach(sublocation => {
+                            const card = document.createElement('div');
+                            card.className = 'location-card';
+                            card.innerHTML = `
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-arrow-right me-2 text-secondary"></i>
+                                    <span>${sublocation.name}</span>
+                                </div>
+                            `;
+                            categoryDiv.appendChild(card);
+                        });
+                        
+                        locationCardsContainer.appendChild(categoryDiv);
+                    }
+                });
+            }
 
             // Function to fetch locations and transform them into a hierarchical structure
             function fetchLocations(tenant, useCache = true) {
@@ -261,6 +455,9 @@
                     .then(response => response.json())
                     .then(locations => {
                         console.log('Raw locations:', locations);
+                        
+                        // Store the raw data for card view
+                        locationData = locations;
                         
                         // Flatten the hierarchy for display
                         const flattenedData = [];
@@ -299,7 +496,12 @@
                         });
                         
                         console.log('Flattened data for grid:', flattenedData);
+                        
+                        // Update grid data
                         gridOptions.api.setRowData(flattenedData);
+                        
+                        // Generate card view
+                        generateCardView(flattenedData);
                         
                         // Hide loading overlay
                         gridOptions.api.hideOverlay();
@@ -308,6 +510,9 @@
                         console.error('Error fetching locations:', error);
                         gridOptions.api.setRowData([]);
                         gridOptions.api.showNoRowsOverlay();
+                        
+                        // Clear card view on error
+                        locationCardsContainer.innerHTML = '<div class="alert alert-danger">Error loading location data</div>';
                     });
             }
             
