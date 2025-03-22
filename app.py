@@ -7,7 +7,6 @@ import requests
 import time
 import secrets
 from datetime import datetime, timedelta
-import datetime
 from threading import Timer
 from pathlib import Path
 
