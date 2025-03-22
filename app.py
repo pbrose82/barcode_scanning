@@ -1595,8 +1595,18 @@ def update_location(tenant):
             "message": str(e)
         }), 500
 
-# Main Application Runner
+# Initialize location cache system when application starts
+init_location_cache()
+
+# Add this inside your main execution block for logging
 if __name__ == '__main__':
     # Get port from environment variable or default to 5000
     port = int(os.environ.get('PORT', 5000))
+    
+    # Initialize location cache directory
+    ensure_location_cache_directory()
+    
+    # Log that we're starting with location caching
+    logging.info(f"Starting application with location caching enabled. Cache directory: {LOCATION_CACHE_DIR}")
+    
     app.run(host='0.0.0.0', port=port, debug=True)
