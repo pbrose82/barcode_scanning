@@ -44,6 +44,42 @@
         .indented {
             margin-left: 25px;
         }
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .status-success {
+            background-color: rgba(0, 168, 107, 0.2);
+            color: #00A86B;
+        }
+        .status-error {
+            background-color: rgba(228, 0, 43, 0.2);
+            color: #E4002B;
+        }
+        .status-refreshing {
+            background-color: rgba(0, 71, 187, 0.2);
+            color: #0047BB;
+        }
+        .status-info-box {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .status-info-box table {
+            width: 100%;
+            margin-top: 10px;
+        }
+        .status-info-box table td {
+            padding: 5px 10px;
+        }
+        .status-info-box table td:first-child {
+            font-weight: 500;
+            width: 200px;
+        }
     </style>
 </head>
 <body>
@@ -57,11 +93,20 @@
                         <a href="/admin" class="btn btn-outline-primary btn-sm header-btn">
                             <i class="fas fa-arrow-left"></i> Back to Admin
                         </a>
-                        <select id="tenantSelector" class="form-select">
+                        <select id="tenantSelector" class="form-select form-select-sm me-2" style="width: auto;">
                             {% for tenant in tenants %}
                             <option value="{{ tenant }}" {% if tenant == current_tenant %}selected{% endif %}>{{ tenant }}</option>
                             {% endfor %}
                         </select>
+                        <button id="refreshButton" class="btn btn-primary btn-sm me-2">
+                            <i class="fas fa-sync-alt"></i> Refresh Cache
+                        </button>
+                        <button id="refreshAllButton" class="btn btn-outline-primary btn-sm me-2">
+                            <i class="fas fa-sync-alt"></i> Refresh All
+                        </button>
+                        <button id="toggleStatusButton" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-info-circle"></i> Cache Status
+                        </button>
                         {% else %}
                         <a href="/tenant/{{ current_tenant }}" class="btn btn-outline-primary btn-sm header-btn">
                             <i class="fas fa-arrow-left"></i> Back to Scanner
@@ -71,6 +116,24 @@
                 </div>
             </div>
         </div>
+        
+        {% if admin_mode %}
+        <div class="row">
+            <div class="col-12">
+                <div id="statusContainer" class="status-info-box" style="display: none;">
+                    <h5>Location Cache Status</h5>
+                    <div id="statusContent">
+                        <div class="d-flex justify-content-center">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <span class="ms-2">Loading cache status...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
         
         <div class="row">
             <div class="col-12">
@@ -93,6 +156,11 @@
             
             {% if admin_mode %}
             const tenantSelector = document.getElementById('tenantSelector');
+            const refreshButton = document.getElementById('refreshButton');
+            const refreshAllButton = document.getElementById('refreshAllButton');
+            const toggleStatusButton = document.getElementById('toggleStatusButton');
+            const statusContainer = document.getElementById('statusContainer');
+            const statusContent = document.getElementById('statusContent');
             {% endif %}
             
             // Set current tenant
@@ -100,6 +168,9 @@
             
             // Admin mode flag
             const adminMode = {% if admin_mode %}true{% else %}false{% endif %};
+            
+            // Cache status toggle
+            let statusVisible = false;
 
             // Custom tree cell renderer that manually creates the tree look
             function TreeCellRenderer() {}
@@ -179,8 +250,14 @@
             new agGrid.Grid(gridDiv, gridOptions);
 
             // Function to fetch locations and transform them into a hierarchical structure
-            function fetchLocations(tenant) {
-                fetch(`/get-locations/${tenant}`)
+            function fetchLocations(tenant, useCache = true) {
+                // Show loading in grid
+                gridOptions.api.showLoadingOverlay();
+                
+                // Build URL with cache parameter
+                const url = `/get-locations/${tenant}?use_cache=${useCache}`;
+                
+                fetch(url)
                     .then(response => response.json())
                     .then(locations => {
                         console.log('Raw locations:', locations);
@@ -223,23 +300,257 @@
                         
                         console.log('Flattened data for grid:', flattenedData);
                         gridOptions.api.setRowData(flattenedData);
+                        
+                        // Hide loading overlay
+                        gridOptions.api.hideOverlay();
                     })
                     .catch(error => {
                         console.error('Error fetching locations:', error);
                         gridOptions.api.setRowData([]);
+                        gridOptions.api.showNoRowsOverlay();
                     });
             }
+            
+            {% if admin_mode %}
+            // Function to trigger manual cache refresh
+            function refreshCache(tenant) {
+                refreshButton.disabled = true;
+                refreshButton.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Refreshing...';
+                
+                fetch(`/admin/refresh-location-cache/${tenant}`, {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Refresh response:', data);
+                    
+                    if (data.status === 'success') {
+                        // Update button to show success temporarily
+                        refreshButton.innerHTML = '<i class="fas fa-check"></i> Started';
+                        refreshButton.classList.remove('btn-primary');
+                        refreshButton.classList.add('btn-success');
+                        
+                        // Show status if not already visible
+                        if (!statusVisible) {
+                            toggleStatusButton.click();
+                        } else {
+                            // Refresh the status display
+                            fetchCacheStatus();
+                        }
+                        
+                        // Reset button after 3 seconds
+                        setTimeout(() => {
+                            refreshButton.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh Cache';
+                            refreshButton.classList.remove('btn-success');
+                            refreshButton.classList.add('btn-primary');
+                            refreshButton.disabled = false;
+                        }, 3000);
+                    } else {
+                        // Show error
+                        refreshButton.innerHTML = '<i class="fas fa-times"></i> Error';
+                        refreshButton.classList.remove('btn-primary');
+                        refreshButton.classList.add('btn-danger');
+                        
+                        // Reset button after 3 seconds
+                        setTimeout(() => {
+                            refreshButton.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh Cache';
+                            refreshButton.classList.remove('btn-danger');
+                            refreshButton.classList.add('btn-primary');
+                            refreshButton.disabled = false;
+                        }, 3000);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error refreshing cache:', error);
+                    
+                    // Show error
+                    refreshButton.innerHTML = '<i class="fas fa-times"></i> Error';
+                    refreshButton.classList.remove('btn-primary');
+                    refreshButton.classList.add('btn-danger');
+                    
+                    // Reset button after 3 seconds
+                    setTimeout(() => {
+                        refreshButton.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh Cache';
+                        refreshButton.classList.remove('btn-danger');
+                        refreshButton.classList.add('btn-primary');
+                        refreshButton.disabled = false;
+                    }, 3000);
+                });
+            }
+            
+            // Function to refresh all caches
+            function refreshAllCaches() {
+                refreshAllButton.disabled = true;
+                refreshAllButton.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Refreshing All...';
+                
+                fetch('/admin/refresh-location-cache-all', {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Refresh all response:', data);
+                    
+                    if (data.status === 'success') {
+                        // Update button to show success temporarily
+                        refreshAllButton.innerHTML = '<i class="fas fa-check"></i> Started';
+                        refreshAllButton.classList.remove('btn-outline-primary');
+                        refreshAllButton.classList.add('btn-success');
+                        
+                        // Show status if not already visible
+                        if (!statusVisible) {
+                            toggleStatusButton.click();
+                        } else {
+                            // Refresh the status display
+                            fetchCacheStatus();
+                        }
+                        
+                        // Reset button after 3 seconds
+                        setTimeout(() => {
+                            refreshAllButton.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh All';
+                            refreshAllButton.classList.remove('btn-success');
+                            refreshAllButton.classList.add('btn-outline-primary');
+                            refreshAllButton.disabled = false;
+                        }, 3000);
+                    } else {
+                        // Show error
+                        refreshAllButton.innerHTML = '<i class="fas fa-times"></i> Error';
+                        refreshAllButton.classList.remove('btn-outline-primary');
+                        refreshAllButton.classList.add('btn-danger');
+                        
+                        // Reset button after 3 seconds
+                        setTimeout(() => {
+                            refreshAllButton.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh All';
+                            refreshAllButton.classList.remove('btn-danger');
+                            refreshAllButton.classList.add('btn-outline-primary');
+                            refreshAllButton.disabled = false;
+                        }, 3000);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error refreshing all caches:', error);
+                    
+                    // Show error
+                    refreshAllButton.innerHTML = '<i class="fas fa-times"></i> Error';
+                    refreshAllButton.classList.remove('btn-outline-primary');
+                    refreshAllButton.classList.add('btn-danger');
+                    
+                    // Reset button after 3 seconds
+                    setTimeout(() => {
+                        refreshAllButton.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh All';
+                        refreshAllButton.classList.remove('btn-danger');
+                        refreshAllButton.classList.add('btn-outline-primary');
+                        refreshAllButton.disabled = false;
+                    }, 3000);
+                });
+            }
+            
+            // Function to fetch and display cache status
+            function fetchCacheStatus() {
+                fetch('/admin/location-cache-status')
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Cache status:', data);
+                        
+                        // Generate status HTML
+                        let html = '<div class="row">';
+                        
+                        // System info
+                        html += '<div class="col-md-12 mb-3">';
+                        html += '<h6>System Information</h6>';
+                        html += '<table class="table table-sm table-bordered">';
+                        html += '<tr><td>Cache Directory</td><td>' + data.system.cache_directory + '</td></tr>';
+                        html += '<tr><td>Directory Exists</td><td>' + (data.system.directory_exists ? 'Yes' : 'No') + '</td></tr>';
+                        html += '<tr><td>Refresh Interval</td><td>' + data.system.refresh_interval_days + ' days</td></tr>';
+                        html += '</table>';
+                        html += '</div>';
+                        
+                        // Tenant information
+                        html += '<div class="col-md-12">';
+                        html += '<h6>Tenant Cache Information</h6>';
+                        html += '<table class="table table-sm table-bordered">';
+                        html += '<thead><tr><th>Tenant</th><th>Status</th><th>Locations</th><th>Last Refreshed</th><th>Next Refresh</th></tr></thead>';
+                        html += '<tbody>';
+                        
+                        for (const [tenantId, status] of Object.entries(data.tenants)) {
+                            const statusClass = status.refresh_status.status === 'success' ? 'status-success' : 
+                                               status.refresh_status.status === 'error' ? 'status-error' : 
+                                               'status-refreshing';
+                            
+                            html += '<tr>';
+                            html += '<td>' + status.display_name + '</td>';
+                            html += '<td><span class="status-badge ' + statusClass + '">' + 
+                                   status.refresh_status.status + '</span><br><small>' + 
+                                   status.refresh_status.message + '</small></td>';
+                            
+                            if (status.cache_exists) {
+                                html += '<td>' + status.location_count + ' locations<br><small>(' + 
+                                       Math.round(status.cache_size_bytes / 1024) + ' KB)</small></td>';
+                            } else {
+                                html += '<td>No cache file</td>';
+                            }
+                            
+                            html += '<td>' + status.last_refreshed_formatted + '</td>';
+                            html += '<td>' + status.next_scheduled_refresh;
+                            
+                            if (status.is_expired) {
+                                html += '<br><span class="badge bg-warning text-dark">Expired</span>';
+                            }
+                            
+                            html += '</td>';
+                            html += '</tr>';
+                        }
+                        
+                        html += '</tbody></table>';
+                        html += '</div>';
+                        html += '</div>';
+                        
+                        // Update the status content
+                        statusContent.innerHTML = html;
+                    })
+                    .catch(error => {
+                        console.error('Error fetching cache status:', error);
+                        statusContent.innerHTML = '<div class="alert alert-danger">Error loading cache status: ' + error.message + '</div>';
+                    });
+            }
+            
+            // Set up event handlers for the admin interface
+            if (adminMode) {
+                refreshButton.addEventListener('click', function() {
+                    refreshCache(currentTenant);
+                });
+                
+                refreshAllButton.addEventListener('click', function() {
+                    refreshAllCaches();
+                });
+                
+                toggleStatusButton.addEventListener('click', function() {
+                    statusVisible = !statusVisible;
+                    
+                    if (statusVisible) {
+                        statusContainer.style.display = 'block';
+                        fetchCacheStatus();
+                        
+                        // Set up auto-refresh for status every 5 seconds
+                        window.statusRefreshInterval = setInterval(fetchCacheStatus, 5000);
+                    } else {
+                        statusContainer.style.display = 'none';
+                        
+                        // Clear auto-refresh interval
+                        if (window.statusRefreshInterval) {
+                            clearInterval(window.statusRefreshInterval);
+                        }
+                    }
+                });
+                
+                tenantSelector.addEventListener('change', function() {
+                    currentTenant = this.value;
+                    fetchLocations(currentTenant);
+                });
+            }
+            {% endif %}
 
             // Initial load
             fetchLocations(currentTenant);
-
-            // Tenant selection change event - only in admin mode
-            {% if admin_mode %}
-            tenantSelector.addEventListener('change', function() {
-                currentTenant = this.value;
-                fetchLocations(currentTenant);
-            });
-            {% endif %}
         });
     </script>
 </body>
