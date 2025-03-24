@@ -15,7 +15,7 @@ RENDER_CONFIG_DIR = '/opt/render/project/config'
 RENDER_CONFIG_PATH = os.path.join(RENDER_CONFIG_DIR, 'config.json')
 LOCATION_CACHE_DIR = os.path.join(RENDER_CONFIG_DIR, 'location_cache')
 LOCATION_CACHE_METADATA = os.path.join(RENDER_CONFIG_DIR, 'location_cache_metadata.json')
-CACHE_REFRESH_INTERVAL = 7 * 24 * 60 * 60  # 7 days in seconds
+CACHE_REFRESH_INTERVAL = 24 * 60 * 60  # 7 days in seconds
 
 
 # Logging Configuration
