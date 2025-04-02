@@ -7,10 +7,16 @@ import requests
 import time
 import secrets
 from datetime import datetime, timedelta
+from threading import Timer
+from pathlib import Path
 
 # Persistent config paths for Render
 RENDER_CONFIG_DIR = '/opt/render/project/config'
 RENDER_CONFIG_PATH = os.path.join(RENDER_CONFIG_DIR, 'config.json')
+LOCATION_CACHE_DIR = os.path.join(RENDER_CONFIG_DIR, 'location_cache')
+LOCATION_CACHE_METADATA = os.path.join(RENDER_CONFIG_DIR, 'location_cache_metadata.json')
+CACHE_REFRESH_INTERVAL = 24 * 60 * 60  # 7 days in seconds
+
 
 # Logging Configuration
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -272,6 +278,263 @@ DEFAULT_TENANT = CONFIG["default_tenant"]
 
 # Global Token Cache
 token_cache = {}
+
+def ensure_location_cache_directory():
+    """Ensure the location cache directory exists"""
+    try:
+        # Create the location cache directory if it doesn't exist
+        os.makedirs(LOCATION_CACHE_DIR, exist_ok=True)
+        logging.info(f"Location cache directory ensured at: {LOCATION_CACHE_DIR}")
+        return True
+    except Exception as e:
+        logging.error(f"Error creating location cache directory: {str(e)}")
+        return False
+
+def get_location_cache_file_path(tenant):
+    """Get the path to the cached location file for a specific tenant"""
+    return os.path.join(LOCATION_CACHE_DIR, f"{tenant}_locations.json")
+
+def load_cache_metadata():
+    """Load the cache metadata containing last refresh timestamps"""
+    try:
+        if os.path.exists(LOCATION_CACHE_METADATA):
+            with open(LOCATION_CACHE_METADATA, 'r') as f:
+                return json.load(f)
+        return {"last_refreshed": {}, "refresh_status": {}}
+    except Exception as e:
+        logging.error(f"Error loading cache metadata: {str(e)}")
+        return {"last_refreshed": {}, "refresh_status": {}}
+
+def save_cache_metadata(metadata):
+    """Save the cache metadata containing last refresh timestamps"""
+    try:
+        with open(LOCATION_CACHE_METADATA, 'w') as f:
+            json.dump(metadata, f, indent=2)
+        return True
+    except Exception as e:
+        logging.error(f"Error saving cache metadata: {str(e)}")
+        return False
+
+def is_cache_expired(tenant):
+    """Check if the location cache for a tenant has expired"""
+    metadata = load_cache_metadata()
+    
+    # If tenant not in metadata, consider it expired
+    if tenant not in metadata["last_refreshed"]:
+        return True
+    
+    last_refreshed = metadata["last_refreshed"].get(tenant, 0)
+    current_time = time.time()
+    
+    # Check if CACHE_REFRESH_INTERVAL seconds have passed since last refresh
+    return (current_time - last_refreshed) > CACHE_REFRESH_INTERVAL
+
+def save_locations_to_cache(tenant, locations):
+    """Save location data to cache file"""
+    try:
+        # Ensure directory exists
+        ensure_location_cache_directory()
+        
+        # Save locations to file
+        cache_file = get_location_cache_file_path(tenant)
+        with open(cache_file, 'w') as f:
+            json.dump(locations, f, indent=2)
+        
+        # Update metadata
+        metadata = load_cache_metadata()
+        metadata["last_refreshed"][tenant] = time.time()
+        metadata["refresh_status"][tenant] = {
+            "status": "success",
+            "timestamp": time.time(),
+            "message": f"Successfully cached {len(locations)} locations",
+            "formatted_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+        save_cache_metadata(metadata)
+        
+        logging.info(f"Saved {len(locations)} locations to cache for tenant {tenant}")
+        return True
+    except Exception as e:
+        # Update metadata with error
+        metadata = load_cache_metadata()
+        metadata["refresh_status"][tenant] = {
+            "status": "error",
+            "timestamp": time.time(),
+            "message": f"Error caching locations: {str(e)}",
+            "formatted_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+        save_cache_metadata(metadata)
+        
+        logging.error(f"Error saving locations to cache for tenant {tenant}: {str(e)}")
+        return False
+
+def load_locations_from_cache(tenant):
+    """Load location data from cache file"""
+    try:
+        cache_file = get_location_cache_file_path(tenant)
+        if os.path.exists(cache_file):
+            with open(cache_file, 'r') as f:
+                locations = json.load(f)
+            logging.info(f"Loaded {len(locations)} locations from cache for tenant {tenant}")
+            return locations
+        else:
+            logging.warning(f"No cache file found for tenant {tenant}")
+            return None
+    except Exception as e:
+        logging.error(f"Error loading locations from cache for tenant {tenant}: {str(e)}")
+        return None
+
+def refresh_location_cache(tenant):
+    """Refresh the location cache for a specific tenant by calling the Alchemy API"""
+    try:
+        # Update metadata to show refresh in progress
+        metadata = load_cache_metadata()
+        metadata["refresh_status"][tenant] = {
+            "status": "refreshing",
+            "timestamp": time.time(),
+            "message": "Refresh in progress...",
+            "formatted_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+        save_cache_metadata(metadata)
+        
+        # Get access token
+        access_token = refresh_alchemy_token(tenant)
+        
+        if not access_token:
+            # Update metadata with error
+            metadata = load_cache_metadata()
+            metadata["refresh_status"][tenant] = {
+                "status": "error",
+                "timestamp": time.time(),
+                "message": f"Failed to get access token for tenant {tenant}",
+                "formatted_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
+            save_cache_metadata(metadata)
+            logging.error(f"Failed to refresh location cache: Unable to get access token for tenant {tenant}")
+            return False
+        
+        # Get tenant configuration
+        tenant_config = get_tenant_config(tenant)
+        
+        # Prepare filter request for locations
+        filter_payload = {
+            "queryTerm": "Result.Status == 'Valid'",
+            "recordTemplateIdentifier": "AC_Location",
+            "drop": 0,
+            "take": 100,  # Fetch up to 100 locations
+            "lastChangedOnFrom": "2018-03-03T00:00:00Z",
+            "lastChangedOnTo": "2028-03-04T00:00:00Z"
+        }
+        
+        # Send request to Alchemy API
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
+        
+        filter_url = tenant_config.get('filter_url')
+        logging.info(f"Refreshing location cache: Fetching locations from Alchemy API for tenant {tenant}")
+        response = requests.put(filter_url, headers=headers, json=filter_payload)
+        
+        if not response.ok:
+            # Update metadata with error
+            metadata = load_cache_metadata()
+            metadata["refresh_status"][tenant] = {
+                "status": "error",
+                "timestamp": time.time(),
+                "message": f"API returned status code {response.status_code}",
+                "formatted_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
+            save_cache_metadata(metadata)
+            
+            logging.error(f"Failed to refresh location cache: API error for tenant {tenant}: {response.text}")
+            return False
+        
+        # Process the response
+        locations_data = response.json()
+        logging.info(f"Received {len(locations_data)} locations from API for tenant {tenant}")
+        
+        # Transform the data into the format needed by the frontend
+        formatted_locations = []
+        
+        for location in locations_data:
+            try:
+                # Extract location ID - use recordId if it exists, otherwise fall back to id
+                location_id = str(location.get("recordId") or location.get("id", "unknown"))
+                
+                # Extract location name using improved method
+                location_name = extract_location_name_improved(location)
+                
+                # Extract sublocations - improved version
+                sublocations = extract_sublocations_improved(location)
+                
+                # Create location info object
+                location_info = {
+                    "id": location_id,
+                    "name": location_name,
+                    "sublocations": sublocations
+                }
+                
+                formatted_locations.append(location_info)
+                
+            except Exception as e:
+                logging.error(f"Error processing location {location.get('recordId', location.get('id', 'unknown'))} for tenant {tenant}: {str(e)}")
+        
+        # Save to cache
+        if formatted_locations:
+            save_locations_to_cache(tenant, formatted_locations)
+            return True
+        else:
+            # Update metadata with error
+            metadata = load_cache_metadata()
+            metadata["refresh_status"][tenant] = {
+                "status": "error",
+                "timestamp": time.time(),
+                "message": "No valid locations found in API response",
+                "formatted_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
+            save_cache_metadata(metadata)
+            
+            logging.warning(f"No valid locations found in API response for tenant {tenant}")
+            return False
+            
+    except Exception as e:
+        # Update metadata with error
+        metadata = load_cache_metadata()
+        metadata["refresh_status"][tenant] = {
+            "status": "error",
+            "timestamp": time.time(),
+            "message": f"Error refreshing cache: {str(e)}",
+            "formatted_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+        save_cache_metadata(metadata)
+        
+        logging.error(f"Error refreshing location cache for tenant {tenant}: {str(e)}")
+        return False
+
+def refresh_all_location_caches():
+    """Refresh location caches for all tenants"""
+    global CONFIG
+    
+    for tenant_id in CONFIG["tenants"].keys():
+        try:
+            refresh_location_cache(tenant_id)
+        except Exception as e:
+            logging.error(f"Error refreshing cache for tenant {tenant_id}: {str(e)}")
+
+# Initialize the location cache system
+def init_location_cache():
+    """Initialize the location cache system"""
+    ensure_location_cache_directory()
+    
+    # Schedule periodic refresh task (weekly)
+    def schedule_refresh():
+        refresh_all_location_caches()
+        # Schedule next run in 7 days
+        Timer(CACHE_REFRESH_INTERVAL, schedule_refresh).start()
+    
+    # Start the first scheduled refresh after 1 hour (gives time for app to stabilize after restart)
+    Timer(3600, schedule_refresh).start()
+    logging.info("Location cache system initialized with weekly refresh schedule")
 
 # Authentication for admin routes
 def authenticate(username, password):
@@ -908,14 +1171,40 @@ def get_locations(tenant):
         # Check if tenant exists
         if tenant not in CONFIG["tenants"]:
             return jsonify({"error": f"Unknown tenant: {tenant}"}), 404
-            
+        
+        # Check if we should use cached data
+        use_cache = request.args.get('use_cache', 'true').lower() == 'true'
+        
+        # If using cache and it's not expired, return cached data
+        if use_cache and not is_cache_expired(tenant):
+            cached_locations = load_locations_from_cache(tenant)
+            if cached_locations:
+                logging.info(f"Using cached locations for tenant {tenant} (count: {len(cached_locations)})")
+                return jsonify(cached_locations)
+            else:
+                logging.info(f"No valid cache found for tenant {tenant}, fetching from API")
+        else:
+            if use_cache:
+                logging.info(f"Location cache expired for tenant {tenant}, fetching from API")
+            else:
+                logging.info(f"Cache bypass requested for tenant {tenant}, fetching from API")
+        
+        # Get a fresh token and fetch from API
         tenant_config = get_tenant_config(tenant)
         
         # Get access token
         access_token = refresh_alchemy_token(tenant)
         
         if not access_token:
-            logging.warning(f"Failed to get access token for tenant {tenant}, returning fallback locations")
+            logging.warning(f"Failed to get access token for tenant {tenant}, checking for stale cache")
+            
+            # Try to use stale cache if it exists
+            stale_locations = load_locations_from_cache(tenant)
+            if stale_locations:
+                logging.info(f"Using stale cached locations for tenant {tenant} as fallback")
+                return jsonify(stale_locations)
+            
+            logging.warning(f"No stale cache found, returning fallback locations")
             return jsonify(get_fallback_locations())
         
         # Prepare filter request for locations
@@ -943,6 +1232,13 @@ def get_locations(tenant):
         
         if not response.ok:
             logging.error(f"Error fetching locations for tenant {tenant}: {response.text}")
+            
+            # Try to use stale cache if it exists
+            stale_locations = load_locations_from_cache(tenant)
+            if stale_locations:
+                logging.info(f"Using stale cached locations for tenant {tenant} as fallback")
+                return jsonify(stale_locations)
+            
             return jsonify(get_fallback_locations())
         
         # Process the response
@@ -951,10 +1247,6 @@ def get_locations(tenant):
         
         # Debug the API response structure
         debug_api_response(locations_data)
-        
-        # Log the full first item for debugging
-        if locations_data and len(locations_data) > 0:
-            logging.info(f"First location data for tenant {tenant}: {json.dumps(locations_data[0])}")
         
         # Transform the data into the format needed by the frontend
         formatted_locations = []
@@ -983,6 +1275,10 @@ def get_locations(tenant):
             except Exception as e:
                 logging.error(f"Error processing location {location.get('recordId', location.get('id', 'unknown'))} for tenant {tenant}: {str(e)}")
         
+        # Save the processed locations to cache
+        if formatted_locations:
+            save_locations_to_cache(tenant, formatted_locations)
+        
         # If no locations were found, add fallback locations
         if not formatted_locations:
             logging.warning(f"No locations found in API response for tenant {tenant}, adding fallback locations")
@@ -992,7 +1288,125 @@ def get_locations(tenant):
         
     except Exception as e:
         logging.error(f"Error fetching locations for tenant {tenant}: {str(e)}")
+        
+        # Try to use stale cache if it exists
+        stale_locations = load_locations_from_cache(tenant)
+        if stale_locations:
+            logging.info(f"Using stale cached locations for tenant {tenant} as fallback after error")
+            return jsonify(stale_locations)
+            
         return jsonify(get_fallback_locations())
+
+# Add new endpoints for cache management
+@app.route('/admin/refresh-location-cache/<tenant>', methods=['POST'])
+def admin_refresh_location_cache(tenant):
+    """Endpoint to manually refresh location cache for a tenant"""
+    try:
+        # Check if tenant exists
+        if tenant not in CONFIG["tenants"]:
+            return jsonify({"status": "error", "message": f"Unknown tenant: {tenant}"}), 404
+        
+        # Start a background thread to refresh the cache
+        import threading
+        refresh_thread = threading.Thread(target=refresh_location_cache, args=(tenant,))
+        refresh_thread.daemon = True
+        refresh_thread.start()
+        
+        return jsonify({
+            "status": "success", 
+            "message": f"Cache refresh for tenant {tenant} started",
+            "note": "The refresh is running in the background. Check the status endpoint for details."
+        })
+    except Exception as e:
+        logging.error(f"Error starting location cache refresh for tenant {tenant}: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/admin/refresh-location-cache-all', methods=['POST'])
+def admin_refresh_all_location_caches():
+    """Endpoint to manually refresh location cache for all tenants"""
+    try:
+        # Start a background thread to refresh all caches
+        import threading
+        refresh_thread = threading.Thread(target=refresh_all_location_caches)
+        refresh_thread.daemon = True
+        refresh_thread.start()
+        
+        return jsonify({
+            "status": "success", 
+            "message": "Cache refresh for all tenants started",
+            "note": "The refresh is running in the background. Check the status endpoint for details."
+        })
+    except Exception as e:
+        logging.error(f"Error starting location cache refresh for all tenants: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/admin/location-cache-status', methods=['GET'])
+def admin_location_cache_status():
+    """Endpoint to get location cache status for all tenants"""
+    try:
+        metadata = load_cache_metadata()
+        
+        # Add formatted last refresh time
+        status_data = {
+            "tenants": {},
+            "system": {
+                "cache_directory": LOCATION_CACHE_DIR,
+                "directory_exists": os.path.exists(LOCATION_CACHE_DIR),
+                "refresh_interval_days": CACHE_REFRESH_INTERVAL / (24 * 60 * 60)
+            }
+        }
+        
+        # Process each tenant's status
+        for tenant_id in CONFIG["tenants"].keys():
+            cache_file = get_location_cache_file_path(tenant_id)
+            cache_exists = os.path.exists(cache_file)
+            cache_size = os.path.getsize(cache_file) if cache_exists else 0
+            
+            last_refreshed = metadata["last_refreshed"].get(tenant_id, 0)
+            refresh_status = metadata["refresh_status"].get(tenant_id, {
+                "status": "unknown",
+                "message": "No refresh status available",
+                "timestamp": 0,
+                "formatted_time": "Never"
+            })
+            
+            # Calculate if cache is expired
+            is_expired = is_cache_expired(tenant_id)
+            
+            # Format last refreshed time
+            if last_refreshed > 0:
+                formatted_time = datetime.fromtimestamp(last_refreshed).strftime("%Y-%m-%d %H:%M:%S")
+                next_refresh = datetime.fromtimestamp(last_refreshed + CACHE_REFRESH_INTERVAL).strftime("%Y-%m-%d %H:%M:%S")
+            else:
+                formatted_time = "Never"
+                next_refresh = "Unknown"
+            
+            # Count locations if cache exists
+            location_count = 0
+            if cache_exists:
+                try:
+                    with open(cache_file, 'r') as f:
+                        location_data = json.load(f)
+                        location_count = len(location_data)
+                except:
+                    pass
+            
+            status_data["tenants"][tenant_id] = {
+                "display_name": CONFIG["tenants"][tenant_id].get("display_name", tenant_id),
+                "cache_exists": cache_exists,
+                "cache_size_bytes": cache_size,
+                "location_count": location_count,
+                "last_refreshed_timestamp": last_refreshed,
+                "last_refreshed_formatted": formatted_time,
+                "next_scheduled_refresh": next_refresh,
+                "is_expired": is_expired,
+                "refresh_status": refresh_status
+            }
+        
+        return jsonify(status_data)
+    except Exception as e:
+        logging.error(f"Error getting location cache status: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 # Main Route Handlers
 @app.route('/')
@@ -1180,8 +1594,18 @@ def update_location(tenant):
             "message": str(e)
         }), 500
 
-# Main Application Runner
+# Initialize location cache system when application starts
+init_location_cache()
+
+# Add this inside your main execution block for logging
 if __name__ == '__main__':
     # Get port from environment variable or default to 5000
     port = int(os.environ.get('PORT', 5000))
+    
+    # Initialize location cache directory
+    ensure_location_cache_directory()
+    
+    # Log that we're starting with location caching
+    logging.info(f"Starting application with location caching enabled. Cache directory: {LOCATION_CACHE_DIR}")
+    
     app.run(host='0.0.0.0', port=port, debug=True)
