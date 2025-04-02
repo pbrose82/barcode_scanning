@@ -29,38 +29,19 @@
         
         /* Header styles */
         .header {
+            position: relative;
             background-color: white;
             padding: 15px 0;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             text-align: center;
         }
-        
-        .header-container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-            position: relative;
-        }
-        
-        .header-logo {
-            margin-right: 15px;
-            font-size: 24px;
-            color: var(--alchemy-dark);
-            vertical-align: middle;
-        }
-        
-        .header-title {
-            color: #333;
-            font-weight: 500;
-            font-size: 24px;
-            margin: 0;
-        }
+    
+    /* Help link positioning */
         .help-link {
             position: absolute;
+            top: 50%;
             right: 20px;
+            transform: translateY(-50%);
             color: var(--alchemy-blue);
             font-size: 24px;
             transition: color 0.2s ease;
@@ -68,6 +49,16 @@
     
         .help-link:hover {
             color: var(--alchemy-light-blue);
+        }
+        
+        /* Ensure the header container doesn't conflict with help icon */
+        .header-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
         }
         
         /* Tenant prompt banner */
@@ -210,6 +201,14 @@
     <div class="header-container">
         <i class="fas fa-barcode header-logo"></i>
         <h1 class="header-title">Alchemy Barcode Scanner</h1>
+    </div>
+
+    <!-- Add the help link outside the container but still within the header -->
+    <div class="header">
+        <div class="header-container">
+            <i class="fas fa-barcode header-logo"></i>
+            <h1 class="header-title">Alchemy Barcode Scanner</h1>
+        </div>
         <a href="https://docs.google.com/document/d/1stfH6T0quznf3Auze6sg7zfFnx2mabF8vmsfuHraDEE/edit?tab=t.0#heading=h.gjdgxs" 
            class="help-link" 
            target="_blank" 
