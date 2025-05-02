@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/alchemy-sidebar.css') }}">
+    <!-- Add HTML5-QRCode library for barcode scanning -->
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     {% block extra_css %}{% endblock %}
     <style>
@@ -20,7 +21,6 @@
             --alchemy-red: #E4002B;
             --alchemy-grey: #6C757D;
             --alchemy-light-grey: #F8F9FA;
-            --alchemy-yellow: #FFD700;
         }
         
         body {
@@ -30,137 +30,14 @@
             padding: 0;
             min-height: 100vh;
         }
-
-        /* Mobile Scanner Styles */
+        
+        /* Scanner styles */
         #scanner-container {
             position: relative;
             min-height: 75vh;
             background-color: #000;
         }
-
-        #scanner-viewport {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-        }
-
-        .viewport-feedback {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            z-index: 10;
-            pointer-events: none;
-        }
-
-        .scan-region {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 70%;
-            height: 25%;
-            transform: translate(-50%, -50%);
-            border: 2px solid var(--alchemy-green);
-            border-radius: 8px;
-            box-shadow: 0 0 0 4000px rgba(0, 0, 0, 0.5);
-        }
-
-        .scan-region::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background-color: rgba(0, 168, 107, 0.5);
-            animation: scan-line 2s linear infinite;
-        }
-
-        @keyframes scan-line {
-            0% {
-                top: 10%;
-            }
-            50% {
-                top: 90%;
-            }
-            100% {
-                top: 10%;
-            }
-        }
-
-        .scan-help-text {
-            position: absolute;
-            bottom: 20px;
-            left: 0;
-            right: 0;
-            text-align: center;
-            color: white;
-            background-color: rgba(0, 0, 0, 0.6);
-            padding: 10px;
-            font-size: 14px;
-            font-weight: 500;
-        }
-
-        .scan-status {
-            position: absolute;
-            top: 15px;
-            left: 0;
-            right: 0;
-            text-align: center;
-        }
-
-        .scan-status-indicator {
-            display: inline-block;
-            padding: 5px 15px;
-            border-radius: 20px;
-            background-color: rgba(0, 0, 0, 0.6);
-            color: white;
-            font-size: 12px;
-            font-weight: 500;
-        }
-
-        /* Scanner controls */
-        .scanner-controls {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px 15px;
-            background-color: #f8f9fa;
-            border-top: 1px solid #dee2e6;
-        }
-
-        .torch-toggle {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background-color: var(--alchemy-light-grey);
-            border: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--alchemy-dark);
-            font-size: 20px;
-        }
-
-        .torch-toggle.active {
-            background-color: var(--alchemy-yellow);
-            color: var(--alchemy-dark);
-        }
-
-        .camera-switch {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background-color: var(--alchemy-light-grey);
-            border: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--alchemy-dark);
-            font-size: 20px;
-        }
-
+        
         #close-scanner-btn {
             position: absolute;
             top: 15px;
@@ -176,20 +53,26 @@
             justify-content: center;
             z-index: 15;
         }
-
-        #manual-barcode-input {
-            width: 100%;
-            margin-bottom: 15px;
+        
+        #scanner-status {
+            position: absolute;
+            top: 15px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            z-index: 10;
         }
-
-        .detected-code {
-            font-family: monospace;
-            font-size: 18px;
-            font-weight: bold;
-            color: var(--alchemy-green);
-            margin-bottom: 0;
+        
+        .scan-status-indicator {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            background-color: rgba(0, 0, 0, 0.6);
+            color: white;
+            font-size: 12px;
+            font-weight: 500;
         }
-
+        
         .success-flash {
             position: fixed;
             top: 0;
@@ -202,7 +85,7 @@
             animation: success-flash 0.5s ease-out;
             opacity: 0;
         }
-
+        
         @keyframes success-flash {
             0% {
                 opacity: 1;
@@ -211,17 +94,13 @@
                 opacity: 0;
             }
         }
-
-        /* Landscape mode improvements */
-        @media (orientation: landscape) {
-            #scanner-container {
-                min-height: 65vh;
-            }
-            
-            .scan-region {
-                width: 50%;
-                height: 50%;
-            }
+        
+        .detected-code {
+            font-family: monospace;
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--alchemy-green);
+            margin-bottom: 0;
         }
     </style>
 </head>
@@ -322,25 +201,10 @@
                 </div>
                 <div class="modal-body p-0">
                     <div id="scanner-container">
+                        <div id="qr-reader"></div>
                         <button id="close-scanner-btn">
                             <i class="fas fa-times"></i>
                         </button>
-                        
-                        <div id="scanner-viewport">
-                            <!-- Camera feed will be inserted here by Quagga -->
-                        </div>
-                        
-                        <div class="viewport-feedback">
-                            <div class="scan-region"></div>
-                            <div class="scan-status">
-                                <span class="scan-status-indicator" id="scanner-status">
-                                    <i class="fas fa-circle-notch fa-spin"></i> Initializing...
-                                </span>
-                            </div>
-                            <div class="scan-help-text">
-                                Position the barcode within the green box
-                            </div>
-                        </div>
                     </div>
                     
                     <!-- Manual input option -->
@@ -368,9 +232,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer scanner-controls">
-                    <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button class="btn btn-primary" id="add-code-btn" disabled>Add Barcode</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 </div>
             </div>
         </div>
