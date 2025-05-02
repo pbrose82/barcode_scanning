@@ -15,46 +15,21 @@ RENDER_CONFIG_DIR = '/opt/render/project/config'
 RENDER_CONFIG_PATH = os.path.join(RENDER_CONFIG_DIR, 'config.json')
 LOCATION_CACHE_DIR = os.path.join(RENDER_CONFIG_DIR, 'location_cache')
 LOCATION_CACHE_METADATA = os.path.join(RENDER_CONFIG_DIR, 'location_cache_metadata.json')
-CACHE_REFRESH_INTERVAL = 24 * 60 * 60  # 7 days in seconds
-
+CACHE_REFRESH_INTERVAL = 24 * 60 * 60  # 1 day in seconds
 
 # Logging Configuration
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Flask Application Setup - use your existing templates
+# Flask Application Setup
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
 # Secret key for sessions - use environment variable or generate a secure one
 app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(16))
 
-# Set session timeout (1 hour)
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=1)
-
-# AG-Grid route with mode parameter
-@app.route('/location-tracking')
-@app.route('/location-tracking/<tenant>')
-@app.route('/admin/location-tracking')
-@app.route('/admin/location-tracking/<tenant>')
-def location_tracking(tenant=None):
-    """Render location tracking page with AG Grid"""
-    # Get all tenants for admin mode
-    tenants = list(CONFIG["tenants"].keys())
-    
-    # Determine if we're in admin mode based on the URL path
-    admin_mode = request.path.startswith('/admin/')
-    
-    # If not in admin mode, use the current session tenant if available
-    if not admin_mode and 'tenant' in session:
-        tenant = session.get('tenant')
-    
-    # Always default to the default tenant if none specified
-    if not tenant:
-        tenant = DEFAULT_TENANT
-    
-    return render_template('location_tracking.html', 
-                           tenants=tenants, 
-                           current_tenant=tenant,
-                           admin_mode=admin_mode)
+# Set session timeout (7 days)
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
+app.config['SESSION_TYPE'] = 'filesystem'
+app.config['SESSION_PERMANENT'] = True
 
 def ensure_config_directory():
     """Ensure the configuration directory exists and is not a file"""
@@ -86,6 +61,11 @@ def ensure_config_directory():
         logging.info(f"Ensuring config directory exists: {RENDER_CONFIG_DIR}")
     except Exception as e:
         logging.error(f"Error creating config directory: {str(e)}")
+
+def ensure_static_css_dir():
+    """Ensure the static/css directory exists"""
+    css_dir = os.path.join(app.static_folder, 'css')
+    os.makedirs(css_dir, exist_ok=True)
 
 def ensure_config_file():
     """Create config.json if it doesn't exist"""
@@ -755,6 +735,530 @@ def get_fallback_locations():
         }
     ]
 
+# Location name extraction helper
+def extract_location_name_improved(location):
+    """Improved function to extract location name from Alchemy API response"""
+    # First, try to use the top-level name field which is most reliable
+    if "name" in location and location["name"]:
+        return location["name"]
+    
+    # Fallback to a default name if top-level name isn't available
+    default_name = f"Location {location.get('recordId') or location.get('id', 'unknown')}"
+    
+    # Check for name in fields array if top-level name isn't available
+    if "fields" in location:
+        # Look for fields with identifiers that might contain location name
+        name_field_identifiers = ["LocationName", "RecordName", "Name"]
+        for field in location["fields"]:
+            identifier = field.get("identifier", "")
+            if identifier in name_field_identifiers:
+                if field.get("rows") and len(field["rows"]) > 0:
+                    row = field["rows"][0]
+                    if row.get("values") and len(row["values"]) > 0:
+                        value = row["values"][0].get("value")
+                        if value and isinstance(value, str) and value.strip():
+                            return value
+    
+    # If no suitable name found, return the default
+    return default_name
+
+def extract_sublocations_improved(location):
+    """Improved function to extract sublocations from Alchemy API response"""
+    sublocations = []
+    location_id = location.get("recordId") or location.get("id", "unknown")
+    
+    # The primary issue is likely here - we need to be more selective about which sublocations we extract
+    # For a given location, we only want its direct children, not all related locations
+    
+    # In your first document's data structure, sublocations are typically found in the "Item" field
+    if "fields" in location:
+        for field in location["fields"]:
+            if field.get("identifier") == "Item":
+                for row in field.get("rows", []):
+                    if row.get("values") and len(row["values"]) > 0:
+                        value = row["values"][0].get("value")
+                        if isinstance(value, dict) and "recordId" in value and "name" in value:
+                            sublocation = {
+                                "id": str(value.get("recordId")),
+                                "name": value.get("name")
+                            }
+                            # Check if this sublocation is not already in the list
+                            if not any(sub["id"] == sublocation["id"] for sub in sublocations):
+                                sublocations.append(sublocation)
+    
+    # Check if there are any LocatedAt references - these might be parent-child relationships
+    if "fields" in location:
+        for field in location["fields"]:
+            if field.get("identifier") == "LocatedAt":
+                for row in field.get("rows", []):
+                    if row.get("values") and len(row["values"]) > 0:
+                        value = row["values"][0].get("value")
+                        if isinstance(value, dict) and "recordId" in value and "name" in value:
+                            parent_id = str(value.get("recordId"))
+                            # This location is located at another location - might be useful for hierarchy
+                            logging.info(f"Location {location.get('name')} is located at {value.get('name')}")
+    
+    # Debug log to track what we're extracting
+    logging.info(f"Found {len(sublocations)} sublocations for location {location.get('name', 'unknown')} (ID: {location_id})")
+    if sublocations:
+        logging.info(f"Sublocations for {location.get('name')}: {[sub['name'] for sub in sublocations]}")
+    
+    return sublocations
+
+# Function to find record ID by scanned barcode
+def find_record_id_by_barcode(barcode, access_token, tenant):
+    """Find Alchemy record ID using barcode as the Result.Code"""
+    try:
+        tenant_config = get_tenant_config(tenant)
+        find_records_url = tenant_config.get('find_records_url')
+        
+        # Prepare find request payload
+        find_payload = {
+            "queryTerm": f"Result.Code == '{barcode}'",
+            "recordTemplateIdentifier": "AC_Study_LabTrial",
+            "lastChangedOnFrom": "2022-03-03T00:00:00Z",
+            "lastChangedOnTo": "2025-12-31T23:59:59Z"  # Extended date range to future
+        }
+        
+        # Send request to Alchemy API
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
+        
+        logging.info(f"Finding record for barcode '{barcode}' in tenant {tenant}: {json.dumps(find_payload)}")
+        response = requests.put(find_records_url, headers=headers, json=find_payload)
+        
+        # Log response for debugging
+        logging.info(f"Find records API response status code for tenant {tenant}: {response.status_code}")
+        
+        if not response.ok:
+            logging.error(f"Error finding record for barcode {barcode} in tenant {tenant}: {response.text}")
+            return None
+        
+        # Process response
+        records = response.json()
+        
+        if not records or len(records) == 0:
+            logging.warning(f"No records found for barcode {barcode} in tenant {tenant}")
+            return None
+        
+        # Get the first matching record ID
+        record_id = records[0].get('recordId') or records[0].get('id')
+        
+        if not record_id:
+            logging.error(f"Found record for barcode {barcode} in tenant {tenant} but could not extract recordId")
+            return None
+            
+        logging.info(f"Found record ID {record_id} for barcode {barcode} in tenant {tenant}")
+        return record_id
+        
+    except Exception as e:
+        logging.error(f"Error finding record for barcode {barcode} in tenant {tenant}: {str(e)}")
+        return None
+
+# ROUTES
+
+@app.route('/')
+def root():
+    """Show tenant selector page"""
+    active_page = 'tenant_selector'
+    return render_template('tenant_selector.html', 
+                          tenants=CONFIG["tenants"],
+                          active_page=active_page)
+
+@app.route('/tenant/<tenant>')
+def tenant_index(tenant):
+    """Render index for a specific tenant"""
+    # Save tenant to session
+    session['tenant'] = tenant
+    
+    # Validate tenant
+    if tenant not in CONFIG["tenants"]:
+        return render_template('error.html', message=f"Unknown tenant: {tenant}"), 404
+    
+    tenant_config = get_tenant_config(tenant)
+    
+    app.logger.info(f"Rendering index.html for tenant: {tenant} ({tenant_config['tenant_name']})")
+    return render_template('index.html', 
+                          tenant=tenant, 
+                          tenant_name=tenant_config['display_name'],
+                          active_page='scanner')
+
+@app.route('/location-tracking')
+@app.route('/location-tracking/<tenant>')
+def location_tracking(tenant=None):
+    """Render location tracking page with tenant support"""
+    # If no tenant is provided but one is in session, use that
+    if not tenant and 'tenant' in session:
+        tenant = session.get('tenant')
+        return redirect(url_for('location_tracking', tenant=tenant))
+    
+    # Save tenant to session if provided
+    if tenant:
+        session['tenant'] = tenant
+    
+    # Get tenant name if tenant is available
+    tenant_name = None
+    if tenant and tenant in CONFIG["tenants"]:
+        tenant_name = CONFIG["tenants"][tenant].get("display_name", tenant)
+        
+    # Get all tenants for dropdown if needed in admin mode
+    tenants = list(CONFIG["tenants"].keys())
+    
+    # Determine if we're in admin mode
+    admin_mode = False
+    
+    # Set current tenant for display
+    current_tenant = tenant or DEFAULT_TENANT
+    
+    return render_template('location_tracking.html', 
+                           tenants=tenants, 
+                           current_tenant=current_tenant,
+                           tenant=tenant,
+                           tenant_name=tenant_name,
+                           admin_mode=admin_mode,
+                           active_page='location_tracking')
+
+@app.route('/admin/location-tracking')
+@app.route('/admin/location-tracking/<tenant>')
+def admin_location_tracking(tenant=None):
+    """Admin version of location tracking page"""
+    # If no tenant provided, use default
+    if not tenant:
+        tenant = DEFAULT_TENANT
+    
+    # Get all tenants for dropdown
+    tenants = list(CONFIG["tenants"].keys())
+    
+    # Get tenant name if tenant is available
+    tenant_name = None
+    if tenant and tenant in CONFIG["tenants"]:
+        tenant_name = CONFIG["tenants"][tenant].get("display_name", tenant)
+    
+    # Set admin mode flag
+    admin_mode = True
+    
+    return render_template('location_tracking.html', 
+                           tenants=tenants, 
+                           current_tenant=tenant,
+                           tenant=tenant,
+                           tenant_name=tenant_name,
+                           admin_mode=admin_mode,
+                           active_page='location_tracking')
+
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    """Serve static files"""
+    return send_from_directory(app.static_folder, filename)
+
+# Route for testing location dropdown
+@app.route('/test')
+def test_page():
+    """Serve test HTML for location dropdown"""
+    return render_template('test.html')
+
+# Route for getting test locations (reliable hardcoded data)
+@app.route('/get-test-locations')
+@app.route('/get-test-locations/<tenant>')
+def get_test_locations(tenant="default"):
+    """Return hardcoded test locations for debugging frontend"""
+    # Get tenant configuration
+    tenant_config = get_tenant_config(tenant)
+    tenant_display_name = tenant_config.get('display_name')
+    
+    test_locations = [
+        {
+            "id": "1001",
+            "name": f"Warehouse A ({tenant_display_name})",
+            "sublocations": [
+                {"id": "sub1", "name": "Section A1"},
+                {"id": "sub2", "name": "Section A2"}
+            ]
+        },
+        {
+            "id": "1002",
+            "name": f"Laboratory B ({tenant_display_name})",
+            "sublocations": [
+                {"id": "sub3", "name": "Lab Storage 1"},
+                {"id": "sub4", "name": "Lab Storage 2"}
+            ]
+        },
+        {
+            "id": "1003",
+            "name": f"Office Building ({tenant_display_name})",
+            "sublocations": []
+        }
+    ]
+    return jsonify(test_locations)
+
+# Route for getting locations from Alchemy API
+@app.route('/get-locations/<tenant>')
+def get_locations(tenant):
+    try:
+        # Check if tenant exists
+        if tenant not in CONFIG["tenants"]:
+            return jsonify({"error": f"Unknown tenant: {tenant}"}), 404
+        
+        # Check if we should use cached data
+        use_cache = request.args.get('use_cache', 'true').lower() == 'true'
+        
+        # If using cache and it's not expired, return cached data
+        if use_cache and not is_cache_expired(tenant):
+            cached_locations = load_locations_from_cache(tenant)
+            if cached_locations:
+                logging.info(f"Using cached locations for tenant {tenant} (count: {len(cached_locations)})")
+                return jsonify(cached_locations)
+            else:
+                logging.info(f"No valid cache found for tenant {tenant}, fetching from API")
+        else:
+            if use_cache:
+                logging.info(f"Location cache expired for tenant {tenant}, fetching from API")
+            else:
+                logging.info(f"Cache bypass requested for tenant {tenant}, fetching from API")
+        
+        # Get a fresh token and fetch from API
+        tenant_config = get_tenant_config(tenant)
+        
+        # Get access token
+        access_token = refresh_alchemy_token(tenant)
+        
+        if not access_token:
+            logging.warning(f"Failed to get access token for tenant {tenant}, checking for stale cache")
+            
+            # Try to use stale cache if it exists
+            stale_locations = load_locations_from_cache(tenant)
+            if stale_locations:
+                logging.info(f"Using stale cached locations for tenant {tenant} as fallback")
+                return jsonify(stale_locations)
+            
+            logging.warning(f"No stale cache found, returning fallback locations")
+            return jsonify(get_fallback_locations())
+        
+        # Prepare filter request for locations
+        filter_payload = {
+            "queryTerm": "Result.Status == 'Valid'",
+            "recordTemplateIdentifier": "AC_Location",
+            "drop": 0,
+            "take": 100,  # Fetch up to 100 locations
+            "lastChangedOnFrom": "2018-03-03T00:00:00Z",
+            "lastChangedOnTo": "2028-03-04T00:00:00Z"
+        }
+        
+        # Send request to Alchemy API
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
+        
+        filter_url = tenant_config.get('filter_url')
+        logging.info(f"Fetching locations from Alchemy API for tenant {tenant}: {json.dumps(filter_payload)}")
+        response = requests.put(filter_url, headers=headers, json=filter_payload)
+        
+        # Log response for debugging
+        logging.info(f"Alchemy API response status code for tenant {tenant}: {response.status_code}")
+        
+        if not response.ok:
+            logging.error(f"Error fetching locations for tenant {tenant}: {response.text}")
+            
+            # Try to use stale cache if it exists
+            stale_locations = load_locations_from_cache(tenant)
+            if stale_locations:
+                logging.info(f"Using stale cached locations for tenant {tenant} as fallback")
+                return jsonify(stale_locations)
+            
+            return jsonify(get_fallback_locations())
+        
+        # Process the response
+        locations_data = response.json()
+        logging.info(f"Received {len(locations_data)} locations from API for tenant {tenant}")
+        
+        # Debug the API response structure
+        debug_api_response(locations_data)
+        
+        # Transform the data into the format needed by the frontend
+        formatted_locations = []
+        
+        for location in locations_data:
+            try:
+                # Extract location ID - use recordId if it exists, otherwise fall back to id
+                location_id = str(location.get("recordId") or location.get("id", "unknown"))
+                
+                # Extract location name using improved method
+                location_name = extract_location_name_improved(location)
+                
+                # Extract sublocations - improved version
+                sublocations = extract_sublocations_improved(location)
+                
+                # Create location info object
+                location_info = {
+                    "id": location_id,
+                    "name": location_name,
+                    "sublocations": sublocations
+                }
+                
+                formatted_locations.append(location_info)
+                logging.info(f"Added location for tenant {tenant}: {location_name} (ID: {location_id}) with {len(sublocations)} sublocations")
+                
+            except Exception as e:
+                logging.error(f"Error processing location {location.get('recordId', location.get('id', 'unknown'))} for tenant {tenant}: {str(e)}")
+        
+        # Save the processed locations to cache
+        if formatted_locations:
+            save_locations_to_cache(tenant, formatted_locations)
+        
+        # If no locations were found, add fallback locations
+        if not formatted_locations:
+            logging.warning(f"No locations found in API response for tenant {tenant}, adding fallback locations")
+            return jsonify(get_fallback_locations())
+        
+        return jsonify(formatted_locations)
+        
+    except Exception as e:
+        logging.error(f"Error fetching locations for tenant {tenant}: {str(e)}")
+        
+        # Try to use stale cache if it exists
+        stale_locations = load_locations_from_cache(tenant)
+        if stale_locations:
+            logging.info(f"Using stale cached locations for tenant {tenant} as fallback after error")
+            return jsonify(stale_locations)
+            
+        return jsonify(get_fallback_locations())
+
+# Route for updating record location in Alchemy
+@app.route('/update-location/<tenant>', methods=['POST'])
+def update_location(tenant):
+    data = request.json
+    
+    if not data:
+        return jsonify({"status": "error", "message": "No data provided"}), 400
+    
+    try:
+        # Check if tenant exists
+        if tenant not in CONFIG["tenants"]:
+            return jsonify({"status": "error", "message": f"Unknown tenant: {tenant}"}), 404
+            
+        tenant_config = get_tenant_config(tenant)
+        
+        barcode_codes = data.get('recordIds', [])  # These are actually barcode codes now, not record IDs
+        location_id = data.get('locationId', '')
+        sublocation_id = data.get('sublocationId', '')
+        
+        if not barcode_codes:
+            return jsonify({"status": "error", "message": "No barcode codes provided"}), 400
+        
+        if not location_id:
+            return jsonify({"status": "error", "message": "No location ID provided"}), 400
+        
+        # Get a fresh access token from Alchemy
+        access_token = refresh_alchemy_token(tenant)
+        
+        if not access_token:
+            return jsonify({
+                "status": "error", 
+                "message": f"Failed to authenticate with Alchemy API for tenant {tenant}"
+            }), 500
+        
+        success_records = []
+        failed_records = []
+        
+        for barcode in barcode_codes:
+            try:
+                # First, find the record ID from the barcode
+                record_id = find_record_id_by_barcode(barcode, access_token, tenant)
+                
+                if not record_id:
+                    failed_records.append({
+                        "id": barcode,
+                        "error": f"Record not found for this barcode in tenant {tenant_config['display_name']}"
+                    })
+                    continue
+                
+                # Format data for Alchemy API update
+                alchemy_payload = {
+                    "recordId": int(record_id),
+                    "fields": [
+                        {
+                            "identifier": "Location",
+                            "rows": [
+                                {
+                                    "row": 0,
+                                    "values": [
+                                        {
+                                            "value": location_id,
+                                            "valuePreview": ""
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+                
+                # Add sublocation if provided
+                if sublocation_id:
+                    alchemy_payload["fields"].append({
+                        "identifier": "Sublocation",
+                        "rows": [
+                            {
+                                "row": 0,
+                                "values": [
+                                    {
+                                        "value": sublocation_id,
+                                        "valuePreview": ""
+                                    }
+                                ]
+                            }
+                        ]
+                    })
+                
+                # Send update to Alchemy API
+                headers = {
+                    "Authorization": f"Bearer {access_token}",
+                    "Content-Type": "application/json"
+                }
+                
+                api_url = tenant_config.get('api_url')
+                logging.info(f"Sending update for record {record_id} (barcode: {barcode}) to Alchemy for tenant {tenant}: {json.dumps(alchemy_payload)}")
+                response = requests.put(api_url, headers=headers, json=alchemy_payload)
+                
+                # Log response for debugging
+                logging.info(f"Alchemy API response status code for tenant {tenant}: {response.status_code}")
+                if response.text:
+                    logging.info(f"Alchemy API response for tenant {tenant}: {response.text}")
+                
+                # Check if the request was successful
+                if response.ok:
+                    success_records.append(barcode)
+                else:
+                    logging.error(f"Error updating record {record_id} (barcode: {barcode}) for tenant {tenant}: {response.text}")
+                    failed_records.append({
+                        "id": barcode,
+                        "error": f"API returned status code {response.status_code}"
+                    })
+                
+            except Exception as e:
+                logging.error(f"Error processing barcode {barcode} for tenant {tenant}: {str(e)}")
+                failed_records.append({
+                    "id": barcode,
+                    "error": str(e)
+                })
+        
+        # Return results
+        return jsonify({
+            "status": "success" if not failed_records else "partial",
+            "message": f"Updated {len(success_records)} of {len(barcode_codes)} records in tenant {tenant_config['display_name']}",
+            "successful": success_records,
+            "failed": failed_records
+        })
+        
+    except Exception as e:
+        logging.error(f"Error updating locations for tenant {tenant}: {e}")
+        return jsonify({
+            "status": "error", 
+            "message": str(e)
+        }), 500
+
 # Admin login routes
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
@@ -784,6 +1288,125 @@ def admin_logout():
     session.pop('admin_authenticated', None)
     session.pop('last_activity', None)
     return redirect(url_for('admin_login'))
+
+@app.route('/admin', methods=['GET'])
+def admin_panel():
+    """Simple admin panel to manage tenants"""
+    return render_template('admin.html', 
+                           tenants=CONFIG["tenants"], 
+                           default_tenant=DEFAULT_TENANT,
+                           active_page='admin')
+
+# Add these routes for cache management
+@app.route('/admin/refresh-location-cache/<tenant>', methods=['POST'])
+def admin_refresh_location_cache(tenant):
+    """Endpoint to manually refresh location cache for a tenant"""
+    try:
+        # Check if tenant exists
+        if tenant not in CONFIG["tenants"]:
+            return jsonify({"status": "error", "message": f"Unknown tenant: {tenant}"}), 404
+        
+        # Start a background thread to refresh the cache
+        import threading
+        refresh_thread = threading.Thread(target=refresh_location_cache, args=(tenant,))
+        refresh_thread.daemon = True
+        refresh_thread.start()
+        
+        return jsonify({
+            "status": "success", 
+            "message": f"Cache refresh for tenant {tenant} started",
+            "note": "The refresh is running in the background. Check the status endpoint for details."
+        })
+    except Exception as e:
+        logging.error(f"Error starting location cache refresh for tenant {tenant}: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/admin/refresh-location-cache-all', methods=['POST'])
+def admin_refresh_all_location_caches():
+    """Endpoint to manually refresh location cache for all tenants"""
+    try:
+        # Start a background thread to refresh all caches
+        import threading
+        refresh_thread = threading.Thread(target=refresh_all_location_caches)
+        refresh_thread.daemon = True
+        refresh_thread.start()
+        
+        return jsonify({
+            "status": "success", 
+            "message": "Cache refresh for all tenants started",
+            "note": "The refresh is running in the background. Check the status endpoint for details."
+        })
+    except Exception as e:
+        logging.error(f"Error starting location cache refresh for all tenants: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/admin/location-cache-status', methods=['GET'])
+def admin_location_cache_status():
+    """Endpoint to get location cache status for all tenants"""
+    try:
+        metadata = load_cache_metadata()
+        
+        # Add formatted last refresh time
+        status_data = {
+            "tenants": {},
+            "system": {
+                "cache_directory": LOCATION_CACHE_DIR,
+                "directory_exists": os.path.exists(LOCATION_CACHE_DIR),
+                "refresh_interval_days": CACHE_REFRESH_INTERVAL / (24 * 60 * 60)
+            }
+        }
+        
+        # Process each tenant's status
+        for tenant_id in CONFIG["tenants"].keys():
+            cache_file = get_location_cache_file_path(tenant_id)
+            cache_exists = os.path.exists(cache_file)
+            cache_size = os.path.getsize(cache_file) if cache_exists else 0
+            
+            last_refreshed = metadata["last_refreshed"].get(tenant_id, 0)
+            refresh_status = metadata["refresh_status"].get(tenant_id, {
+                "status": "unknown",
+                "message": "No refresh status available",
+                "timestamp": 0,
+                "formatted_time": "Never"
+            })
+            
+            # Calculate if cache is expired
+            is_expired = is_cache_expired(tenant_id)
+            
+            # Format last refreshed time
+            if last_refreshed > 0:
+                formatted_time = datetime.fromtimestamp(last_refreshed).strftime("%Y-%m-%d %H:%M:%S")
+                next_refresh = datetime.fromtimestamp(last_refreshed + CACHE_REFRESH_INTERVAL).strftime("%Y-%m-%d %H:%M:%S")
+            else:
+                formatted_time = "Never"
+                next_refresh = "Unknown"
+            
+            # Count locations if cache exists
+            location_count = 0
+            if cache_exists:
+                try:
+                    with open(cache_file, 'r') as f:
+                        location_data = json.load(f)
+                        location_count = len(location_data)
+                except:
+                    pass
+            
+            status_data["tenants"][tenant_id] = {
+                "display_name": CONFIG["tenants"][tenant_id].get("display_name", tenant_id),
+                "cache_exists": cache_exists,
+                "cache_size_bytes": cache_size,
+                "location_count": location_count,
+                "last_refreshed_timestamp": last_refreshed,
+                "last_refreshed_formatted": formatted_time,
+                "next_scheduled_refresh": next_refresh,
+                "is_expired": is_expired,
+                "refresh_status": refresh_status
+            }
+        
+        return jsonify(status_data)
+    except Exception as e:
+        logging.error(f"Error getting location cache status: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 # Configuration Management Routes
 @app.route('/api/update-tenant-token', methods=['POST'])
@@ -1009,431 +1632,6 @@ def reload_config_route():
         logging.error(f"Error reloading configuration: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
-# Function to find record ID by scanned barcode
-def find_record_id_by_barcode(barcode, access_token, tenant):
-    """Find Alchemy record ID using barcode as the Result.Code"""
-    try:
-        tenant_config = get_tenant_config(tenant)
-        find_records_url = tenant_config.get('find_records_url')
-        
-        # Prepare find request payload
-        find_payload = {
-            "queryTerm": f"Result.Code == '{barcode}'",
-            "recordTemplateIdentifier": "AC_Study_LabTrial",
-            "lastChangedOnFrom": "2022-03-03T00:00:00Z",
-            "lastChangedOnTo": "2025-12-31T23:59:59Z"  # Extended date range to future
-        }
-        
-        # Send request to Alchemy API
-        headers = {
-            "Authorization": f"Bearer {access_token}",
-            "Content-Type": "application/json"
-        }
-        
-        logging.info(f"Finding record for barcode '{barcode}' in tenant {tenant}: {json.dumps(find_payload)}")
-        response = requests.put(find_records_url, headers=headers, json=find_payload)
-        
-        # Log response for debugging
-        logging.info(f"Find records API response status code for tenant {tenant}: {response.status_code}")
-        
-        if not response.ok:
-            logging.error(f"Error finding record for barcode {barcode} in tenant {tenant}: {response.text}")
-            return None
-        
-        # Process response
-        records = response.json()
-        
-        if not records or len(records) == 0:
-            logging.warning(f"No records found for barcode {barcode} in tenant {tenant}")
-            return None
-        
-        # Get the first matching record ID
-        record_id = records[0].get('recordId') or records[0].get('id')
-        
-        if not record_id:
-            logging.error(f"Found record for barcode {barcode} in tenant {tenant} but could not extract recordId")
-            return None
-            
-        logging.info(f"Found record ID {record_id} for barcode {barcode} in tenant {tenant}")
-        return record_id
-        
-    except Exception as e:
-        logging.error(f"Error finding record for barcode {barcode} in tenant {tenant}: {str(e)}")
-        return None
-
-# Location name extraction helper
-def extract_location_name_improved(location):
-    """Improved function to extract location name from Alchemy API response"""
-    # First, try to use the top-level name field which is most reliable
-    if "name" in location and location["name"]:
-        return location["name"]
-    
-    # Fallback to a default name if top-level name isn't available
-    default_name = f"Location {location.get('recordId') or location.get('id', 'unknown')}"
-    
-    # Check for name in fields array if top-level name isn't available
-    if "fields" in location:
-        # Look for fields with identifiers that might contain location name
-        name_field_identifiers = ["LocationName", "RecordName", "Name"]
-        for field in location["fields"]:
-            identifier = field.get("identifier", "")
-            if identifier in name_field_identifiers:
-                if field.get("rows") and len(field["rows"]) > 0:
-                    row = field["rows"][0]
-                    if row.get("values") and len(row["values"]) > 0:
-                        value = row["values"][0].get("value")
-                        if value and isinstance(value, str) and value.strip():
-                            return value
-    
-    # If no suitable name found, return the default
-    return default_name
-
-def extract_sublocations_improved(location):
-    """Improved function to extract sublocations from Alchemy API response"""
-    sublocations = []
-    location_id = location.get("recordId") or location.get("id", "unknown")
-    
-    # The primary issue is likely here - we need to be more selective about which sublocations we extract
-    # For a given location, we only want its direct children, not all related locations
-    
-    # In your first document's data structure, sublocations are typically found in the "Item" field
-    if "fields" in location:
-        for field in location["fields"]:
-            if field.get("identifier") == "Item":
-                for row in field.get("rows", []):
-                    if row.get("values") and len(row["values"]) > 0:
-                        value = row["values"][0].get("value")
-                        if isinstance(value, dict) and "recordId" in value and "name" in value:
-                            sublocation = {
-                                "id": str(value.get("recordId")),
-                                "name": value.get("name")
-                            }
-                            # Check if this sublocation is not already in the list
-                            if not any(sub["id"] == sublocation["id"] for sub in sublocations):
-                                sublocations.append(sublocation)
-    
-    # Check if there are any LocatedAt references - these might be parent-child relationships
-    if "fields" in location:
-        for field in location["fields"]:
-            if field.get("identifier") == "LocatedAt":
-                for row in field.get("rows", []):
-                    if row.get("values") and len(row["values"]) > 0:
-                        value = row["values"][0].get("value")
-                        if isinstance(value, dict) and "recordId" in value and "name" in value:
-                            parent_id = str(value.get("recordId"))
-                            # This location is located at another location - might be useful for hierarchy
-                            logging.info(f"Location {location.get('name')} is located at {value.get('name')}")
-    
-    # Debug log to track what we're extracting
-    logging.info(f"Found {len(sublocations)} sublocations for location {location.get('name', 'unknown')} (ID: {location_id})")
-    if sublocations:
-        logging.info(f"Sublocations for {location.get('name')}: {[sub['name'] for sub in sublocations]}")
-    
-    return sublocations
-
-# Route for getting test locations (reliable hardcoded data)
-@app.route('/get-test-locations/<tenant>', methods=['GET'])
-def get_test_locations(tenant):
-    """Return hardcoded test locations for debugging frontend"""
-    # Get tenant configuration
-    tenant_config = get_tenant_config(tenant)
-    tenant_display_name = tenant_config.get('display_name')
-    
-    test_locations = [
-        {
-            "id": "1001",
-            "name": f"Warehouse A ({tenant_display_name})",
-            "sublocations": [
-                {"id": "sub1", "name": "Section A1"},
-                {"id": "sub2", "name": "Section A2"}
-            ]
-        },
-        {
-            "id": "1002",
-            "name": f"Laboratory B ({tenant_display_name})",
-            "sublocations": [
-                {"id": "sub3", "name": "Lab Storage 1"},
-                {"id": "sub4", "name": "Lab Storage 2"}
-            ]
-        },
-        {
-            "id": "1003",
-            "name": f"Office Building ({tenant_display_name})",
-            "sublocations": []
-        }
-    ]
-    return jsonify(test_locations)
-
-# Route for getting locations from Alchemy API
-@app.route('/get-locations/<tenant>', methods=['GET'])
-def get_locations(tenant):
-    try:
-        # Check if tenant exists
-        if tenant not in CONFIG["tenants"]:
-            return jsonify({"error": f"Unknown tenant: {tenant}"}), 404
-        
-        # Check if we should use cached data
-        use_cache = request.args.get('use_cache', 'true').lower() == 'true'
-        
-        # If using cache and it's not expired, return cached data
-        if use_cache and not is_cache_expired(tenant):
-            cached_locations = load_locations_from_cache(tenant)
-            if cached_locations:
-                logging.info(f"Using cached locations for tenant {tenant} (count: {len(cached_locations)})")
-                return jsonify(cached_locations)
-            else:
-                logging.info(f"No valid cache found for tenant {tenant}, fetching from API")
-        else:
-            if use_cache:
-                logging.info(f"Location cache expired for tenant {tenant}, fetching from API")
-            else:
-                logging.info(f"Cache bypass requested for tenant {tenant}, fetching from API")
-        
-        # Get a fresh token and fetch from API
-        tenant_config = get_tenant_config(tenant)
-        
-        # Get access token
-        access_token = refresh_alchemy_token(tenant)
-        
-        if not access_token:
-            logging.warning(f"Failed to get access token for tenant {tenant}, checking for stale cache")
-            
-            # Try to use stale cache if it exists
-            stale_locations = load_locations_from_cache(tenant)
-            if stale_locations:
-                logging.info(f"Using stale cached locations for tenant {tenant} as fallback")
-                return jsonify(stale_locations)
-            
-            logging.warning(f"No stale cache found, returning fallback locations")
-            return jsonify(get_fallback_locations())
-        
-        # Prepare filter request for locations
-        filter_payload = {
-            "queryTerm": "Result.Status == 'Valid'",
-            "recordTemplateIdentifier": "AC_Location",
-            "drop": 0,
-            "take": 100,  # Fetch up to 100 locations
-            "lastChangedOnFrom": "2018-03-03T00:00:00Z",
-            "lastChangedOnTo": "2028-03-04T00:00:00Z"
-        }
-        
-        # Send request to Alchemy API
-        headers = {
-            "Authorization": f"Bearer {access_token}",
-            "Content-Type": "application/json"
-        }
-        
-        filter_url = tenant_config.get('filter_url')
-        logging.info(f"Fetching locations from Alchemy API for tenant {tenant}: {json.dumps(filter_payload)}")
-        response = requests.put(filter_url, headers=headers, json=filter_payload)
-        
-        # Log response for debugging
-        logging.info(f"Alchemy API response status code for tenant {tenant}: {response.status_code}")
-        
-        if not response.ok:
-            logging.error(f"Error fetching locations for tenant {tenant}: {response.text}")
-            
-            # Try to use stale cache if it exists
-            stale_locations = load_locations_from_cache(tenant)
-            if stale_locations:
-                logging.info(f"Using stale cached locations for tenant {tenant} as fallback")
-                return jsonify(stale_locations)
-            
-            return jsonify(get_fallback_locations())
-        
-        # Process the response
-        locations_data = response.json()
-        logging.info(f"Received {len(locations_data)} locations from API for tenant {tenant}")
-        
-        # Debug the API response structure
-        debug_api_response(locations_data)
-        
-        # Transform the data into the format needed by the frontend
-        formatted_locations = []
-        
-        for location in locations_data:
-            try:
-                # Extract location ID - use recordId if it exists, otherwise fall back to id
-                location_id = str(location.get("recordId") or location.get("id", "unknown"))
-                
-                # Extract location name using improved method
-                location_name = extract_location_name_improved(location)
-                
-                # Extract sublocations - improved version
-                sublocations = extract_sublocations_improved(location)
-                
-                # Create location info object
-                location_info = {
-                    "id": location_id,
-                    "name": location_name,
-                    "sublocations": sublocations
-                }
-                
-                formatted_locations.append(location_info)
-                logging.info(f"Added location for tenant {tenant}: {location_name} (ID: {location_id}) with {len(sublocations)} sublocations")
-                
-            except Exception as e:
-                logging.error(f"Error processing location {location.get('recordId', location.get('id', 'unknown'))} for tenant {tenant}: {str(e)}")
-        
-        # Save the processed locations to cache
-        if formatted_locations:
-            save_locations_to_cache(tenant, formatted_locations)
-        
-        # If no locations were found, add fallback locations
-        if not formatted_locations:
-            logging.warning(f"No locations found in API response for tenant {tenant}, adding fallback locations")
-            return jsonify(get_fallback_locations())
-        
-        return jsonify(formatted_locations)
-        
-    except Exception as e:
-        logging.error(f"Error fetching locations for tenant {tenant}: {str(e)}")
-        
-        # Try to use stale cache if it exists
-        stale_locations = load_locations_from_cache(tenant)
-        if stale_locations:
-            logging.info(f"Using stale cached locations for tenant {tenant} as fallback after error")
-            return jsonify(stale_locations)
-            
-        return jsonify(get_fallback_locations())
-
-# Add new endpoints for cache management
-@app.route('/admin/refresh-location-cache/<tenant>', methods=['POST'])
-def admin_refresh_location_cache(tenant):
-    """Endpoint to manually refresh location cache for a tenant"""
-    try:
-        # Check if tenant exists
-        if tenant not in CONFIG["tenants"]:
-            return jsonify({"status": "error", "message": f"Unknown tenant: {tenant}"}), 404
-        
-        # Start a background thread to refresh the cache
-        import threading
-        refresh_thread = threading.Thread(target=refresh_location_cache, args=(tenant,))
-        refresh_thread.daemon = True
-        refresh_thread.start()
-        
-        return jsonify({
-            "status": "success", 
-            "message": f"Cache refresh for tenant {tenant} started",
-            "note": "The refresh is running in the background. Check the status endpoint for details."
-        })
-    except Exception as e:
-        logging.error(f"Error starting location cache refresh for tenant {tenant}: {str(e)}")
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-@app.route('/admin/refresh-location-cache-all', methods=['POST'])
-def admin_refresh_all_location_caches():
-    """Endpoint to manually refresh location cache for all tenants"""
-    try:
-        # Start a background thread to refresh all caches
-        import threading
-        refresh_thread = threading.Thread(target=refresh_all_location_caches)
-        refresh_thread.daemon = True
-        refresh_thread.start()
-        
-        return jsonify({
-            "status": "success", 
-            "message": "Cache refresh for all tenants started",
-            "note": "The refresh is running in the background. Check the status endpoint for details."
-        })
-    except Exception as e:
-        logging.error(f"Error starting location cache refresh for all tenants: {str(e)}")
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-@app.route('/admin/location-cache-status', methods=['GET'])
-def admin_location_cache_status():
-    """Endpoint to get location cache status for all tenants"""
-    try:
-        metadata = load_cache_metadata()
-        
-        # Add formatted last refresh time
-        status_data = {
-            "tenants": {},
-            "system": {
-                "cache_directory": LOCATION_CACHE_DIR,
-                "directory_exists": os.path.exists(LOCATION_CACHE_DIR),
-                "refresh_interval_days": CACHE_REFRESH_INTERVAL / (24 * 60 * 60)
-            }
-        }
-        
-        # Process each tenant's status
-        for tenant_id in CONFIG["tenants"].keys():
-            cache_file = get_location_cache_file_path(tenant_id)
-            cache_exists = os.path.exists(cache_file)
-            cache_size = os.path.getsize(cache_file) if cache_exists else 0
-            
-            last_refreshed = metadata["last_refreshed"].get(tenant_id, 0)
-            refresh_status = metadata["refresh_status"].get(tenant_id, {
-                "status": "unknown",
-                "message": "No refresh status available",
-                "timestamp": 0,
-                "formatted_time": "Never"
-            })
-            
-            # Calculate if cache is expired
-            is_expired = is_cache_expired(tenant_id)
-            
-            # Format last refreshed time
-            if last_refreshed > 0:
-                formatted_time = datetime.fromtimestamp(last_refreshed).strftime("%Y-%m-%d %H:%M:%S")
-                next_refresh = datetime.fromtimestamp(last_refreshed + CACHE_REFRESH_INTERVAL).strftime("%Y-%m-%d %H:%M:%S")
-            else:
-                formatted_time = "Never"
-                next_refresh = "Unknown"
-            
-            # Count locations if cache exists
-            location_count = 0
-            if cache_exists:
-                try:
-                    with open(cache_file, 'r') as f:
-                        location_data = json.load(f)
-                        location_count = len(location_data)
-                except:
-                    pass
-            
-            status_data["tenants"][tenant_id] = {
-                "display_name": CONFIG["tenants"][tenant_id].get("display_name", tenant_id),
-                "cache_exists": cache_exists,
-                "cache_size_bytes": cache_size,
-                "location_count": location_count,
-                "last_refreshed_timestamp": last_refreshed,
-                "last_refreshed_formatted": formatted_time,
-                "next_scheduled_refresh": next_refresh,
-                "is_expired": is_expired,
-                "refresh_status": refresh_status
-            }
-        
-        return jsonify(status_data)
-    except Exception as e:
-        logging.error(f"Error getting location cache status: {str(e)}")
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-# Main Route Handlers
-@app.route('/')
-def root():
-    # Show tenant selector page
-    return render_template('tenant_selector.html', tenants=CONFIG["tenants"])
-
-@app.route('/tenant/<tenant>')
-def index(tenant):
-    # Validate tenant
-    if tenant not in CONFIG["tenants"]:
-        return render_template('error.html', message=f"Unknown tenant: {tenant}"), 404
-    
-    tenant_config = get_tenant_config(tenant)
-    
-    app.logger.info(f"Rendering index.html for tenant: {tenant} ({tenant_config['tenant_name']})")
-    return render_template('index.html', tenant=tenant, tenant_name=tenant_config['display_name'])
-
-@app.route('/static/<path:filename>')
-def serve_static(filename):
-    return send_from_directory(app.static_folder, filename)
-
-@app.route('/admin', methods=['GET'])
-def admin_panel():
-    """Simple admin panel to manage tenants"""
-    return render_template('admin.html', tenants=CONFIG["tenants"], default_tenant=DEFAULT_TENANT)
-    
 @app.route('/api/get-refresh-token', methods=['POST'])
 def get_refresh_token():
     """Proxy for Alchemy sign-in API to get refresh tokens"""
@@ -1460,144 +1658,6 @@ def get_refresh_token():
         logging.error(f"Error getting refresh token: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
-# Route for updating record location in Alchemy
-@app.route('/update-location/<tenant>', methods=['POST'])
-def update_location(tenant):
-    data = request.json
-    
-    if not data:
-        return jsonify({"status": "error", "message": "No data provided"}), 400
-    
-    try:
-        # Check if tenant exists
-        if tenant not in CONFIG["tenants"]:
-            return jsonify({"status": "error", "message": f"Unknown tenant: {tenant}"}), 404
-            
-        tenant_config = get_tenant_config(tenant)
-        
-        barcode_codes = data.get('recordIds', [])  # These are actually barcode codes now, not record IDs
-        location_id = data.get('locationId', '')
-        sublocation_id = data.get('sublocationId', '')
-        
-        if not barcode_codes:
-            return jsonify({"status": "error", "message": "No barcode codes provided"}), 400
-        
-        if not location_id:
-            return jsonify({"status": "error", "message": "No location ID provided"}), 400
-        
-        # Get a fresh access token from Alchemy
-        access_token = refresh_alchemy_token(tenant)
-        
-        if not access_token:
-            return jsonify({
-                "status": "error", 
-                "message": f"Failed to authenticate with Alchemy API for tenant {tenant}"
-            }), 500
-        
-        success_records = []
-        failed_records = []
-        
-        for barcode in barcode_codes:
-            try:
-                # First, find the record ID from the barcode
-                record_id = find_record_id_by_barcode(barcode, access_token, tenant)
-                
-                if not record_id:
-                    failed_records.append({
-                        "id": barcode,
-                        "error": f"Record not found for this barcode in tenant {tenant_config['display_name']}"
-                    })
-                    continue
-                
-                # Format data for Alchemy API update
-                alchemy_payload = {
-                    "recordId": int(record_id),
-                    "fields": [
-                        {
-                            "identifier": "Location",
-                            "rows": [
-                                {
-                                    "row": 0,
-                                    "values": [
-                                        {
-                                            "value": location_id,
-                                            "valuePreview": ""
-                                        }
-                                    ]
-                                }
-                            ]
-                        }
-                    ]
-                }
-                
-                # Add sublocation if provided
-                if sublocation_id:
-                    alchemy_payload["fields"].append({
-                        "identifier": "Sublocation",
-                        "rows": [
-                            {
-                                "row": 0,
-                                "values": [
-                                    {
-                                        "value": sublocation_id,
-                                        "valuePreview": ""
-                                    }
-                                ]
-                            }
-                        ]
-                    })
-                
-                # Send update to Alchemy API
-                headers = {
-                    "Authorization": f"Bearer {access_token}",
-                    "Content-Type": "application/json"
-                }
-                
-                api_url = tenant_config.get('api_url')
-                logging.info(f"Sending update for record {record_id} (barcode: {barcode}) to Alchemy for tenant {tenant}: {json.dumps(alchemy_payload)}")
-                response = requests.put(api_url, headers=headers, json=alchemy_payload)
-                
-                # Log response for debugging
-                logging.info(f"Alchemy API response status code for tenant {tenant}: {response.status_code}")
-                if response.text:
-                    logging.info(f"Alchemy API response for tenant {tenant}: {response.text}")
-                
-                # Check if the request was successful
-                if response.ok:
-                    success_records.append(barcode)
-                else:
-                    logging.error(f"Error updating record {record_id} (barcode: {barcode}) for tenant {tenant}: {response.text}")
-                    failed_records.append({
-                        "id": barcode,
-                        "error": f"API returned status code {response.status_code}"
-                    })
-                
-            except Exception as e:
-                logging.error(f"Error processing barcode {barcode} for tenant {tenant}: {str(e)}")
-                failed_records.append({
-                    "id": barcode,
-                    "error": str(e)
-                })
-        
-        # Return results
-        return jsonify({
-            "status": "success" if not failed_records else "partial",
-            "message": f"Updated {len(success_records)} of {len(barcode_codes)} records in tenant {tenant_config['display_name']}",
-            "successful": success_records,
-            "failed": failed_records
-        })
-        
-    except Exception as e:
-        logging.error(f"Error updating locations for tenant {tenant}: {e}")
-        return jsonify({
-            "status": "error", 
-            "message": str(e)
-        }), 500
-
-# Initialize location cache system when application starts
-init_location_cache()
-
-# Add this inside your main execution block for logging
 if __name__ == '__main__':
     # Get port from environment variable or default to 5000
     port = int(os.environ.get('PORT', 5000))
@@ -1605,7 +1665,323 @@ if __name__ == '__main__':
     # Initialize location cache directory
     ensure_location_cache_directory()
     
+    # Ensure static/css directory exists
+    ensure_static_css_dir()
+    
+    # Create alchemy-sidebar.css if it doesn't exist
+    css_file_path = os.path.join(app.static_folder, 'css', 'alchemy-sidebar.css')
+    
+    if not os.path.exists(css_file_path):
+        # Content for the sidebar CSS file
+        css_content = """/* Alchemy Sidebar Styles - Matching Calendar App */
+:root {
+    --alchemy-blue: #0047BB;
+    --alchemy-light-blue: #3F88F6;
+    --alchemy-dark-blue: #0c3d99;
+    --alchemy-blue-bg: #E7F0FF;
+    --alchemy-dark: #001952;
+    --alchemy-green: #00A86B;
+    --alchemy-red: #E4002B;
+    --alchemy-grey: #6C757D;
+    --alchemy-light-grey: #F8F9FA;
+}
+
+/* Main layout with sidebar */
+.app-container {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* Sidebar styles */
+.alchemy-sidebar {
+    background-color: var(--alchemy-blue);
+    height: 100vh;
+    width: 220px;
+    position: fixed;
+    transition: width 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    z-index: 1000;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+}
+
+.alchemy-sidebar.collapsed {
+    width: 60px;
+}
+
+/* Sidebar header */
+.sidebar-header {
+    padding: 18px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-logo {
+    height: 24px;
+    filter: brightness(0) invert(1); /* Make logo white */
+}
+
+.sidebar-title {
+    margin: 0;
+    margin-left: 10px;
+    font-size: 1rem;
+    color: white;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 500;
+}
+
+.toggle-btn {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+}
+
+.toggle-btn:hover {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.alchemy-sidebar.collapsed .sidebar-title,
+.alchemy-sidebar.collapsed .toggle-btn i.fa-chevron-left {
+    display: none;
+}
+
+.alchemy-sidebar:not(.collapsed) .toggle-btn i.fa-chevron-right {
+    display: none;
+}
+
+/* Sidebar search */
+.sidebar-search {
+    padding: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.search-input {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 4px;
+    padding: 8px 15px 8px 35px;
+    color: white;
+    width: 100%;
+    font-size: 0.85rem;
+}
+
+.search-input-wrapper {
+    position: relative;
+}
+
+.search-input-wrapper i {
+    position: absolute;
+    left: 12px;
+    top: 9px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.search-input::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.search-input:focus {
+    outline: none;
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+/* Current tenant badge */
+.current-tenant-badge {
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 8px 10px;
+    border-radius: 4px;
+    color: white;
+}
+
+.tenant-label {
+    font-size: 0.75rem;
+    opacity: 0.8;
+    display: block;
+    margin-bottom: 3px;
+}
+
+.tenant-value {
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.alchemy-sidebar.collapsed .sidebar-search,
+.alchemy-sidebar.collapsed .current-tenant-badge {
+    display: none;
+}
+
+/* Sidebar content */
+.sidebar-content {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 15px 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Navigation menu */
+.sidebar-nav {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.sidebar-nav-item {
+    margin-bottom: 2px;
+}
+
+.sidebar-nav-link {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    color: rgba(255, 255, 255, 0.85);
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.sidebar-nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+.sidebar-nav-item.active .sidebar-nav-link {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: white;
+    font-weight: 500;
+}
+
+.sidebar-nav-icon {
+    margin-right: 12px;
+    width: 20px;
+    text-align: center;
+    color: white;
+}
+
+.alchemy-sidebar.collapsed .sidebar-nav-text {
+    display: none;
+}
+
+/* Divider */
+.sidebar-divider {
+    height: 1px;
+    background-color: rgba(255, 255, 255, 0.1);
+    margin: 10px 15px;
+}
+
+/* Admin section */
+.admin-section {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.admin-section-title {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 0 15px;
+    margin-bottom: 10px;
+}
+
+.alchemy-sidebar.collapsed .admin-section-title {
+    display: none;
+}
+
+/* Copyright in sidebar */
+.sidebar-copyright {
+    margin-top: auto;
+    padding: 15px;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 11px;
+    text-align: center;
+    line-height: 1.5;
+}
+
+.sidebar-copyright-text {
+    display: block;
+}
+
+.alchemy-sidebar.collapsed .sidebar-copyright {
+    display: none;
+}
+
+/* Main content wrapper */
+.main-content-wrapper {
+    flex: 1;
+    margin-left: 220px;
+    transition: margin-left 0.3s ease;
+    width: calc(100% - 220px);
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.main-content-wrapper.sidebar-collapsed {
+    margin-left: 60px;
+    width: calc(100% - 60px);
+}
+
+/* Content area should grow to fill available space */
+.content-area {
+    flex: 1;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+    .alchemy-sidebar {
+        width: 220px;
+        left: -220px;
+    }
+    
+    .alchemy-sidebar.mobile-expanded {
+        left: 0;
+    }
+    
+    .main-content-wrapper {
+        margin-left: 0;
+        width: 100%;
+    }
+    
+    .main-content-wrapper.sidebar-collapsed {
+        margin-left: 0;
+        width: 100%;
+    }
+    
+    .mobile-sidebar-toggle {
+        display: block;
+        position: fixed;
+        top: 15px;
+        left: 15px;
+        z-index: 1001;
+        background: var(--alchemy-blue);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        width: 40px;
+        height: 40px;
+        text-align: center;
+    }
+}"""
+        
+        # Write the CSS file
+        with open(css_file_path, 'w') as f:
+            f.write(css_content)
+        
+        print(f"Created Alchemy sidebar CSS file at: {css_file_path}")
+    
     # Log that we're starting with location caching
     logging.info(f"Starting application with location caching enabled. Cache directory: {LOCATION_CACHE_DIR}")
+    
+    # Initialize location caching system
+    init_location_cache()
     
     app.run(host='0.0.0.0', port=port, debug=True)

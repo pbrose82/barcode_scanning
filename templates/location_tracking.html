@@ -1,573 +1,579 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Location Tracking - Alchemy Barcode Scanner</title>
+{% extends "layout.html" %}
+
+{% block title %}Location Tracking - Alchemy Barcode Scanner{% endblock %}
+
+{% set active_page = 'location_tracking' %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.0/styles/ag-grid.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.0/styles/ag-theme-alpine.css">
+<style>
+    .location-tracking-container {
+        padding: 30px;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
     
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    .grid-container {
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        padding: 20px;
+        margin-top: 20px;
+    }
     
-    <!-- AG Grid CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.0/styles/ag-grid.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.0/styles/ag-theme-alpine.css">
+    #locationGrid {
+        height: 600px;
+        width: 100%;
+    }
     
-    <!-- Font Awesome for icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    .admin-controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
     
-    <style>
-        body {
-            background-color: #f4f6f9;
-        }
-        .grid-container {
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            padding: 20px;
-            margin-top: 20px;
-        }
-        #locationGrid {
-            height: 600px;
-            width: 100%;
-        }
-        .header-btn {
-            margin-right: 10px;
-        }
-        .tree-node {
-            display: flex;
-            align-items: center;
-        }
-        .tree-icon {
-            margin-right: 5px;
-            color: #0047BB;
-        }
-        .indented {
-            margin-left: 25px;
-        }
-        .status-badge {
-            padding: 5px 10px;
-            border-radius: 15px;
-            font-size: 12px;
-            font-weight: 500;
-        }
-        .status-success {
-            background-color: rgba(0, 168, 107, 0.2);
-            color: #00A86B;
-        }
-        .status-error {
-            background-color: rgba(228, 0, 43, 0.2);
-            color: #E4002B;
-        }
-        .status-refreshing {
-            background-color: rgba(0, 71, 187, 0.2);
-            color: #0047BB;
-        }
-        .status-info-box {
-            background-color: #f8f9fa;
-            border-radius: 8px;
+    .control-buttons {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+    
+    .header-btn {
+        margin-right: 10px;
+    }
+    
+    .tree-node {
+        display: flex;
+        align-items: center;
+    }
+    
+    .tree-icon {
+        margin-right: 5px;
+        color: #0047BB;
+    }
+    
+    .indented {
+        margin-left: 25px;
+    }
+    
+    .status-badge {
+        padding: 5px 10px;
+        border-radius: 15px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+    
+    .status-success {
+        background-color: rgba(0, 168, 107, 0.2);
+        color: #00A86B;
+    }
+    
+    .status-error {
+        background-color: rgba(228, 0, 43, 0.2);
+        color: #E4002B;
+    }
+    
+    .status-refreshing {
+        background-color: rgba(0, 71, 187, 0.2);
+        color: #0047BB;
+    }
+    
+    .status-info-box {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+        font-size: 14px;
+    }
+    
+    .status-info-box table {
+        width: 100%;
+        margin-top: 10px;
+    }
+    
+    .status-info-box table td {
+        padding: 5px 10px;
+    }
+    
+    .status-info-box table td:first-child {
+        font-weight: 500;
+        width: 200px;
+    }
+    
+    /* Card View Styles */
+    .location-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
+        padding: 15px 0;
+    }
+    
+    .location-category {
+        border-radius: 8px;
+        padding: 15px;
+        height: 100%;
+    }
+    
+    .location-card {
+        background-color: white;
+        border-radius: 6px;
+        padding: 12px;
+        margin-bottom: 10px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .location-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    /* Muted color scheme for category backgrounds */
+    .standalone-category {
+        background-color: #E8EEF4;
+    }
+    .lab-a1-category {
+        background-color: #E3F2E3;
+    }
+    .lab-center-category {
+        background-color: #FFF8E6;
+    }
+    .manufacturing-category {
+        background-color: #F8EAEA;
+    }
+    .shelf-category {
+        background-color: #ECE8F8;
+    }
+    
+    /* Nav tab styling */
+    .nav-tabs .nav-link {
+        color: #495057;
+        border: 1px solid transparent;
+        border-top-left-radius: 0.25rem;
+        border-top-right-radius: 0.25rem;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+    }
+    
+    .nav-tabs .nav-link.active {
+        color: #0047BB;
+        background-color: #fff;
+        border-color: #dee2e6 #dee2e6 #fff;
+        font-weight: 600;
+    }
+    
+    .nav-tabs .nav-link:hover {
+        border-color: #e9ecef #e9ecef #dee2e6;
+    }
+    
+    @media (max-width: 768px) {
+        .location-tracking-container {
             padding: 15px;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-        .status-info-box table {
-            width: 100%;
-            margin-top: 10px;
-        }
-        .status-info-box table td {
-            padding: 5px 10px;
-        }
-        .status-info-box table td:first-child {
-            font-weight: 500;
-            width: 200px;
         }
         
-        /* Card View Styles */
-        .location-cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 20px;
-            padding: 15px 0;
-        }
-        .location-category {
-            border-radius: 8px;
-            padding: 15px;
-            height: 100%;
-        }
-        .location-card {
-            background-color: white;
-            border-radius: 6px;
-            padding: 12px;
-            margin-bottom: 10px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            cursor: pointer;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-        .location-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        .admin-controls {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 15px;
         }
         
-        /* Muted color scheme for category backgrounds */
-        .standalone-category {
-            background-color: #E8EEF4;
+        .control-buttons {
+            flex-wrap: wrap;
         }
-        .lab-a1-category {
-            background-color: #E3F2E3;
-        }
-        .lab-center-category {
-            background-color: #FFF8E6;
-        }
-        .manufacturing-category {
-            background-color: #F8EAEA;
-        }
-        .shelf-category {
-            background-color: #ECE8F8;
-        }
-        
-        /* Nav tab styling */
-        .nav-tabs .nav-link {
-            color: #495057;
-            border: 1px solid transparent;
-            border-top-left-radius: 0.25rem;
-            border-top-right-radius: 0.25rem;
-            padding: 0.5rem 1rem;
-            font-weight: 500;
-        }
-        .nav-tabs .nav-link.active {
-            color: #0047BB;
-            background-color: #fff;
-            border-color: #dee2e6 #dee2e6 #fff;
-            font-weight: 600;
-        }
-        .nav-tabs .nav-link:hover {
-            border-color: #e9ecef #e9ecef #dee2e6;
-        }
-    </style>
-</head>
-<body>
-    <div class="container-fluid">
-        <div class="row">
-            <div class="col-12">
-                <div class="d-flex justify-content-between align-items-center p-3 bg-white shadow-sm mb-3">
-                    <h3 class="mb-0">Location Tracking</h3>
-                    <div class="d-flex align-items-center">
-                        {% if admin_mode %}
-                        <a href="/admin" class="btn btn-outline-primary btn-sm header-btn">
-                            <i class="fas fa-arrow-left"></i> Back to Admin
-                        </a>
-                        <select id="tenantSelector" class="form-select form-select-sm me-2" style="width: auto;">
-                            {% for tenant in tenants %}
-                            <option value="{{ tenant }}" {% if tenant == current_tenant %}selected{% endif %}>{{ tenant }}</option>
-                            {% endfor %}
-                        </select>
-                        <button id="refreshButton" class="btn btn-primary btn-sm me-2">
-                            <i class="fas fa-sync-alt"></i> Refresh Cache
-                        </button>
-                        <button id="refreshAllButton" class="btn btn-outline-primary btn-sm me-2">
-                            <i class="fas fa-sync-alt"></i> Refresh All
-                        </button>
-                        <button id="toggleStatusButton" class="btn btn-outline-secondary btn-sm">
-                            <i class="fas fa-info-circle"></i> Cache Status
-                        </button>
-                        {% else %}
-                        <a href="/tenant/{{ current_tenant }}" class="btn btn-outline-primary btn-sm header-btn">
-                            <i class="fas fa-arrow-left"></i> Back to Scanner
-                        </a>
-                        {% endif %}
-                    </div>
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="location-tracking-container">
+    {% if admin_mode %}
+    <div class="admin-controls">
+        <h2>Location Tracking</h2>
+        <div class="control-buttons">
+            <select id="tenantSelector" class="form-select form-select-sm" style="width: auto;">
+                {% for tenant in tenants %}
+                <option value="{{ tenant }}" {% if tenant == current_tenant %}selected{% endif %}>{{ tenant }}</option>
+                {% endfor %}
+            </select>
+            <button id="refreshButton" class="btn btn-primary btn-sm">
+                <i class="fas fa-sync-alt"></i> Refresh Cache
+            </button>
+            <button id="refreshAllButton" class="btn btn-outline-primary btn-sm">
+                <i class="fas fa-sync-alt"></i> Refresh All
+            </button>
+            <button id="toggleStatusButton" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-info-circle"></i> Cache Status
+            </button>
+        </div>
+    </div>
+    
+    <div id="statusContainer" class="status-info-box" style="display: none;">
+        <h5>Location Cache Status</h5>
+        <div id="statusContent">
+            <div class="d-flex justify-content-center">
+                <div class="spinner-border spinner-border-sm text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
                 </div>
+                <span class="ms-2">Loading cache status...</span>
             </div>
         </div>
+    </div>
+    {% else %}
+    <h2>Location Tracking</h2>
+    {% endif %}
+    
+    <div class="grid-container">
+        <!-- Tab navigation -->
+        <ul class="nav nav-tabs mb-3" id="locationViewTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="tree-tab" data-bs-toggle="tab" data-bs-target="#tree-view" type="button" role="tab" aria-controls="tree-view" aria-selected="true">
+                    <i class="fas fa-sitemap me-1"></i> Tree View
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="card-tab" data-bs-toggle="tab" data-bs-target="#card-view" type="button" role="tab" aria-controls="card-view" aria-selected="false">
+                    <i class="fas fa-th-large me-1"></i> Card View
+                </button>
+            </li>
+        </ul>
         
-        {% if admin_mode %}
-        <div class="row">
-            <div class="col-12">
-                <div id="statusContainer" class="status-info-box" style="display: none;">
-                    <h5>Location Cache Status</h5>
-                    <div id="statusContent">
-                        <div class="d-flex justify-content-center">
-                            <div class="spinner-border spinner-border-sm text-primary" role="status">
-                                <span class="visually-hidden">Loading...</span>
-                            </div>
-                            <span class="ms-2">Loading cache status...</span>
-                        </div>
-                    </div>
-                </div>
+        <!-- Tab content -->
+        <div class="tab-content" id="locationViewTabsContent">
+            <!-- Tree View Tab -->
+            <div class="tab-pane fade show active" id="tree-view" role="tabpanel" aria-labelledby="tree-tab">
+                <div id="locationGrid" class="ag-theme-alpine"></div>
             </div>
-        </div>
-        {% endif %}
-        
-        <div class="row">
-            <div class="col-12">
-                <div class="grid-container">
-                    <!-- Tab navigation -->
-                    <ul class="nav nav-tabs mb-3" id="locationViewTabs" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="tree-tab" data-bs-toggle="tab" data-bs-target="#tree-view" type="button" role="tab" aria-controls="tree-view" aria-selected="true">
-                                <i class="fas fa-sitemap me-1"></i> Tree View
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="card-tab" data-bs-toggle="tab" data-bs-target="#card-view" type="button" role="tab" aria-controls="card-view" aria-selected="false">
-                                <i class="fas fa-th-large me-1"></i> Card View
-                            </button>
-                        </li>
-                    </ul>
-                    
-                    <!-- Tab content -->
-                    <div class="tab-content" id="locationViewTabsContent">
-                        <!-- Tree View Tab -->
-                        <div class="tab-pane fade show active" id="tree-view" role="tabpanel" aria-labelledby="tree-tab">
-                            <div id="locationGrid" class="ag-theme-alpine"></div>
-                        </div>
-                        
-                        <!-- Card View Tab -->
-                        <div class="tab-pane fade" id="card-view" role="tabpanel" aria-labelledby="card-tab">
-                            <div id="locationCards" class="location-cards">
-                                <!-- Cards will be generated dynamically with JavaScript -->
-                            </div>
-                        </div>
-                    </div>
+            
+            <!-- Card View Tab -->
+            <div class="tab-pane fade" id="card-view" role="tabpanel" aria-labelledby="card-tab">
+                <div id="locationCards" class="location-cards">
+                    <!-- Cards will be generated dynamically with JavaScript -->
                 </div>
             </div>
         </div>
     </div>
+</div>
+{% endblock %}
 
-    <!-- AG Grid Community -->
-    <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.0/dist/ag-grid-community.min.js"></script>
-    
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+{% block extra_js %}
+<!-- AG Grid Community -->
+<script src="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.0/dist/ag-grid-community.min.js"></script>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const gridDiv = document.getElementById('locationGrid');
-            const locationCardsContainer = document.getElementById('locationCards');
-            
-            {% if admin_mode %}
-            const tenantSelector = document.getElementById('tenantSelector');
-            const refreshButton = document.getElementById('refreshButton');
-            const refreshAllButton = document.getElementById('refreshAllButton');
-            const toggleStatusButton = document.getElementById('toggleStatusButton');
-            const statusContainer = document.getElementById('statusContainer');
-            const statusContent = document.getElementById('statusContent');
-            {% endif %}
-            
-            // Set current tenant
-            let currentTenant = "{{ current_tenant }}";
-            
-            // Admin mode flag
-            const adminMode = {% if admin_mode %}true{% else %}false{% endif %};
-            
-            // Cache status toggle
-            let statusVisible = false;
-            
-            // Data storage for cards view
-            let locationData = [];
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const gridDiv = document.getElementById('locationGrid');
+        const locationCardsContainer = document.getElementById('locationCards');
+        
+        {% if admin_mode %}
+        const tenantSelector = document.getElementById('tenantSelector');
+        const refreshButton = document.getElementById('refreshButton');
+        const refreshAllButton = document.getElementById('refreshAllButton');
+        const toggleStatusButton = document.getElementById('toggleStatusButton');
+        const statusContainer = document.getElementById('statusContainer');
+        const statusContent = document.getElementById('statusContent');
+        {% endif %}
+        
+        // Set current tenant
+        let currentTenant = "{{ current_tenant }}";
+        
+        // Admin mode flag
+        const adminMode = {% if admin_mode %}true{% else %}false{% endif %};
+        
+        // Cache status toggle
+        let statusVisible = false;
+        
+        // Data storage for cards view
+        let locationData = [];
 
-            // Custom tree cell renderer that manually creates the tree look
-            function TreeCellRenderer() {}
+        // Custom tree cell renderer that manually creates the tree look
+        function TreeCellRenderer() {}
+        
+        TreeCellRenderer.prototype.init = function(params) {
+            this.eGui = document.createElement('div');
+            this.eGui.className = 'tree-node';
             
-            TreeCellRenderer.prototype.init = function(params) {
-                this.eGui = document.createElement('div');
-                this.eGui.className = 'tree-node';
-                
-                let html = '';
-                
-                // Add indentation and icons based on level
-                if (params.data.level > 0) {
-                    html += '<div class="indented">';
-                    html += '<i class="fas fa-arrow-right tree-icon"></i>';
-                }
-                
-                // Add location name with appropriate icon
-                if (params.data.isParent) {
-                    html += '<i class="fas fa-folder tree-icon"></i>';
-                } else {
-                    html += '<i class="fas fa-map-marker-alt tree-icon"></i>';
-                }
-                
-                html += params.value;
-                
-                if (params.data.level > 0) {
-                    html += '</div>';
-                }
-                
-                this.eGui.innerHTML = html;
-            };
+            let html = '';
             
-            TreeCellRenderer.prototype.getGui = function() {
-                return this.eGui;
-            };
-
-            // Define the columns for AG Grid based on mode
-            const columnDefs = [
-                {
-                    headerName: 'Location Hierarchy',
-                    field: 'name',
-                    cellRenderer: 'treeCellRenderer',
-                    flex: 2,
-                    minWidth: 250,
-                    sortable: true,
-                    filter: true
-                }
-            ];
-            
-            // Only add the ID column in admin mode
-            if (adminMode) {
-                columnDefs.push({
-                    headerName: 'Location ID',
-                    field: 'id',
-                    flex: 1,
-                    minWidth: 100,
-                    sortable: true,
-                    filter: true
-                });
+            // Add indentation and icons based on level
+            if (params.data.level > 0) {
+                html += '<div class="indented">';
+                html += '<i class="fas fa-arrow-right tree-icon"></i>';
             }
-
-            // Create the grid options
-            const gridOptions = {
-                columnDefs: columnDefs,
-                defaultColDef: {
-                    resizable: true
-                },
-                components: {
-                    treeCellRenderer: TreeCellRenderer
-                },
-                rowData: [],
-                pagination: true,
-                paginationPageSize: 20
-            };
-
-            // Initialize the grid
-            new agGrid.Grid(gridDiv, gridOptions);
             
-            // Function to generate card view
-            function generateCardView(data) {
-                // Clear existing cards
-                locationCardsContainer.innerHTML = '';
-                
-                // Group locations by parent
-                const locationsByParent = {};
-                
-                // First, identify parent locations (level 0)
-                data.forEach(location => {
-                    if (location.level === 0) {
-                        if (!locationsByParent[location.name]) {
-                            locationsByParent[location.name] = {
-                                parent: location,
-                                sublocations: []
-                            };
-                        }
+            // Add location name with appropriate icon
+            if (params.data.isParent) {
+                html += '<i class="fas fa-folder tree-icon"></i>';
+            } else {
+                html += '<i class="fas fa-map-marker-alt tree-icon"></i>';
+            }
+            
+            html += params.value;
+            
+            if (params.data.level > 0) {
+                html += '</div>';
+            }
+            
+            this.eGui.innerHTML = html;
+        };
+        
+        TreeCellRenderer.prototype.getGui = function() {
+            return this.eGui;
+        };
+
+        // Define the columns for AG Grid based on mode
+        const columnDefs = [
+            {
+                headerName: 'Location Hierarchy',
+                field: 'name',
+                cellRenderer: 'treeCellRenderer',
+                flex: 2,
+                minWidth: 250,
+                sortable: true,
+                filter: true
+            }
+        ];
+        
+        // Only add the ID column in admin mode
+        if (adminMode) {
+            columnDefs.push({
+                headerName: 'Location ID',
+                field: 'id',
+                flex: 1,
+                minWidth: 100,
+                sortable: true,
+                filter: true
+            });
+        }
+
+        // Create the grid options
+        const gridOptions = {
+            columnDefs: columnDefs,
+            defaultColDef: {
+                resizable: true
+            },
+            components: {
+                treeCellRenderer: TreeCellRenderer
+            },
+            rowData: [],
+            pagination: true,
+            paginationPageSize: 20
+        };
+
+        // Initialize the grid
+        new agGrid.Grid(gridDiv, gridOptions);
+        
+        // Function to generate card view
+        function generateCardView(data) {
+            // Clear existing cards
+            locationCardsContainer.innerHTML = '';
+            
+            // Group locations by parent
+            const locationsByParent = {};
+            
+            // First, identify parent locations (level 0)
+            data.forEach(location => {
+                if (location.level === 0) {
+                    if (!locationsByParent[location.name]) {
+                        locationsByParent[location.name] = {
+                            parent: location,
+                            sublocations: []
+                        };
                     }
+                }
+            });
+            
+            // Now add sublocations to their parents
+            data.forEach(location => {
+                if (location.level === 1 && location.parentName) {
+                    if (locationsByParent[location.parentName]) {
+                        locationsByParent[location.parentName].sublocations.push(location);
+                    }
+                }
+            });
+            
+            // Standalone locations (those without parents or children)
+            const standaloneLocations = data.filter(location => 
+                location.level === 0 && 
+                !data.some(l => l.level === 1 && l.parentName === location.name) &&
+                !data.some(l => l.parentName === location.name)
+            );
+            
+            // Create the standalone category if there are standalone locations
+            if (standaloneLocations.length > 0) {
+                const standaloneDiv = document.createElement('div');
+                standaloneDiv.className = 'location-category standalone-category';
+                
+                const categoryTitle = document.createElement('h5');
+                categoryTitle.textContent = 'Standalone';
+                categoryTitle.className = 'mb-3';
+                standaloneDiv.appendChild(categoryTitle);
+                
+                standaloneLocations.forEach(location => {
+                    const card = document.createElement('div');
+                    card.className = 'location-card';
+                    card.innerHTML = `
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-map-marker-alt me-2 text-primary"></i>
+                            <span>${location.name}</span>
+                        </div>
+                    `;
+                    standaloneDiv.appendChild(card);
                 });
                 
-                // Now add sublocations to their parents
-                data.forEach(location => {
-                    if (location.level === 1 && location.parentName) {
-                        if (locationsByParent[location.parentName]) {
-                            locationsByParent[location.parentName].sublocations.push(location);
-                        }
-                    }
-                });
-                
-                // Standalone locations (those without parents or children)
-                const standaloneLocations = data.filter(location => 
-                    location.level === 0 && 
-                    !data.some(l => l.level === 1 && l.parentName === location.name) &&
-                    !data.some(l => l.parentName === location.name)
-                );
-                
-                // Create the standalone category if there are standalone locations
-                if (standaloneLocations.length > 0) {
-                    const standaloneDiv = document.createElement('div');
-                    standaloneDiv.className = 'location-category standalone-category';
+                locationCardsContainer.appendChild(standaloneDiv);
+            }
+            
+            // Create category cards for each parent with sublocations
+            Object.keys(locationsByParent).forEach((parentName, index) => {
+                const locationGroup = locationsByParent[parentName];
+                if (locationGroup.sublocations.length > 0) {
+                    const categoryDiv = document.createElement('div');
+                    
+                    // Assign different background colors based on parent name or index
+                    // Using muted color classes defined in CSS
+                    const colorClasses = [
+                        'lab-a1-category', 
+                        'lab-center-category', 
+                        'manufacturing-category',
+                        'shelf-category'
+                    ];
+                    const colorClass = colorClasses[index % colorClasses.length];
+                    categoryDiv.className = `location-category ${colorClass}`;
                     
                     const categoryTitle = document.createElement('h5');
-                    categoryTitle.textContent = 'Standalone';
+                    categoryTitle.textContent = parentName;
                     categoryTitle.className = 'mb-3';
-                    standaloneDiv.appendChild(categoryTitle);
+                    categoryDiv.appendChild(categoryTitle);
                     
-                    standaloneLocations.forEach(location => {
+                    // Add sublocation cards
+                    locationGroup.sublocations.forEach(sublocation => {
                         const card = document.createElement('div');
                         card.className = 'location-card';
                         card.innerHTML = `
                             <div class="d-flex align-items-center">
-                                <i class="fas fa-map-marker-alt me-2 text-primary"></i>
-                                <span>${location.name}</span>
+                                <i class="fas fa-arrow-right me-2 text-secondary"></i>
+                                <span>${sublocation.name}</span>
                             </div>
                         `;
-                        standaloneDiv.appendChild(card);
+                        categoryDiv.appendChild(card);
                     });
                     
-                    locationCardsContainer.appendChild(standaloneDiv);
+                    locationCardsContainer.appendChild(categoryDiv);
                 }
-                
-                // Create category cards for each parent with sublocations
-                Object.keys(locationsByParent).forEach((parentName, index) => {
-                    const locationGroup = locationsByParent[parentName];
-                    if (locationGroup.sublocations.length > 0) {
-                        const categoryDiv = document.createElement('div');
-                        
-                        // Assign different background colors based on parent name or index
-                        // Using muted color classes defined in CSS
-                        const colorClasses = [
-                            'lab-a1-category', 
-                            'lab-center-category', 
-                            'manufacturing-category',
-                            'shelf-category'
-                        ];
-                        const colorClass = colorClasses[index % colorClasses.length];
-                        categoryDiv.className = `location-category ${colorClass}`;
-                        
-                        const categoryTitle = document.createElement('h5');
-                        categoryTitle.textContent = parentName;
-                        categoryTitle.className = 'mb-3';
-                        categoryDiv.appendChild(categoryTitle);
-                        
-                        // Add sublocation cards
-                        locationGroup.sublocations.forEach(sublocation => {
-                            const card = document.createElement('div');
-                            card.className = 'location-card';
-                            card.innerHTML = `
-                                <div class="d-flex align-items-center">
-                                    <i class="fas fa-arrow-right me-2 text-secondary"></i>
-                                    <span>${sublocation.name}</span>
-                                </div>
-                            `;
-                            categoryDiv.appendChild(card);
-                        });
-                        
-                        locationCardsContainer.appendChild(categoryDiv);
-                    }
-                });
-            }
+            });
+        }
 
-            // Function to fetch locations and transform them into a hierarchical structure
-            function fetchLocations(tenant, useCache = true) {
-                // Show loading in grid
-                gridOptions.api.showLoadingOverlay();
-                
-                // Build URL with cache parameter
-                const url = `/get-locations/${tenant}?use_cache=${useCache}`;
-                
-                fetch(url)
-                    .then(response => response.json())
-                    .then(locations => {
-                        console.log('Raw locations:', locations);
-                        
-                        // Store the raw data for card view
-                        locationData = locations;
-                        
-                        // Flatten the hierarchy for display
-                        const flattenedData = [];
-                        
-                        // Add parent nodes first (sorting alphabetically)
-                        const sortedLocations = [...locations].sort((a, b) => 
-                            a.name.localeCompare(b.name)
-                        );
-                        
-                        // Add parent locations
-                        sortedLocations.forEach(location => {
-                            flattenedData.push({
-                                id: location.id,
-                                name: location.name,
-                                level: 0,
-                                isParent: location.sublocations && location.sublocations.length > 0
-                            });
-                            
-                            // Add child locations
-                            if (location.sublocations && location.sublocations.length > 0) {
-                                const sortedSublocations = [...location.sublocations].sort((a, b) => 
-                                    a.name.localeCompare(b.name)
-                                );
-                                
-                                sortedSublocations.forEach(sublocation => {
-                                    flattenedData.push({
-                                        id: sublocation.id,
-                                        name: sublocation.name,
-                                        level: 1,
-                                        isParent: false,
-                                        parentId: location.id,
-                                        parentName: location.name
-                                    });
-                                });
-                            }
+        // Function to fetch locations and transform them into a hierarchical structure
+        function fetchLocations(tenant, useCache = true) {
+            // Show loading in grid
+            gridOptions.api.showLoadingOverlay();
+            
+            // Build URL with cache parameter
+            const url = `/get-locations/${tenant}?use_cache=${useCache}`;
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(locations => {
+                    console.log('Raw locations:', locations);
+                    
+                    // Store the raw data for card view
+                    locationData = locations;
+                    
+                    // Flatten the hierarchy for display
+                    const flattenedData = [];
+                    
+                    // Add parent nodes first (sorting alphabetically)
+                    const sortedLocations = [...locations].sort((a, b) => 
+                        a.name.localeCompare(b.name)
+                    );
+                    
+                    // Add parent locations
+                    sortedLocations.forEach(location => {
+                        flattenedData.push({
+                            id: location.id,
+                            name: location.name,
+                            level: 0,
+                            isParent: location.sublocations && location.sublocations.length > 0
                         });
                         
-                        console.log('Flattened data for grid:', flattenedData);
-                        
-                        // Update grid data
-                        gridOptions.api.setRowData(flattenedData);
-                        
-                        // Generate card view
-                        generateCardView(flattenedData);
-                        
-                        // Hide loading overlay
-                        gridOptions.api.hideOverlay();
-                    })
-                    .catch(error => {
-                        console.error('Error fetching locations:', error);
-                        gridOptions.api.setRowData([]);
-                        gridOptions.api.showNoRowsOverlay();
-                        
-                        // Clear card view on error
-                        locationCardsContainer.innerHTML = '<div class="alert alert-danger">Error loading location data</div>';
-                    });
-            }
-            
-            {% if admin_mode %}
-            // Function to trigger manual cache refresh
-            function refreshCache(tenant) {
-                refreshButton.disabled = true;
-                refreshButton.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Refreshing...';
-                
-                fetch(`/admin/refresh-location-cache/${tenant}`, {
-                    method: 'POST'
-                })
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Refresh response:', data);
-                    
-                    if (data.status === 'success') {
-                        // Update button to show success temporarily
-                        refreshButton.innerHTML = '<i class="fas fa-check"></i> Started';
-                        refreshButton.classList.remove('btn-primary');
-                        refreshButton.classList.add('btn-success');
-                        
-                        // Show status if not already visible
-                        if (!statusVisible) {
-                            toggleStatusButton.click();
-                        } else {
-                            // Refresh the status display
-                            fetchCacheStatus();
+                        // Add child locations
+                        if (location.sublocations && location.sublocations.length > 0) {
+                            const sortedSublocations = [...location.sublocations].sort((a, b) => 
+                                a.name.localeCompare(b.name)
+                            );
+                            
+                            sortedSublocations.forEach(sublocation => {
+                                flattenedData.push({
+                                    id: sublocation.id,
+                                    name: sublocation.name,
+                                    level: 1,
+                                    isParent: false,
+                                    parentId: location.id,
+                                    parentName: location.name
+                                });
+                            });
                         }
-                        
-                        // Reset button after 3 seconds
-                        setTimeout(() => {
-                            refreshButton.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh Cache';
-                            refreshButton.classList.remove('btn-success');
-                            refreshButton.classList.add('btn-primary');
-                            refreshButton.disabled = false;
-                        }, 3000);
-                    } else {
-                        // Show error
-                        refreshButton.innerHTML = '<i class="fas fa-times"></i> Error';
-                        refreshButton.classList.remove('btn-primary');
-                        refreshButton.classList.add('btn-danger');
-                        
-                        // Reset button after 3 seconds
-                        setTimeout(() => {
-                            refreshButton.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh Cache';
-                            refreshButton.classList.remove('btn-danger');
-                            refreshButton.classList.add('btn-primary');
-                            refreshButton.disabled = false;
-                        }, 3000);
-                    }
+                    });
+                    
+                    console.log('Flattened data for grid:', flattenedData);
+                    
+                    // Update grid data
+                    gridOptions.api.setRowData(flattenedData);
+                    
+                    // Generate card view
+                    generateCardView(flattenedData);
+                    
+                    // Hide loading overlay
+                    gridOptions.api.hideOverlay();
                 })
                 .catch(error => {
-                    console.error('Error refreshing cache:', error);
+                    console.error('Error fetching locations:', error);
+                    gridOptions.api.setRowData([]);
+                    gridOptions.api.showNoRowsOverlay();
                     
+                    // Clear card view on error
+                    locationCardsContainer.innerHTML = '<div class="alert alert-danger">Error loading location data</div>';
+                });
+        }
+        
+        {% if admin_mode %}
+        // Function to trigger manual cache refresh
+        function refreshCache(tenant) {
+            refreshButton.disabled = true;
+            refreshButton.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Refreshing...';
+            
+            fetch(`/admin/refresh-location-cache/${tenant}`, {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Refresh response:', data);
+                
+                if (data.status === 'success') {
+                    // Update button to show success temporarily
+                    refreshButton.innerHTML = '<i class="fas fa-check"></i> Started';
+                    refreshButton.classList.remove('btn-primary');
+                    refreshButton.classList.add('btn-success');
+                    
+                    // Show status if not already visible
+                    if (!statusVisible) {
+                        toggleStatusButton.click();
+                    } else {
+                        // Refresh the status display
+                        fetchCacheStatus();
+                    }
+                    
+                    // Reset button after 3 seconds
+                    setTimeout(() => {
+                        refreshButton.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh Cache';
+                        refreshButton.classList.remove('btn-success');
+                        refreshButton.classList.add('btn-primary');
+                        refreshButton.disabled = false;
+                    }, 3000);
+                } else {
                     // Show error
                     refreshButton.innerHTML = '<i class="fas fa-times"></i> Error';
                     refreshButton.classList.remove('btn-primary');
@@ -580,60 +586,60 @@
                         refreshButton.classList.add('btn-primary');
                         refreshButton.disabled = false;
                     }, 3000);
-                });
-            }
-            
-            // Function to refresh all caches
-            function refreshAllCaches() {
-                refreshAllButton.disabled = true;
-                refreshAllButton.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Refreshing All...';
+                }
+            })
+            .catch(error => {
+                console.error('Error refreshing cache:', error);
                 
-                fetch('/admin/refresh-location-cache-all', {
-                    method: 'POST'
-                })
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Refresh all response:', data);
+                // Show error
+                refreshButton.innerHTML = '<i class="fas fa-times"></i> Error';
+                refreshButton.classList.remove('btn-primary');
+                refreshButton.classList.add('btn-danger');
+                
+                // Reset button after 3 seconds
+                setTimeout(() => {
+                    refreshButton.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh Cache';
+                    refreshButton.classList.remove('btn-danger');
+                    refreshButton.classList.add('btn-primary');
+                    refreshButton.disabled = false;
+                }, 3000);
+            });
+        }
+        
+        // Function to refresh all caches
+        function refreshAllCaches() {
+            refreshAllButton.disabled = true;
+            refreshAllButton.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Refreshing All...';
+            
+            fetch('/admin/refresh-location-cache-all', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Refresh all response:', data);
+                
+                if (data.status === 'success') {
+                    // Update button to show success temporarily
+                    refreshAllButton.innerHTML = '<i class="fas fa-check"></i> Started';
+                    refreshAllButton.classList.remove('btn-outline-primary');
+                    refreshAllButton.classList.add('btn-success');
                     
-                    if (data.status === 'success') {
-                        // Update button to show success temporarily
-                        refreshAllButton.innerHTML = '<i class="fas fa-check"></i> Started';
-                        refreshAllButton.classList.remove('btn-outline-primary');
-                        refreshAllButton.classList.add('btn-success');
-                        
-                        // Show status if not already visible
-                        if (!statusVisible) {
-                            toggleStatusButton.click();
-                        } else {
-                            // Refresh the status display
-                            fetchCacheStatus();
-                        }
-                        
-                        // Reset button after 3 seconds
-                        setTimeout(() => {
-                            refreshAllButton.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh All';
-                            refreshAllButton.classList.remove('btn-success');
-                            refreshAllButton.classList.add('btn-outline-primary');
-                            refreshAllButton.disabled = false;
-                        }, 3000);
+                    // Show status if not already visible
+                    if (!statusVisible) {
+                        toggleStatusButton.click();
                     } else {
-                        // Show error
-                        refreshAllButton.innerHTML = '<i class="fas fa-times"></i> Error';
-                        refreshAllButton.classList.remove('btn-outline-primary');
-                        refreshAllButton.classList.add('btn-danger');
-                        
-                        // Reset button after 3 seconds
-                        setTimeout(() => {
-                            refreshAllButton.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh All';
-                            refreshAllButton.classList.remove('btn-danger');
-                            refreshAllButton.classList.add('btn-outline-primary');
-                            refreshAllButton.disabled = false;
-                        }, 3000);
+                        // Refresh the status display
+                        fetchCacheStatus();
                     }
-                })
-                .catch(error => {
-                    console.error('Error refreshing all caches:', error);
                     
+                    // Reset button after 3 seconds
+                    setTimeout(() => {
+                        refreshAllButton.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh All';
+                        refreshAllButton.classList.remove('btn-success');
+                        refreshAllButton.classList.add('btn-outline-primary');
+                        refreshAllButton.disabled = false;
+                    }, 3000);
+                } else {
                     // Show error
                     refreshAllButton.innerHTML = '<i class="fas fa-times"></i> Error';
                     refreshAllButton.classList.remove('btn-outline-primary');
@@ -646,117 +652,133 @@
                         refreshAllButton.classList.add('btn-outline-primary');
                         refreshAllButton.disabled = false;
                     }, 3000);
-                });
-            }
-            
-            // Function to fetch and display cache status
-            function fetchCacheStatus() {
-                fetch('/admin/location-cache-status')
-                    .then(response => response.json())
-                    .then(data => {
-                        console.log('Cache status:', data);
-                        
-                        // Generate status HTML
-                        let html = '<div class="row">';
-                        
-                        // System info
-                        html += '<div class="col-md-12 mb-3">';
-                        html += '<h6>System Information</h6>';
-                        html += '<table class="table table-sm table-bordered">';
-                        html += '<tr><td>Cache Directory</td><td>' + data.system.cache_directory + '</td></tr>';
-                        html += '<tr><td>Directory Exists</td><td>' + (data.system.directory_exists ? 'Yes' : 'No') + '</td></tr>';
-                        html += '<tr><td>Refresh Interval</td><td>' + data.system.refresh_interval_days + ' days</td></tr>';
-                        html += '</table>';
-                        html += '</div>';
-                        
-                        // Tenant information
-                        html += '<div class="col-md-12">';
-                        html += '<h6>Tenant Cache Information</h6>';
-                        html += '<table class="table table-sm table-bordered">';
-                        html += '<thead><tr><th>Tenant</th><th>Status</th><th>Locations</th><th>Last Refreshed</th><th>Next Refresh</th></tr></thead>';
-                        html += '<tbody>';
-                        
-                        for (const [tenantId, status] of Object.entries(data.tenants)) {
-                            const statusClass = status.refresh_status.status === 'success' ? 'status-success' : 
-                                               status.refresh_status.status === 'error' ? 'status-error' : 
-                                               'status-refreshing';
-                            
-                            html += '<tr>';
-                            html += '<td>' + status.display_name + '</td>';
-                            html += '<td><span class="status-badge ' + statusClass + '">' + 
-                                   status.refresh_status.status + '</span><br><small>' + 
-                                   status.refresh_status.message + '</small></td>';
-                            
-                            if (status.cache_exists) {
-                                html += '<td>' + status.location_count + ' locations<br><small>(' + 
-                                       Math.round(status.cache_size_bytes / 1024) + ' KB)</small></td>';
-                            } else {
-                                html += '<td>No cache file</td>';
-                            }
-                            
-                            html += '<td>' + status.last_refreshed_formatted + '</td>';
-                            html += '<td>' + status.next_scheduled_refresh;
-                            
-                            if (status.is_expired) {
-                                html += '<br><span class="badge bg-warning text-dark">Expired</span>';
-                            }
-                            
-                            html += '</td>';
-                            html += '</tr>';
-                        }
-                        
-                        html += '</tbody></table>';
-                        html += '</div>';
-                        html += '</div>';
-                        
-                        // Update the status content
-                        statusContent.innerHTML = html;
-                    })
-                    .catch(error => {
-                        console.error('Error fetching cache status:', error);
-                        statusContent.innerHTML = '<div class="alert alert-danger">Error loading cache status: ' + error.message + '</div>';
-                    });
-            }
-            
-            // Set up event handlers for the admin interface
-            if (adminMode) {
-                refreshButton.addEventListener('click', function() {
-                    refreshCache(currentTenant);
-                });
+                }
+            })
+            .catch(error => {
+                console.error('Error refreshing all caches:', error);
                 
-                refreshAllButton.addEventListener('click', function() {
-                    refreshAllCaches();
-                });
+                // Show error
+                refreshAllButton.innerHTML = '<i class="fas fa-times"></i> Error';
+                refreshAllButton.classList.remove('btn-outline-primary');
+                refreshAllButton.classList.add('btn-danger');
                 
-                toggleStatusButton.addEventListener('click', function() {
-                    statusVisible = !statusVisible;
+                // Reset button after 3 seconds
+                setTimeout(() => {
+                    refreshAllButton.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh All';
+                    refreshAllButton.classList.remove('btn-danger');
+                    refreshAllButton.classList.add('btn-outline-primary');
+                    refreshAllButton.disabled = false;
+                }, 3000);
+            });
+        }
+        
+        // Function to fetch and display cache status
+        function fetchCacheStatus() {
+            fetch('/admin/location-cache-status')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Cache status:', data);
                     
-                    if (statusVisible) {
-                        statusContainer.style.display = 'block';
-                        fetchCacheStatus();
+                    // Generate status HTML
+                    let html = '<div class="row">';
+                    
+                    // System info
+                    html += '<div class="col-md-12 mb-3">';
+                    html += '<h6>System Information</h6>';
+                    html += '<table class="table table-sm table-bordered">';
+                    html += '<tr><td>Cache Directory</td><td>' + data.system.cache_directory + '</td></tr>';
+                    html += '<tr><td>Directory Exists</td><td>' + (data.system.directory_exists ? 'Yes' : 'No') + '</td></tr>';
+                    html += '<tr><td>Refresh Interval</td><td>' + data.system.refresh_interval_days + ' days</td></tr>';
+                    html += '</table>';
+                    html += '</div>';
+                    
+                    // Tenant information
+                    html += '<div class="col-md-12">';
+                    html += '<h6>Tenant Cache Information</h6>';
+                    html += '<table class="table table-sm table-bordered">';
+                    html += '<thead><tr><th>Tenant</th><th>Status</th><th>Locations</th><th>Last Refreshed</th><th>Next Refresh</th></tr></thead>';
+                    html += '<tbody>';
+                    
+                    for (const [tenantId, status] of Object.entries(data.tenants)) {
+                        const statusClass = status.refresh_status.status === 'success' ? 'status-success' : 
+                                           status.refresh_status.status === 'error' ? 'status-error' : 
+                                           'status-refreshing';
                         
-                        // Set up auto-refresh for status every 5 seconds
-                        window.statusRefreshInterval = setInterval(fetchCacheStatus, 5000);
-                    } else {
-                        statusContainer.style.display = 'none';
+                        html += '<tr>';
+                        html += '<td>' + status.display_name + '</td>';
+                        html += '<td><span class="status-badge ' + statusClass + '">' + 
+                               status.refresh_status.status + '</span><br><small>' + 
+                               status.refresh_status.message + '</small></td>';
                         
-                        // Clear auto-refresh interval
-                        if (window.statusRefreshInterval) {
-                            clearInterval(window.statusRefreshInterval);
+                        if (status.cache_exists) {
+                            html += '<td>' + status.location_count + ' locations<br><small>(' + 
+                                   Math.round(status.cache_size_bytes / 1024) + ' KB)</small></td>';
+                        } else {
+                            html += '<td>No cache file</td>';
                         }
+                        
+                        html += '<td>' + status.last_refreshed_formatted + '</td>';
+                        html += '<td>' + status.next_scheduled_refresh;
+                        
+                        if (status.is_expired) {
+                            html += '<br><span class="badge bg-warning text-dark">Expired</span>';
+                        }
+                        
+                        html += '</td>';
+                        html += '</tr>';
                     }
+                    
+                    html += '</tbody></table>';
+                    html += '</div>';
+                    html += '</div>';
+                    
+                    // Update the status content
+                    statusContent.innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Error fetching cache status:', error);
+                    statusContent.innerHTML = '<div class="alert alert-danger">Error loading cache status: ' + error.message + '</div>';
                 });
+        }
+        
+        // Set up event handlers for the admin interface
+        if (adminMode) {
+            refreshButton.addEventListener('click', function() {
+                refreshCache(currentTenant);
+            });
+            
+            refreshAllButton.addEventListener('click', function() {
+                refreshAllCaches();
+            });
+            
+            toggleStatusButton.addEventListener('click', function() {
+                statusVisible = !statusVisible;
                 
-                tenantSelector.addEventListener('change', function() {
-                    currentTenant = this.value;
-                    fetchLocations(currentTenant);
-                });
-            }
-            {% endif %}
+                if (statusVisible) {
+                    statusContainer.style.display = 'block';
+                    fetchCacheStatus();
+                    
+                    // Set up auto-refresh for status every 5 seconds
+                    window.statusRefreshInterval = setInterval(fetchCacheStatus, 5000);
+                } else {
+                    statusContainer.style.display = 'none';
+                    
+                    // Clear auto-refresh interval
+                    if (window.statusRefreshInterval) {
+                        clearInterval(window.statusRefreshInterval);
+                    }
+                }
+            });
+            
+            tenantSelector.addEventListener('change', function() {
+                currentTenant = this.value;
+                fetchLocations(currentTenant);
+            });
+        }
+        {% endif %}
 
-            // Initial load
-            fetchLocations(currentTenant);
-        });
-    </script>
-</body>
-</html>
+        // Initial load
+        fetchLocations(currentTenant);
+    });
+</script>
+{% endblock %}

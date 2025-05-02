@@ -1,571 +1,221 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Alchemy Barcode Scanner</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        :root {
-            --alchemy-blue: #0047BB;
-            --alchemy-light-blue: #3F88F6;
-            --alchemy-blue-bg: #E7F0FF;
-            --alchemy-dark: #001952;
-            --alchemy-green: #00A86B;
-            --alchemy-red: #E4002B;
-            --alchemy-grey: #6C757D;
-            --alchemy-light-grey: #F8F9FA;
-        }
-        
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f4f6f9;
-            min-height: 100vh;
-            display: flex;
+{% extends "layout.html" %}
+
+{% block title %}Alchemy Barcode Scanner{% endblock %}
+
+{% set active_page = 'scanner' %}
+
+{% block extra_css %}
+<style>
+    /* Updated styles to work with the sidebar layout */
+    .scanner-content {
+        padding: 30px;
+        max-width: 1200px;
+        margin: 0 auto;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 30px;
+    }
+    
+    .scanner-section {
+        flex: 1;
+        min-width: 320px;
+        background-color: white;
+        border-radius: 8px;
+        padding: 25px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .tips-section {
+        width: 250px;
+        background-color: var(--alchemy-blue-bg);
+        border-radius: 8px;
+        padding: 15px 20px;
+        height: fit-content;
+    }
+    
+    .tips-title {
+        color: var(--alchemy-blue);
+        font-weight: 600;
+        font-size: 16px;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+    }
+    
+    .tips-title i {
+        margin-right: 10px;
+        font-size: 18px;
+        color: var(--alchemy-blue);
+    }
+    
+    .tips-list {
+        margin: 0;
+        padding-left: 20px;
+        margin-bottom: 5px;
+    }
+    
+    .tips-list li {
+        margin-bottom: 10px;
+        font-size: 14px;
+        color: var(--alchemy-dark);
+    }
+    
+    /* Button styles - UPDATED */
+    .button-group {
+        display: flex;
+        gap: 15px;
+        margin-top: 25px;
+    }
+
+    .btn-update {
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 12px 25px;
+        font-weight: 600;
+        flex: 1;
+        transition: all 0.2s ease;
+    }
+
+    /* Default is disabled (gray) */
+    .btn-update.disabled {
+        background-color: #cccccc;
+        cursor: not-allowed;
+    }
+
+    /* When enabled (not disabled), it should be blue */
+    .btn-update:not(.disabled) {
+        background-color: var(--alchemy-blue);
+        cursor: pointer;
+    }
+
+    /* Hover effect for enabled button */
+    .btn-update:not(.disabled):hover {
+        background-color: var(--alchemy-light-blue);
+    }
+
+    .btn-reset {
+        background-color: white;
+        color: var(--alchemy-dark);
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 12px 25px;
+        font-weight: 500;
+        width: 120px;
+        transition: all 0.2s ease;
+    }
+
+    .btn-reset:hover {
+        background-color: var(--alchemy-light-grey);
+    }
+    
+    @media (max-width: 768px) {
+        .scanner-content {
             flex-direction: column;
-            margin: 0;
-        }
-        
-        /* Header styles */
-        .header {
-            background-color: white;
-            padding: 15px 0;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-        
-        .header-container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-            position: relative;
-        }
-        
-        .header-logo {
-            margin-right: 15px;
-            font-size: 24px;
-            color: var(--alchemy-dark);
-            vertical-align: middle;
-        }
-        
-        .header-title {
-            color: #333;
-            font-weight: 500;
-            font-size: 24px;
-            margin: 0;
-        }
-        .help-link {
-            position: absolute;
-            right: 20px;
-            color: var(--alchemy-blue);
-            font-size: 24px;
-            transition: color 0.2s ease;
-        }
-
-        .help-link:hover {
-            color: var(--alchemy-light-blue);
-        }
-        
-        /* Tenant banner styles */
-        .tenant-banner {
-            background-color: var(--alchemy-blue-bg);
-            padding: 12px 0;
-            position: relative;
-        }
-        
-        .tenant-container {
-            text-align: center;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
-        
-        .tenant-info {
-            color: var(--alchemy-dark);
-            font-weight: 500;
-        }
-        
-        .tenant-name {
-            font-weight: 600;
-        }
-        
-        .back-button {
-            position: absolute;
-            right: 20px;
-            top: 50%;
-            transform: translateY(-50%);
-            display: flex;
-            align-items: center;
-            padding: 6px 12px;
-            background-color: white;
-            color: var(--alchemy-blue);
-            border: 1px solid var(--alchemy-blue);
-            border-radius: 4px;
-            font-size: 14px;
-            font-weight: 500;
-            text-decoration: none;
-            transition: all 0.2s ease;
-        }
-        
-        .back-button:hover {
-            background-color: var(--alchemy-blue);
-            color: white;
-        }
-        
-        .back-button i {
-            margin-right: 6px;
-        }
-        
-        /* Main content styles - UPDATED */
-        .main-content {
-            flex: 1;
-            display: flex;
-            justify-content: center;
-            padding: 30px 20px;
-            margin: 0 auto;
-            max-width: 1300px;
-            gap: 30px; /* Space between scanner and tips */
-        }
-        
-        /* Scanner section styles - UPDATED */
-        .scanner-section {
-            width: 500px;
-            background-color: white;
-            border-radius: 8px;
-            padding: 30px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-        
-        /* Tips section styles - UPDATED */
-        .tips-section {
-            width: 250px;
-            background-color: var(--alchemy-blue-bg);
-            border-radius: 8px;
-            padding: 15px 20px;
-            height: fit-content;
-            align-self: flex-start;
-        }
-        
-        .tips-title {
-            color: var(--alchemy-blue);
-            font-weight: 600;
-            font-size: 16px;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-        }
-        
-        .tips-title i {
-            margin-right: 10px;
-            font-size: 18px;
-            color: var(--alchemy-blue);
-        }
-        
-        .tips-list {
-            margin: 0;
-            padding-left: 20px;
-            margin-bottom: 5px;
-        }
-        
-        .tips-list li {
-            margin-bottom: 10px;
-            font-size: 14px;
-            color: var(--alchemy-dark);
-        }
-        
-        .tips-list li:last-child {
-            margin-bottom: 0;
-        }
-        
-        /* Form styles */
-        .form-label {
-            color: var(--alchemy-dark);
-            font-weight: 500;
-            margin-bottom: 8px;
-        }
-        
-        .form-control, .form-select {
-            border-radius: 4px;
-            padding: 10px 15px;
-            border: 1px solid #dee2e6;
-            box-shadow: none;
-        }
-        
-        .form-control:focus, .form-select:focus {
-            border-color: var(--alchemy-light-blue);
-            box-shadow: 0 0 0 3px rgba(63, 136, 246, 0.15);
-        }
-        
-        .input-group .btn {
-            padding: 10px 20px;
-            background-color: var(--alchemy-blue);
-            border-color: var(--alchemy-blue);
-            color: white;
-            font-weight: 500;
-        }
-        
-        .input-group .btn:hover {
-            background-color: var(--alchemy-light-blue);
-            border-color: var(--alchemy-light-blue);
-        }
-        
-        .text-muted {
-            font-size: 13px;
-            color: var(--alchemy-grey) !important;
-        }
-        
-        /* Scanned items styles */
-        .scanned-items-container {
-            max-height: 250px;
-            overflow-y: auto;
-            border-radius: 4px;
-            border: 1px solid #dee2e6;
-            margin-bottom: 20px;
-        }
-        
-        .list-group {
-            border-radius: 4px;
-        }
-        
-        .list-group-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 15px;
-            border-left: none;
-            border-right: none;
-        }
-        
-        .list-group-item:first-child {
-            border-top: none;
-        }
-        
-        .list-group-item:last-child {
-            border-bottom: none;
-        }
-        
-        .record-badge {
-            background-color: var(--alchemy-blue-bg);
-            color: var(--alchemy-blue);
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-family: monospace;
-            font-weight: 500;
-        }
-        
-        .remove-item {
-            border: none;
-            background: transparent;
-            color: var(--alchemy-red);
-            padding: 4px 8px;
-            border-radius: 4px;
-            transition: all 0.2s ease;
-        }
-        
-        .remove-item:hover {
-            background-color: rgba(228, 0, 43, 0.1);
-        }
-        
-       /* Button styles - UPDATED */
-.button-group {
-    display: flex;
-    gap: 15px;
-    margin-top: 25px;
-}
-
-.btn-update {
-    color: white;
-    border: none;
-    border-radius: 4px;
-    padding: 12px 25px;
-    font-weight: 600;
-    flex: 1;
-    transition: all 0.2s ease;
-}
-
-/* Default is disabled (gray) */
-.btn-update.disabled {
-    background-color: #cccccc;
-    cursor: not-allowed;
-}
-
-/* When enabled (not disabled), it should be blue */
-.btn-update:not(.disabled) {
-    background-color: var(--alchemy-blue);
-    cursor: pointer;
-}
-
-/* Hover effect for enabled button */
-.btn-update:not(.disabled):hover {
-    background-color: var(--alchemy-light-blue);
-}
-
-.btn-reset {
-    background-color: white;
-    color: var(--alchemy-dark);
-    border: 1px solid #dee2e6;
-    border-radius: 4px;
-    padding: 12px 25px;
-    font-weight: 500;
-    width: 120px;
-    transition: all 0.2s ease;
-}
-
-.btn-reset:hover {
-    background-color: var(--alchemy-light-grey);
-}
-        
-        /* Status and results styles */
-        .alert {
-            border-radius: 4px;
             padding: 15px;
         }
         
-        .alert-info {
-            background-color: var(--alchemy-blue-bg);
-            border-color: var(--alchemy-light-blue);
-            color: var(--alchemy-blue);
-        }
-        
-        .progress {
-            height: 6px;
-            border-radius: 3px;
-            overflow: hidden;
-        }
-        
-        .progress-bar {
-            background-color: var(--alchemy-blue);
-        }
-        
-        .result-box {
-            background-color: white;
-            border-radius: 8px;
-            padding: 20px;
-            margin-top: 20px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-        
-        .result-box h5 {
-            color: var(--alchemy-dark);
-            font-weight: 600;
-            margin-bottom: 15px;
-            font-size: 18px;
-        }
-        
-        .alert-success {
-            background-color: rgba(0, 168, 107, 0.1);
-            border-color: rgba(0, 168, 107, 0.2);
-            color: var(--alchemy-green);
-        }
-        
-        .alert-warning {
-            background-color: rgba(245, 158, 11, 0.1);
-            border-color: rgba(245, 158, 11, 0.2);
-            color: #f59e0b;
-        }
-        
-        .alert-danger {
-            background-color: rgba(228, 0, 43, 0.1);
-            border-color: rgba(228, 0, 43, 0.2);
-            color: var(--alchemy-red);
-        }
-        
-        /* Footer styles */
-        .footer {
-            background-color: white;
+        .tips-section {
             width: 100%;
-            padding: 20px 0;
-            border-top: 1px solid rgba(0, 0, 0, 0.08);
-            text-align: center;
-            margin-top: auto;
+            order: -1;
         }
         
-        .footer-content {
-            display: flex;
+        .button-group {
             flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            gap: 10px;
         }
         
-        .footer-logo {
-            height: 40px;
-            margin-bottom: 5px;
+        .btn-reset {
+            width: 100%;
         }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="scanner-content">
+    <!-- Scanner Section -->
+    <div class="scanner-section">
+        <div class="form-group mb-4">
+            <label class="form-label">Scan or Enter Barcode</label>
+            <div class="input-group">
+                <input type="text" id="barcode-input" class="form-control" placeholder="Scan or enter barcode" autofocus>
+                <button id="add-barcode" class="btn btn-primary">Add</button>
+            </div>
+            <small class="text-muted">Press Enter or click Add after scanning</small>
+        </div>
         
-        .copyright {
-            color: var(--alchemy-grey);
-            font-size: 12px;
-            font-weight: 500;
-        }
+        <div class="form-group mb-4">
+            <label class="form-label">Scanned Barcodes</label>
+            <div class="scanned-items-container">
+                <ul id="scanned-items" class="list-group">
+                    <!-- Scanned items will be listed here -->
+                </ul>
+            </div>
+        </div>
         
-        /* Responsive styles - UPDATED */
-        @media (max-width: 992px) {
-            .main-content {
-                flex-direction: column;
-                align-items: center;
-            }
-            
-            .scanner-section {
-                width: 100%;
-                max-width: 500px;
-            }
-            
-            .tips-section {
-                width: 100%;
-                order: -1; /* Show tips at the top on mobile */
-                max-width: 450px;
-                margin-bottom: 20px;
-            }
-        }
+        <div class="form-group mb-4">
+            <label class="form-label">Select Location</label>
+            <select class="form-select" id="location-select">
+                <option value="">-- Select Location --</option>
+                <!-- Locations will be loaded dynamically -->
+            </select>
+        </div>
         
-        @media (max-width: 768px) {
-            .tenant-banner {
-                padding: 12px 20px 45px 20px;
-            }
-            
-            .back-button {
-                top: auto;
-                bottom: 10px;
-                right: 50%;
-                transform: translateX(50%);
-            }
-            
-            .button-group {
-                flex-direction: column;
-            }
-            
-            .btn-reset {
-                width: 100%;
-            }
-        }
-    </style>
-</head>
-<body>
-    <!-- Header -->
-<div class="header">
-    <div class="header-container">
-        <i class="fas fa-barcode header-logo"></i>
-        <h1 class="header-title">Alchemy Barcode Scanner</h1>
-        <a href="https://docs.google.com/document/d/1stfH6T0quznf3Auze6sg7zfFnx2mabF8vmsfuHraDEE/edit?tab=t.0#heading=h.gjdgxs" 
-           class="help-link" 
-           target="_blank" 
-           title="Help Documentation">
-            <i class="fas fa-question-circle"></i>
-        </a>
+        <div class="form-group mb-4">
+            <label class="form-label">Select Sublocation (Optional)</label>
+            <select class="form-select" id="sublocation-select" disabled>
+                <option value="">-- Select Sublocation --</option>
+                <!-- Sublocations will be loaded dynamically -->
+            </select>
+        </div>
+        
+        <div class="button-group">
+            <button id="update-button" class="btn-update disabled" disabled>UPDATE LOCATIONS</button>
+            <button id="reset-button" class="btn-reset">RESET</button>
+        </div>
+        
+        <!-- Processing Status -->
+        <div id="processing-status" style="display: none;" class="alert alert-info mt-3">
+            <div class="d-flex align-items-center">
+                <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                <span id="status-text">Processing update...</span>
+            </div>
+            <div class="progress mt-2">
+                <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%"></div>
+            </div>
+        </div>
+        
+        <!-- Results Box -->
+        <div id="update-results" style="display: none;" class="result-box">
+            <h5>Update Results:</h5>
+            <div id="results-content"></div>
+        </div>
+    </div>
+    
+    <!-- Tips Section -->
+    <div class="tips-section">
+        <div class="tips-title">
+            <i class="fas fa-clipboard-check"></i>
+            Tips for best results:
+        </div>
+        <ul class="tips-list">
+            <li>Ensure the input field is in focus before scanning.</li>
+            <li>You can manually enter barcode if scanning fails.</li>
+            <li>There is no limit to the number of barcodes you can scan.</li>
+        </ul>
     </div>
 </div>
-    
-   <!-- Tenant Banner -->
-<div class="tenant-banner">
-    <div class="tenant-container">
-        <div class="tenant-info">
-            All scanned data will be sent to <span class="tenant-name">{{ tenant_name }}</span>.
-            <a href="/location-tracking" class="btn btn-sm btn-outline-primary ms-3">
-                <i class="fas fa-sitemap me-1"></i> View Location Hierarchy
-            </a>
-        </div>
-    </div>
-    <a href="/" class="back-button">
-        <i class="fas fa-arrow-left"></i> BACK TO TENANTS
-    </a>
-</div>
-    
-    <!-- Main Content -->
-    <div class="main-content">
-        <!-- Scanner Section -->
-        <div class="scanner-section">
-            <div class="form-group mb-4">
-                <label class="form-label">Scan or Enter Barcode</label>
-                <div class="input-group">
-                    <input type="text" id="barcode-input" class="form-control" placeholder="Scan or enter barcode" autofocus>
-                    <button id="add-barcode" class="btn">Add</button>
-                </div>
-                <small class="text-muted">Press Enter or click Add after scanning</small>
-            </div>
-            
-            <div class="form-group mb-4">
-                <label class="form-label">Scanned Barcodes</label>
-                <div class="scanned-items-container">
-                    <ul id="scanned-items" class="list-group">
-                        <!-- Scanned items will be listed here -->
-                    </ul>
-                </div>
-            </div>
-            
-            <div class="form-group mb-4">
-                <label class="form-label">Select Location</label>
-                <select class="form-select" id="location-select">
-                    <option value="">-- Select Location --</option>
-                    <!-- Locations will be loaded dynamically -->
-                </select>
-            </div>
-            
-            <div class="form-group mb-4">
-                <label class="form-label">Select Sublocation (Optional)</label>
-                <select class="form-select" id="sublocation-select" disabled>
-                    <option value="">-- Select Sublocation --</option>
-                    <!-- Sublocations will be loaded dynamically -->
-                </select>
-            </div>
-            
-            <div class="button-group">
-                <button id="update-button" class="btn-update disabled" disabled>UPDATE LOCATIONS</button>
-                <button id="reset-button" class="btn-reset">RESET</button>
-            </div>
-            
-            <!-- Processing Status -->
-            <div id="processing-status" style="display: none;" class="alert alert-info mt-3">
-                <div class="d-flex align-items-center">
-                    <div class="spinner-border spinner-border-sm me-2" role="status"></div>
-                    <span id="status-text">Processing update...</span>
-                </div>
-                <div class="progress mt-2">
-                    <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%"></div>
-                </div>
-            </div>
-            
-            <!-- Results Box -->
-            <div id="update-results" style="display: none;" class="result-box">
-                <h5>Update Results:</h5>
-                <div id="results-content"></div>
-            </div>
-        </div>
-        
-        <!-- Tips Section -->
-        <div class="tips-section">
-            <div class="tips-title">
-                <i class="fas fa-clipboard-check"></i>
-                Tips for best results:
-            </div>
-            <ul class="tips-list">
-                <li>Ensure the input field is in focus before scanning.</li>
-                <li>You can manually enter barcode if scanning fails.</li>
-                <li>There is no limit to the number of barcodes you can scan.</li>
-            </ul>
-        </div>
-    </div>
-    
-    <!-- Footer -->
-    <div class="footer">
-        <div class="footer-content">
-            <img src="{{ url_for('static', filename='Alchemy-logo.svg') }}" alt="Alchemy Cloud Logo" class="footer-logo">
-            <div class="copyright">© ALCHEMY CLOUD, INC. ALL RIGHTS RESERVED.</div>
-        </div>
-    </div>
-    
-    <!-- Add tenant info for JavaScript -->
-    <script>
-        window.tenantInfo = {
-            tenant: "{{ tenant }}",
-            tenantName: "{{ tenant_name }}"
-        };
-    </script>
-    
-    <!-- Main script file -->
-    <script src="{{ url_for('static', filename='js/scanner.js') }}"></script>
-</body>
-</html>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Add tenant info for JavaScript -->
+<script>
+    window.tenantInfo = {
+        tenant: "{{ tenant }}",
+        tenantName: "{{ tenant_name }}"
+    };
+</script>
+
+<!-- Main script file -->
+<script src="{{ url_for('static', filename='js/scanner.js') }}"></script>
+{% endblock %}
