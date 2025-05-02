@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Alchemy Barcode Scanner{% endblock %}</title>
+    <title>{% block title %}Barcode Scanner{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
@@ -45,6 +45,15 @@
                 </button>
             </div>
             
+            <!-- Current Tenant Badge - Only show if tenant is set -->
+            {% if tenant is defined and tenant %}
+            <div class="sidebar-search" style="padding-bottom: 12px;">
+                <div class="current-tenant-badge">
+                    <span class="tenant-label">Current Tenant:</span>
+                    <span class="tenant-value">{{ tenant_name }}</span>
+                </div>
+            </div>
+            {% else %}
             <!-- Optional Search Box -->
             <div class="sidebar-search">
                 <div class="search-input-wrapper">
@@ -52,29 +61,32 @@
                     <input type="text" class="search-input" placeholder="Search...">
                 </div>
             </div>
+            {% endif %}
             
             <!-- Main Navigation -->
             <div class="sidebar-content">
                 <ul class="sidebar-nav">
+                    <!-- Alchemy Dashboard Link (moved to top) -->
+                    <li class="sidebar-nav-item">
+                        <a href="https://app.alchemy.cloud/" target="_blank" class="sidebar-nav-link">
+                            <i class="fas fa-th-large sidebar-nav-icon"></i>
+                            <span class="sidebar-nav-text">Alchemy Dashboard</span>
+                        </a>
+                    </li>
+                    
                     <li class="sidebar-nav-item {% if active_page == 'scanner' %}active{% endif %}">
-                        <a href="{% if tenant is defined %}/tenant/{{ tenant }}{% else %}/{% endif %}" class="sidebar-nav-link">
+                        <a href="{% if tenant is defined and tenant %}/tenant/{{ tenant }}{% else %}/{% endif %}" class="sidebar-nav-link">
                             <i class="fas fa-barcode sidebar-nav-icon"></i>
                             <span class="sidebar-nav-text">Barcode Scanner</span>
                         </a>
                     </li>
                     <li class="sidebar-nav-item {% if active_page == 'location_tracking' %}active{% endif %}">
-                        <a href="{% if admin_mode is defined and admin_mode %}/admin/location-tracking{% else %}/location-tracking{% endif %}{% if tenant is defined %}/{{ tenant }}{% endif %}" class="sidebar-nav-link">
+                        <a href="{% if tenant is defined and tenant %}/location-tracking/{{ tenant }}{% else %}/location-tracking{% endif %}" class="sidebar-nav-link">
                             <i class="fas fa-sitemap sidebar-nav-icon"></i>
                             <span class="sidebar-nav-text">Location Tracking</span>
                         </a>
                     </li>
                 </ul>
-                
-                <!-- Alchemy Dashboard Link -->
-                <a href="https://app.alchemy.cloud/" target="_blank" class="dashboard-link">
-                    <i class="fas fa-external-link-alt"></i>
-                    <span>Alchemy Dashboard</span>
-                </a>
                 
                 <!-- Admin Section -->
                 <div class="admin-section">
@@ -94,6 +106,12 @@
                         </li>
                     </ul>
                 </div>
+                
+                <!-- Copyright moved to sidebar -->
+                <div class="sidebar-copyright">
+                    <div class="sidebar-copyright-text">© ALCHEMY CLOUD, INC.</div>
+                    <div class="sidebar-copyright-text">ALL RIGHTS RESERVED.</div>
+                </div>
             </div>
         </aside>
         
@@ -106,12 +124,6 @@
         <div class="main-content-wrapper" id="mainContent">
             <div class="content-area">
                 {% block content %}{% endblock %}
-            </div>
-            
-            <!-- Footer -->
-            <div class="footer">
-                <img src="{{ url_for('static', filename='Alchemy-logo.svg') }}" alt="Alchemy Cloud Logo" class="footer-logo">
-                <div class="copyright">© ALCHEMY CLOUD, INC. ALL RIGHTS RESERVED.</div>
             </div>
         </div>
     </div>
