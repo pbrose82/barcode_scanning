@@ -118,7 +118,28 @@
     background-color: rgba(255, 255, 255, 0.15);
 }
 
-.alchemy-sidebar.collapsed .sidebar-search {
+/* Current tenant badge */
+.current-tenant-badge {
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 8px 10px;
+    border-radius: 4px;
+    color: white;
+}
+
+.tenant-label {
+    font-size: 0.75rem;
+    opacity: 0.8;
+    display: block;
+    margin-bottom: 3px;
+}
+
+.tenant-value {
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.alchemy-sidebar.collapsed .sidebar-search,
+.alchemy-sidebar.collapsed .current-tenant-badge {
     display: none;
 }
 
@@ -182,7 +203,7 @@
 
 /* Admin section */
 .admin-section {
-    margin-top: auto;
+    margin-top: 20px;
     padding-top: 15px;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -200,28 +221,21 @@
     display: none;
 }
 
-/* Alchemy Dashboard Link */
-.dashboard-link {
-    display: flex;
-    align-items: center;
-    padding: 12px 15px;
-    color: rgba(255, 255, 255, 0.85);
-    text-decoration: none;
-    transition: all 0.2s ease;
-}
-
-.dashboard-link:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    color: white;
-}
-
-.dashboard-link i {
-    margin-right: 12px;
-    width: 20px;
+/* Copyright in sidebar */
+.sidebar-copyright {
+    margin-top: auto;
+    padding: 15px;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 11px;
     text-align: center;
+    line-height: 1.5;
 }
 
-.alchemy-sidebar.collapsed .dashboard-link span {
+.sidebar-copyright-text {
+    display: block;
+}
+
+.alchemy-sidebar.collapsed .sidebar-copyright {
     display: none;
 }
 
@@ -244,26 +258,6 @@
 /* Content area should grow to fill available space */
 .content-area {
     flex: 1;
-}
-
-/* Footer */
-.footer {
-    background-color: white;
-    text-align: center;
-    padding: 20px 0;
-    border-top: 1px solid #eee;
-    margin-top: auto; /* Push to bottom */
-}
-
-.footer-logo {
-    height: 30px;
-    opacity: 0.5;
-}
-
-.copyright {
-    color: var(--alchemy-grey);
-    font-size: 12px;
-    margin-top: 5px;
 }
 
 /* Responsive styles */
