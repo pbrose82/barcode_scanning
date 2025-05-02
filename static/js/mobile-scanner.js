@@ -1,6 +1,7 @@
 /**
  * Mobile Barcode Scanner functionality for Alchemy Barcode Scanner
  * Uses QuaggaJS for scanning barcodes on mobile devices
+ * Includes QR code scanning support
  */
 
 // Scanner-related DOM elements
@@ -192,12 +193,18 @@ function startScanner() {
         },
         locator: {
             patchSize: "medium",
-            halfSample: true
+            halfSample: true,
+            debug: {
+                showCanvas: false,
+                showPatches: false,
+                showFoundPatches: false
+            }
         },
         numOfWorkers: 4,
         frequency: 10,
         decoder: {
             readers: [
+                "qr_code_reader",  // Added QR code reader support!
                 "code_128_reader",
                 "ean_reader",
                 "ean_8_reader",
@@ -267,7 +274,8 @@ function handleBarcodeDetection(result) {
     console.log(`Detected code: ${code} (confidence: ${confidence})`);
     
     // Only process codes with good confidence (0-1 scale)
-    if (confidence < 0.10) {
+    // Lower threshold slightly for QR codes with simple content
+    if (confidence < 0.08) {
         return;
     }
     
@@ -280,7 +288,8 @@ function handleBarcodeDetection(result) {
         detectedCodeElement.textContent = code;
         
         // If confidence is high enough, show the success UI
-        if (confidence > 0.60) {
+        // Lower threshold for simple QR codes like "FG1.1"
+        if (confidence > 0.40) {
             locksDetections = true;
             handleSuccessfulScan(code);
         }
