@@ -8,6 +8,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/alchemy-sidebar.css') }}">
+    <!-- Add Quagga JS for barcode scanning -->
+    <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.2/dist/quagga.min.js"></script>
     {% block extra_css %}{% endblock %}
     <style>
         :root {
@@ -19,6 +21,7 @@
             --alchemy-red: #E4002B;
             --alchemy-grey: #6C757D;
             --alchemy-light-grey: #F8F9FA;
+            --alchemy-yellow: #FFD700;
         }
         
         body {
@@ -27,6 +30,199 @@
             margin: 0;
             padding: 0;
             min-height: 100vh;
+        }
+
+        /* Mobile Scanner Styles */
+        #scanner-container {
+            position: relative;
+            min-height: 75vh;
+            background-color: #000;
+        }
+
+        #scanner-viewport {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .viewport-feedback {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .scan-region {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 70%;
+            height: 25%;
+            transform: translate(-50%, -50%);
+            border: 2px solid var(--alchemy-green);
+            border-radius: 8px;
+            box-shadow: 0 0 0 4000px rgba(0, 0, 0, 0.5);
+        }
+
+        .scan-region::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background-color: rgba(0, 168, 107, 0.5);
+            animation: scan-line 2s linear infinite;
+        }
+
+        @keyframes scan-line {
+            0% {
+                top: 10%;
+            }
+            50% {
+                top: 90%;
+            }
+            100% {
+                top: 10%;
+            }
+        }
+
+        .scan-help-text {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.6);
+            padding: 10px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .scan-status {
+            position: absolute;
+            top: 15px;
+            left: 0;
+            right: 0;
+            text-align: center;
+        }
+
+        .scan-status-indicator {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            background-color: rgba(0, 0, 0, 0.6);
+            color: white;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        /* Scanner controls */
+        .scanner-controls {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 15px;
+            background-color: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .torch-toggle {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: var(--alchemy-light-grey);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--alchemy-dark);
+            font-size: 20px;
+        }
+
+        .torch-toggle.active {
+            background-color: var(--alchemy-yellow);
+            color: var(--alchemy-dark);
+        }
+
+        .camera-switch {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: var(--alchemy-light-grey);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--alchemy-dark);
+            font-size: 20px;
+        }
+
+        #close-scanner-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background-color: rgba(0, 0, 0, 0.6);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 15;
+        }
+
+        #manual-barcode-input {
+            width: 100%;
+            margin-bottom: 15px;
+        }
+
+        .detected-code {
+            font-family: monospace;
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--alchemy-green);
+            margin-bottom: 0;
+        }
+
+        .success-flash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 168, 107, 0.3);
+            z-index: 9999;
+            pointer-events: none;
+            animation: success-flash 0.5s ease-out;
+            opacity: 0;
+        }
+
+        @keyframes success-flash {
+            0% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+            }
+        }
+
+        /* Landscape mode improvements */
+        @media (orientation: landscape) {
+            #scanner-container {
+                min-height: 65vh;
+            }
+            
+            .scan-region {
+                width: 50%;
+                height: 50%;
+            }
         }
     </style>
 </head>
@@ -117,7 +313,7 @@
         </div>
     </div>
     
-    <!-- Mobile Barcode Scanner Modal -->
+    <!-- Improved Mobile Barcode Scanner Modal -->
     <div class="modal fade" id="mobileScannerModal" tabindex="-1" aria-labelledby="mobileScannerModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-fullscreen">
             <div class="modal-content">
@@ -126,18 +322,56 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-0">
-                    <div id="scanner-container" class="w-100 h-100 position-relative">
-                        <video id="scanner-video" class="w-100 h-100 object-fit-cover"></video>
-                        <div id="scan-overlay" class="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-center align-items-center">
-                            <div class="scan-reticle mb-3"></div>
-                            <div class="scan-instructions bg-dark bg-opacity-50 text-white p-2 rounded">
-                                Position the barcode in the center
+                    <div id="scanner-container">
+                        <button id="close-scanner-btn">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        
+                        <div id="scanner-viewport">
+                            <!-- Camera feed will be inserted here by Quagga -->
+                        </div>
+                        
+                        <div class="viewport-feedback">
+                            <div class="scan-region"></div>
+                            <div class="scan-status">
+                                <span class="scan-status-indicator" id="scanner-status">
+                                    <i class="fas fa-circle-notch fa-spin"></i> Initializing...
+                                </span>
+                            </div>
+                            <div class="scan-help-text">
+                                Position the barcode within the green box
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- Manual input option -->
+                    <div class="p-3">
+                        <div class="mb-3">
+                            <label for="manual-barcode-input" class="form-label">Or enter barcode manually:</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="manual-barcode-input" placeholder="Enter barcode here">
+                                <button class="btn btn-primary" id="manual-barcode-btn">Add</button>
+                            </div>
+                        </div>
+                        
+                        <div id="barcode-result" style="display: none;" class="text-center py-3">
+                            <div class="alert alert-success">
+                                <p class="mb-1">Barcode detected:</p>
+                                <p class="detected-code" id="detected-code">CODE123</p>
+                            </div>
+                            
+                            <button class="btn btn-success" id="use-detected-code-btn">
+                                <i class="fas fa-check"></i> Use This Code
+                            </button>
+                            <button class="btn btn-secondary ms-2" id="scan-another-btn">
+                                <i class="fas fa-redo"></i> Scan Again
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <div class="modal-footer scanner-controls">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-primary" id="add-code-btn" disabled>Add Barcode</button>
                 </div>
             </div>
         </div>
@@ -204,111 +438,27 @@
                 if (barcodeInput) {
                     const inputGroup = barcodeInput.parentElement;
                     
-                    // Create camera button
-                    const cameraButton = document.createElement('button');
-                    cameraButton.type = 'button';
-                    cameraButton.className = 'btn btn-secondary';
-                    cameraButton.id = 'camera-button';
-                    cameraButton.innerHTML = '<i class="fas fa-camera"></i>';
-                    cameraButton.setAttribute('data-bs-toggle', 'modal');
-                    cameraButton.setAttribute('data-bs-target', '#mobileScannerModal');
-                    
-                    // Add button to input group
-                    inputGroup.appendChild(cameraButton);
-                    
-                    // Setup scanner when modal is shown
-                    const scannerModal = document.getElementById('mobileScannerModal');
-                    scannerModal.addEventListener('shown.bs.modal', startScanner);
-                    scannerModal.addEventListener('hidden.bs.modal', stopScanner);
+                    // Check if we already have a camera button
+                    if (!document.getElementById('camera-button')) {
+                        // Create camera button
+                        const cameraButton = document.createElement('button');
+                        cameraButton.type = 'button';
+                        cameraButton.className = 'btn btn-secondary';
+                        cameraButton.id = 'camera-button';
+                        cameraButton.innerHTML = '<i class="fas fa-camera"></i>';
+                        cameraButton.setAttribute('data-bs-toggle', 'modal');
+                        cameraButton.setAttribute('data-bs-target', '#mobileScannerModal');
+                        
+                        // Add button to input group
+                        inputGroup.appendChild(cameraButton);
+                    }
                 }
-            }
-            
-            // Scanner variables
-            let videoElement;
-            let stream;
-            let barcodeDetector;
-            
-            // Start the scanner
-            function startScanner() {
-                videoElement = document.getElementById('scanner-video');
-                
-                // Check if BarcodeDetector is available
-                if ('BarcodeDetector' in window) {
-                    barcodeDetector = new BarcodeDetector({ formats: ['qr_code', 'code_39', 'code_128', 'ean_13', 'upc_a', 'upc_e'] });
-                    
-                    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-                        .then(function(mediaStream) {
-                            stream = mediaStream;
-                            videoElement.srcObject = mediaStream;
-                            videoElement.play();
-                            
-                            // Start scanning
-                            scanBarcodes();
-                        })
-                        .catch(function(error) {
-                            console.error("Camera access error:", error);
-                            alert("Could not access the camera: " + error.message);
-                        });
-                } else {
-                    console.error("BarcodeDetector not supported");
-                    alert("Your browser doesn't support barcode scanning. Please use the manual input.");
-                    const modalElement = document.getElementById('mobileScannerModal');
-                    const modal = bootstrap.Modal.getInstance(modalElement);
-                    modal.hide();
-                }
-            }
-            
-            // Stop the scanner
-            function stopScanner() {
-                if (stream) {
-                    stream.getTracks().forEach(track => track.stop());
-                }
-            }
-            
-            // Scan for barcodes
-            function scanBarcodes() {
-                if (!barcodeDetector || !videoElement.srcObject) return;
-                
-                barcodeDetector.detect(videoElement)
-                    .then(barcodes => {
-                        if (barcodes.length > 0) {
-                            // Get first barcode value
-                            const barcodeValue = barcodes[0].rawValue;
-                            
-                            // Play success sound
-                            const audio = new Audio('data:audio/mp3;base64,SUQzAwAAAAAAJlRQRTEAAAAcAAAAU291bmRKYXkuY29tIFNvdW5kIEVmZmVjdHMA//uSwAAAAAABLBQAAAMBUVTEFDQABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/7ksH/g8AAAaQcAAAgAAA0gAAABFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV');
-                            audio.volume = 0.5;
-                            audio.play();
-                            
-                            // Set value in input field
-                            const barcodeInput = document.getElementById('barcode-input');
-                            if (barcodeInput) {
-                                barcodeInput.value = barcodeValue;
-                                
-                                // Submit value
-                                const addButton = document.getElementById('add-barcode');
-                                if (addButton) {
-                                    addButton.click();
-                                }
-                            }
-                            
-                            // Close modal
-                            const modalElement = document.getElementById('mobileScannerModal');
-                            const modal = bootstrap.Modal.getInstance(modalElement);
-                            modal.hide();
-                            
-                        } else {
-                            // Continue scanning
-                            requestAnimationFrame(scanBarcodes);
-                        }
-                    })
-                    .catch(error => {
-                        console.error("Barcode detection error:", error);
-                        requestAnimationFrame(scanBarcodes);
-                    });
             }
         });
     </script>
+    
+    <!-- Include the mobile scanner JS -->
+    <script src="{{ url_for('static', filename='js/mobile-scanner.js') }}"></script>
     
     {% block extra_js %}{% endblock %}
 </body>
