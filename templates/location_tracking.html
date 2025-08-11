@@ -10,24 +10,24 @@
 <style>
     /* --- Style Customizations to match Figma --- */
     body, .content-area {
-        background-color: #FFFFFF !important; /* Set main background to white */
+        background-color: #f8f9fa !important; /* Set main background to light grey */
     }
 
-    /* New subheader style for the grey background section */
+    /* New subheader style for the top section */
     .page-subheader {
-        background-color: #f8f9fa; /* Light grey background */
+        background-color: #f8f9fa;
         padding: 30px;
-        margin-bottom: 30px; /* Space between grey section and the grid */
+        margin-bottom: 30px;
     }
 
     .location-tracking-container {
-        padding: 0; /* Remove padding from main container */
-        max-width: 100%; /* Allow it to span full width */
-        background-color: #FFFFFF;
+        padding: 0;
+        max-width: 100%;
+        background-color: transparent;
     }
 
-    /* Center the content of the subheader and the grid */
-    .subheader-content, .grid-content {
+    /* Center the content */
+    .subheader-content, .grid-content-wrapper {
         max-width: 1400px;
         margin: 0 auto;
     }
@@ -39,13 +39,15 @@
     .page-header p {
         color: var(--alchemy-grey);
         max-width: 800px;
-        margin-bottom: 0; /* Remove bottom margin as padding is on parent */
+        margin-bottom: 0;
     }
-
-    .grid-wrapper {
-        background-color: transparent;
-        padding: 0;
-        box-shadow: none;
+    
+    /* White card for the grid and its controls */
+    .grid-card {
+        background-color: #FFFFFF;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
     
     .grid-controls {
@@ -55,15 +57,29 @@
         padding-bottom: 15px;
     }
 
+    .control-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .control-btn {
+        background-color: #FFFFFF;
+        border: 1px solid #dee2e6;
+        color: var(--alchemy-dark);
+    }
+    .control-btn i {
+        margin-right: 5px;
+    }
+    
     .search-box {
-        width: 300px;
+        width: 250px;
     }
     
     #locationGrid {
         height: 65vh;
         width: 100%;
-        border: 1px solid #dee2e6;
-        border-radius: 8px;
+        border: none;
     }
 
     #locationGrid .ag-header {
@@ -77,7 +93,8 @@
     }
 
     .ag-theme-alpine {
-        --ag-border-color: transparent;
+        --ag-border-color: #dee2e6; /* Restore grid lines */
+        --ag-row-border-color: #dee2e6;
     }
 
     .location-icon {
@@ -100,25 +117,37 @@
         </div>
     </div>
 
-    <div class="grid-content">
-        <div class="grid-wrapper">
+    <div class="grid-content-wrapper">
+        <div class="grid-card">
             <div class="grid-controls">
-                <div class="input-group search-box">
-                    <span class="input-group-text bg-white border-end-0"><i class="fas fa-search"></i></span>
-                    <input type="text" id="grid-search-filter" class="form-control border-start-0" placeholder="Search locations...">
+                <div class="control-group">
+                    <button class="btn btn-sm control-btn"><i class="fas fa-filter"></i> Filters</button>
+                    <button class="btn btn-sm control-btn"><i class="fas fa-layer-group"></i> Group By (2)</button>
+                    <button class="btn btn-sm control-btn"><i class="fas fa-sort-amount-down"></i> Sort</button>
                 </div>
-                {% if admin_mode %}
-                <div class="admin-actions">
-                     <select id="tenantSelector" class="form-select form-select-sm d-inline-block" style="width: auto; margin-right: 10px;">
-                        {% for tenant in tenants %}
-                        <option value="{{ tenant }}" {% if tenant == current_tenant %}selected{% endif %}>{{ tenant }}</option>
-                        {% endfor %}
-                    </select>
-                    <button id="refreshButton" class="btn btn-sm btn-outline-primary">
-                        <i class="fas fa-sync-alt"></i> Refresh Cache
-                    </button>
+
+                <div class="control-group">
+                     <div class="input-group input-group-sm search-box">
+                        <span class="input-group-text bg-white border-end-0"><i class="fas fa-search"></i></span>
+                        <input type="text" id="grid-search-filter" class="form-control border-start-0" placeholder="Search...">
+                    </div>
+                     <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn control-btn active"><i class="fas fa-list"></i></button>
+                        <button type="button" class="btn control-btn"><i class="fas fa-th"></i></button>
+                    </div>
+                    {% if admin_mode %}
+                    <div class="admin-actions">
+                         <select id="tenantSelector" class="form-select form-select-sm d-inline-block" style="width: auto;">
+                            {% for tenant in tenants %}
+                            <option value="{{ tenant }}" {% if tenant == current_tenant %}selected{% endif %}>{{ tenant }}</option>
+                            {% endfor %}
+                        </select>
+                        <button id="refreshButton" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                    {% endif %}
                 </div>
-                {% endif %}
             </div>
             <div id="locationGrid" class="ag-theme-alpine"></div>
         </div>
@@ -221,12 +250,12 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         refreshButton?.addEventListener('click', async () => {
             refreshButton.disabled = true;
-            refreshButton.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Refreshing...';
+            refreshButton.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i>';
             await fetch(`/admin/refresh-location-cache/${currentTenant}`, { method: 'POST' });
             setTimeout(() => {
                 fetchAndDisplayLocations(currentTenant);
                 refreshButton.disabled = false;
-                refreshButton.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh Cache';
+                refreshButton.innerHTML = '<i class="fas fa-sync-alt"></i>';
             }, 2000);
         });
     }
