@@ -186,14 +186,9 @@ document.addEventListener('DOMContentLoaded', function () {
             field: 'name',
             flex: 2,
             minWidth: 350,
-            // Use the default group cell renderer but customize the inner content
             cellRendererParams: {
-                suppressCount: true, // Don't show the child count
-                // The innerRenderer function is used to customize the content
-                // that appears next to the expand/collapse arrow.
+                suppressCount: true,
                 innerRenderer: params => {
-                    // If the node is a group (a parent), show a folder icon.
-                    // Otherwise, show a location marker icon.
                     const iconClass = params.node.group ? 'fa-folder' : 'fa-map-marker-alt';
                     return `<i class="fas ${iconClass} location-icon"></i> ${params.value}`;
                 }
@@ -220,7 +215,20 @@ document.addEventListener('DOMContentLoaded', function () {
         try {
             const response = await fetch(`/get-locations/${tenantId}`);
             if (!response.ok) throw new Error(`Failed to fetch: ${response.statusText}`);
-            const data = await response.json();
+            const locations = await response.json();
+            
+            // Create a set of all sublocation names to identify true top-level locations
+            const sublocationNames = new Set();
+            locations.forEach(location => {
+                if (location.sublocations && location.sublocations.length > 0) {
+                    location.sublocations.forEach(sub => {
+                        sublocationNames.add(sub.name);
+                    });
+                }
+            });
+
+            // Filter for top-level locations (those whose name is not in the sublocation set)
+            const topLevelLocations = locations.filter(location => !sublocationNames.has(location.name));
             
             const rowData = [];
             const processLocation = (location, parentHierarchy) => {
@@ -232,7 +240,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             };
             
-            data.sort((a, b) => a.name.localeCompare(b.name)).forEach(loc => processLocation(loc, []));
+            // Process only the filtered top-level locations
+            topLevelLocations.sort((a, b) => a.name.localeCompare(b.name)).forEach(loc => processLocation(loc, []));
             
             gridOptions.api?.setRowData(rowData);
         } catch (error) {
