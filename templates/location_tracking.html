@@ -172,16 +172,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const adminMode = {% if admin_mode %}true{% else %}false{% endif %};
     let currentTenant = "{{ current_tenant }}";
 
-    class LocationCellRenderer {
-        init(params) {
-            this.eGui = document.createElement('span');
-            const iconClass = params.node.allChildrenCount > 0 ? 'fa-folder' : 'fa-map-marker-alt';
-            this.eGui.innerHTML = `<i class="fas ${iconClass} location-icon"></i> ${params.value}`;
-        }
-        getGui() { return this.eGui; }
-        refresh(params) { return false; }
-    }
-
     const gridOptions = {
         columnDefs: [
             {
@@ -196,10 +186,17 @@ document.addEventListener('DOMContentLoaded', function () {
             field: 'name',
             flex: 2,
             minWidth: 350,
-            cellRenderer: LocationCellRenderer,
+            // Use the default group cell renderer but customize the inner content
             cellRendererParams: {
-                suppressCount: true,
-                innerRenderer: (params) => params.value, 
+                suppressCount: true, // Don't show the child count
+                // The innerRenderer function is used to customize the content
+                // that appears next to the expand/collapse arrow.
+                innerRenderer: params => {
+                    // If the node is a group (a parent), show a folder icon.
+                    // Otherwise, show a location marker icon.
+                    const iconClass = params.node.group ? 'fa-folder' : 'fa-map-marker-alt';
+                    return `<i class="fas ${iconClass} location-icon"></i> ${params.value}`;
+                }
             },
         },
         defaultColDef: {
