@@ -13,13 +13,25 @@
         background-color: #FFFFFF !important; /* Set main background to white */
     }
 
-    .location-tracking-container {
+    /* New subheader style for the grey background section */
+    .page-subheader {
+        background-color: #f8f9fa; /* Light grey background */
         padding: 30px;
-        max-width: 1400px;
-        margin: 0 auto;
-        background-color: #FFFFFF; /* Ensure container is white */
+        margin-bottom: 30px; /* Space between grey section and the grid */
     }
 
+    .location-tracking-container {
+        padding: 0; /* Remove padding from main container */
+        max-width: 100%; /* Allow it to span full width */
+        background-color: #FFFFFF;
+    }
+
+    /* Center the content of the subheader and the grid */
+    .subheader-content, .grid-content {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+    
     .page-header h2 {
         color: var(--alchemy-dark);
         font-weight: 600;
@@ -27,10 +39,9 @@
     .page-header p {
         color: var(--alchemy-grey);
         max-width: 800px;
-        margin-bottom: 30px;
+        margin-bottom: 0; /* Remove bottom margin as padding is on parent */
     }
 
-    /* Keep the wrapper for structure, but remove its background */
     .grid-wrapper {
         background-color: transparent;
         padding: 0;
@@ -51,32 +62,24 @@
     #locationGrid {
         height: 65vh;
         width: 100%;
-        border: 1px solid #dee2e6; /* Add border to the grid itself */
+        border: 1px solid #dee2e6;
         border-radius: 8px;
     }
 
-    /* Set grey background for column headers */
     #locationGrid .ag-header {
-        background-color: #f8f9fa; /* Light grey */
+        background-color: #f8f9fa;
         border-bottom: 1px solid #dee2e6;
     }
 
     #locationGrid .ag-header-cell {
-        background-color: transparent; /* Let the header background show through */
+        background-color: transparent;
         font-weight: 500;
     }
 
-    /* Remove the grid's default border as we've added our own */
     .ag-theme-alpine {
         --ag-border-color: transparent;
     }
 
-    /* Custom cell renderer styles */
-    .location-cell {
-        display: flex;
-        align-items: center;
-        height: 100%;
-    }
     .location-icon {
         margin-right: 8px;
         color: var(--alchemy-blue);
@@ -88,31 +91,37 @@
 
 {% block content %}
 <div class="location-tracking-container">
-    <div class="page-header">
-        <h2>Location Tracking</h2>
-        <p>Here you can review all locations and their hierarchical relationships, such as Laboratory → Room → Cupboard. Use the grid or list view to explore and manage the structure in the way that suits you best.</p>
+    <div class="page-subheader">
+        <div class="subheader-content">
+            <div class="page-header">
+                <h2>Location Tracking</h2>
+                <p>Here you can review all locations and their hierarchical relationships, such as Laboratory → Room → Cupboard. Use the grid or list view to explore and manage the structure in the way that suits you best.</p>
+            </div>
+        </div>
     </div>
 
-    <div class="grid-wrapper">
-        <div class="grid-controls">
-            <div class="input-group search-box">
-                <span class="input-group-text bg-white border-end-0"><i class="fas fa-search"></i></span>
-                <input type="text" id="grid-search-filter" class="form-control border-start-0" placeholder="Search locations...">
+    <div class="grid-content">
+        <div class="grid-wrapper">
+            <div class="grid-controls">
+                <div class="input-group search-box">
+                    <span class="input-group-text bg-white border-end-0"><i class="fas fa-search"></i></span>
+                    <input type="text" id="grid-search-filter" class="form-control border-start-0" placeholder="Search locations...">
+                </div>
+                {% if admin_mode %}
+                <div class="admin-actions">
+                     <select id="tenantSelector" class="form-select form-select-sm d-inline-block" style="width: auto; margin-right: 10px;">
+                        {% for tenant in tenants %}
+                        <option value="{{ tenant }}" {% if tenant == current_tenant %}selected{% endif %}>{{ tenant }}</option>
+                        {% endfor %}
+                    </select>
+                    <button id="refreshButton" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-sync-alt"></i> Refresh Cache
+                    </button>
+                </div>
+                {% endif %}
             </div>
-            {% if admin_mode %}
-            <div class="admin-actions">
-                 <select id="tenantSelector" class="form-select form-select-sm d-inline-block" style="width: auto; margin-right: 10px;">
-                    {% for tenant in tenants %}
-                    <option value="{{ tenant }}" {% if tenant == current_tenant %}selected{% endif %}>{{ tenant }}</option>
-                    {% endfor %}
-                </select>
-                <button id="refreshButton" class="btn btn-sm btn-outline-primary">
-                    <i class="fas fa-sync-alt"></i> Refresh Cache
-                </button>
-            </div>
-            {% endif %}
+            <div id="locationGrid" class="ag-theme-alpine"></div>
         </div>
-        <div id="locationGrid" class="ag-theme-alpine"></div>
     </div>
 </div>
 {% endblock %}
