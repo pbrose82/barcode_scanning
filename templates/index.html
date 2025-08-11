@@ -6,22 +6,36 @@
 
 {% block extra_css %}
 <style>
-    .scanner-container {
+    /* --- Style Customizations to match Location Tracking Page --- */
+    body, .content-area {
+        background-color: #f8f9fa !important; /* Set main background to light grey */
+    }
+
+    .page-subheader {
+        background-color: #f8f9fa;
         padding: 30px;
+        margin-bottom: 30px;
+    }
+
+    .scanner-container {
+        padding: 0;
+        max-width: 100%;
+        background-color: transparent;
+    }
+
+    .subheader-content, .main-content-wrapper {
         max-width: 1200px;
         margin: 0 auto;
     }
-    
+
     .page-header h2 {
         color: var(--alchemy-dark);
         font-weight: 600;
-        margin-bottom: 5px;
     }
-
     .page-header p {
         color: var(--alchemy-grey);
-        max-width: 700px;
-        margin-bottom: 30px;
+        max-width: 800px;
+        margin-bottom: 0;
     }
 
     .content-card {
@@ -32,11 +46,11 @@
     }
 
     .content-card .card-header {
-        background-color: #f8f9fa;
-        border-bottom: 1px solid #dee2e6;
         padding: 15px 20px;
         font-weight: 600;
         color: var(--alchemy-dark);
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
     }
     
     .content-card .card-body {
@@ -53,11 +67,16 @@
     .table th {
         background-color: #f8f9fa;
     }
+    
+    .table td {
+        vertical-align: middle;
+    }
 
-    .no-samples-row {
+    .no-samples-row td {
         text-align: center;
         color: #6c757d;
         font-style: italic;
+        padding: 20px;
     }
 
     .btn-update {
@@ -85,90 +104,102 @@
 
 {% block content %}
 <div class="scanner-container">
-    <div class="page-header">
-        <h2>Barcode Scanning</h2>
-        <p>Before scanning, make sure the input field is active so the barcode is entered correctly. In case the scanner doesn't respond or fails to read the code, you can simply type the barcode manually instead. There's no limit to how many barcodes you can scan, so feel free to continue as needed.</p>
-    </div>
-
-    <div class="content-card">
-        <div class="card-header">
-            Barcode Overview
-        </div>
-        <div class="card-body">
-            <div class="form-group mb-4">
-                <label for="barcode-input" class="form-label fw-bold">Scan or Enter Barcode</label>
-                <div class="input-group">
-                    <input type="text" id="barcode-input" class="form-control" placeholder="Enter barcode..." autofocus>
-                    <button id="add-barcode" class="btn btn-primary">Add</button>
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label fw-bold">Scanned Barcodes</label>
-                <div class="scanned-items-table-container">
-                    <table class="table table-sm table-hover mb-0">
-                        <thead>
-                            <tr>
-                                <th>Barcode</th>
-                                <th style="width: 50px;"></th>
-                            </tr>
-                        </thead>
-                        <tbody id="scanned-items-tbody">
-                            <tr id="no-scanned-items-row">
-                                <td colspan="2" class="no-samples-row">No scanned samples</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+    <!-- Grey Subheader Section -->
+    <div class="page-subheader">
+        <div class="subheader-content">
+            <div class="page-header">
+                <h2>Barcode Scanning</h2>
+                <p>Before scanning, make sure the input field is active so the barcode is entered correctly. In case the scanner doesn't respond or fails to read the code, you can simply type the barcode manually instead. There's no limit to how many barcodes you can scan, so feel free to continue as needed.</p>
             </div>
         </div>
     </div>
 
-    <div class="content-card">
-        <div class="card-header">
-            Location
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label for="location-select" class="form-label fw-bold">Location</label>
-                    <select class="form-select" id="location-select">
-                        <option value="">-- Please Select --</option>
-                    </select>
+    <!-- White Content Section -->
+    <div class="main-content-wrapper">
+        <!-- Barcode Overview Section -->
+        <div class="content-card">
+            <div class="card-header">
+                Barcode Overview
+            </div>
+            <div class="card-body">
+                <div class="form-group mb-4">
+                    <label for="barcode-input" class="form-label fw-bold">Scan or Enter Barcode</label>
+                    <div class="input-group">
+                        <input type="text" id="barcode-input" class="form-control" placeholder="Enter barcode..." autofocus>
+                        <button id="add-barcode" class="btn btn-primary">Add</button>
+                    </div>
                 </div>
-                <div class="col-md-6 mb-3">
-                    <label for="sublocation-select" class="form-label fw-bold">Sublocation</label>
-                    <select class="form-select" id="sublocation-select" disabled>
-                        <option value="">-- Please Select --</option>
-                    </select>
+                
+                <div class="form-group">
+                    <label class="form-label fw-bold">Scanned Barcodes</label>
+                    <div class="scanned-items-table-container">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Barcode</th>
+                                    <th style="width: 50px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="scanned-items-tbody">
+                                <tr id="no-scanned-items-row" class="no-samples-row">
+                                    <td colspan="2">No scanned samples</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-             <div class="d-flex gap-2 mt-3">
-                <button id="update-button" class="btn btn-update" disabled>UPDATE LOCATION</button>
-                <button id="reset-button" class="btn btn-secondary btn-reset">RESET</button>
-            </div>
         </div>
-    </div>
-    
-    <div id="processing-status" style="display: none;" class="alert alert-info mt-3">
-        <div class="d-flex align-items-center">
-            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
-            <span id="status-text">Processing update...</span>
-        </div>
-        <div class="progress mt-2" style="height: 5px;">
-            <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%"></div>
-        </div>
-    </div>
-    
-    <div id="update-results" style="display: none;" class="content-card mt-4">
-         <div class="card-header">Update Results</div>
-         <div class="card-body" id="results-content"></div>
-    </div>
 
+        <!-- Location Section -->
+        <div class="content-card">
+            <div class="card-header">
+                Location
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="location-select" class="form-label fw-bold">Location</label>
+                        <select class="form-select" id="location-select">
+                            <option value="">-- Please Select --</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="sublocation-select" class="form-label fw-bold">Sublocation</label>
+                        <select class="form-select" id="sublocation-select" disabled>
+                            <option value="">-- Please Select --</option>
+                        </select>
+                    </div>
+                </div>
+                 <div class="d-flex gap-2 mt-3">
+                    <button id="update-button" class="btn btn-update" disabled>UPDATE LOCATION</button>
+                    <button id="reset-button" class="btn btn-secondary btn-reset">RESET</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Processing Status -->
+        <div id="processing-status" style="display: none;" class="alert alert-info mt-3">
+            <div class="d-flex align-items-center">
+                <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                <span id="status-text">Processing update...</span>
+            </div>
+            <div class="progress mt-2" style="height: 5px;">
+                <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%"></div>
+            </div>
+        </div>
+        
+        <!-- Results Box -->
+        <div id="update-results" style="display: none;" class="content-card mt-4">
+             <div class="card-header">Update Results</div>
+             <div class="card-body" id="results-content"></div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
+<!-- Add tenant info for JavaScript -->
 <script>
     window.tenantInfo = {
         tenant: "{{ tenant }}",
@@ -176,5 +207,6 @@
     };
 </script>
 
+<!-- Main script file -->
 <script src="{{ url_for('static', filename='js/scanner.js') }}"></script>
 {% endblock %}
