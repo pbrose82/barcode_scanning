@@ -47,10 +47,19 @@
         width: 100%;
     }
 
-    /* Custom cell renderer styles */
-    .ag-cell-wrapper {
-        line-height: 30px; /* Vertically center content */
+    /* --- Style Customizations to match Figma --- */
+    /* Set grey background for column headers */
+    #locationGrid .ag-header {
+        background-color: #f8f9fa; /* Light grey */
+        border-bottom: 1px solid #dee2e6;
     }
+
+    /* Remove background color from header cells to let the header background show */
+    #locationGrid .ag-header-cell {
+        background-color: transparent;
+    }
+
+    /* Custom cell renderer styles */
     .location-cell {
         display: flex;
         align-items: center;
@@ -59,8 +68,9 @@
     .location-icon {
         margin-right: 8px;
         color: var(--alchemy-blue);
+        width: 14px; /* Ensure icons align */
+        text-align: center;
     }
-    
 </style>
 {% endblock %}
 
@@ -74,8 +84,8 @@
     <div class="grid-wrapper">
         <div class="grid-controls">
             <div class="input-group search-box">
-                <span class="input-group-text"><i class="fas fa-search"></i></span>
-                <input type="text" id="grid-search-filter" class="form-control" placeholder="Search locations...">
+                <span class="input-group-text bg-white border-end-0"><i class="fas fa-search"></i></span>
+                <input type="text" id="grid-search-filter" class="form-control border-start-0" placeholder="Search locations...">
             </div>
             {% if admin_mode %}
             <div class="admin-actions">
@@ -105,9 +115,6 @@
  * Uses AG Grid to display a hierarchical view of locations.
  */
 document.addEventListener('DOMContentLoaded', function () {
-    // Type definitions
-    // interface LocationRow { hierarchy: string[]; }
-    // interface ILocationCellRendererParams extends ICellRendererParams { value: { name: string; isParent: boolean; }; }
     const gridDiv = document.getElementById('locationGrid');
     const searchFilterInput = document.getElementById('grid-search-filter');
     const adminMode = {% if admin_mode %}true{% else %}false{% endif %};
@@ -118,17 +125,12 @@ document.addEventListener('DOMContentLoaded', function () {
      */
     class LocationCellRenderer {
         init(params) {
-            this.eGui = document.createElement('div');
-            this.eGui.classList.add('location-cell');
-            const { value, data } = params;
-            const level = data.hierarchy.length - 1;
-            const iconClass = data.isParent ? 'fa-folder' : 'fa-map-marker-alt';
-
-            this.eGui.innerHTML = `
-                <span style="display: inline-block; width: ${level * 25}px;"></span>
-                <i class="fas ${iconClass} location-icon"></i>
-                <span>${value.name}</span>
-            `;
+            this.eGui = document.createElement('span');
+            const { value } = params;
+            // The value is the node's name (e.g., "Laboratory A1")
+            // The icon is determined by whether the node has children
+            const iconClass = params.node.allChildrenCount > 0 ? 'fa-folder' : 'fa-map-marker-alt';
+            this.eGui.innerHTML = `<i class="fas ${iconClass} location-icon"></i> ${value}`;
         }
         getGui() {
             return this.eGui;
@@ -138,48 +140,42 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // AG Grid Configuration
+    // --- Corrected AG Grid Configuration ---
     const gridOptions = {
+        // Define the secondary column here
         columnDefs: [
             {
-                headerName: 'Location Hierarchy',
-                field: 'display',
-                flex: 3,
-                cellRenderer: LocationCellRenderer,
-                comparator: (valueA, valueB, nodeA, nodeB) => {
-                    // Custom sort to keep hierarchy together
-                    const pathA = nodeA.data.hierarchy.join('/');
-                    const pathB = nodeB.data.hierarchy.join('/');
-                    return pathA.localeCompare(pathB);
-                }
-            },
-            {
-                headerName: 'Country / Address', // As per new design
-                flex: 2,
-                valueGetter: () => 'Country Name / Address' // Placeholder data
+                headerName: 'Country / Address',
+                flex: 1,
+                valueGetter: () => 'Country Name / Address', // Placeholder data as in figma
+                sortable: false,
             }
         ],
+        // Use autoGroupColumnDef to define the primary hierarchy column
+        autoGroupColumnDef: {
+            headerName: 'Location Hierarchy',
+            field: 'name', // The field to display in the hierarchy
+            flex: 2,
+            minWidth: 350,
+            cellRenderer: LocationCellRenderer, // Use our custom renderer
+            // Disable the default expand/collapse icons to use our own folder/pin icons
+            cellRendererParams: {
+                suppressCount: true,
+                innerRenderer: (params) => params.value, 
+            },
+        },
         defaultColDef: {
             resizable: true,
             sortable: true,
         },
         rowData: [],
-        treeData: true,
-        getDataPath: (data) => data.hierarchy,
-        autoGroupColumnDef: {
-            headerName: 'Location Hierarchy',
-            field: 'name',
-            minWidth: 300,
-            cellRendererParams: {
-                suppressCount: true,
-            }
-        },
+        treeData: true, // Enable tree data mode
+        getDataPath: (data) => data.hierarchy, // Specify the path for hierarchy
+        groupDefaultExpanded: 1, // Expand the first level by default
         suppressRowClickSelection: true,
-        domLayout: 'autoHeight',
         animateRows: true,
     };
 
-    // Initialize the grid
     if (gridDiv) {
         new agGrid.Grid(gridDiv, gridOptions);
     }
@@ -200,16 +196,18 @@ document.addEventListener('DOMContentLoaded', function () {
             const processLocation = (location, parentHierarchy) => {
                 const currentHierarchy = [...parentHierarchy, location.name];
                 rowData.push({
+                    name: location.name, // Field for autoGroupColumnDef
                     hierarchy: currentHierarchy,
-                    display: { name: location.name, isParent: !!location.sublocations?.length },
-                    isParent: !!location.sublocations?.length,
                 });
 
                 if (location.sublocations) {
-                    location.sublocations.forEach(sub => processLocation(sub, currentHierarchy));
+                    // Sort sublocations alphabetically before processing
+                    const sortedSublocations = [...location.sublocations].sort((a,b) => a.name.localeCompare(b.name));
+                    sortedSublocations.forEach(sub => processLocation(sub, currentHierarchy));
                 }
             };
             
+            // Sort top-level locations alphabetically before processing
             data.sort((a,b) => a.name.localeCompare(b.name)).forEach(loc => processLocation(loc, []));
             
             gridOptions.api?.setRowData(rowData);
@@ -241,7 +239,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 fetchAndDisplayLocations(currentTenant);
                 refreshButton.disabled = false;
                 refreshButton.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh Cache';
-            }, 2000); // Wait 2s for cache to update
+            }, 2000);
         });
     }
 
