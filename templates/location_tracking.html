@@ -8,10 +8,16 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.0/styles/ag-grid.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.0/styles/ag-theme-alpine.css">
 <style>
+    /* --- Style Customizations to match Figma --- */
+    body, .content-area {
+        background-color: #FFFFFF !important; /* Set main background to white */
+    }
+
     .location-tracking-container {
         padding: 30px;
         max-width: 1400px;
         margin: 0 auto;
+        background-color: #FFFFFF; /* Ensure container is white */
     }
 
     .page-header h2 {
@@ -24,11 +30,11 @@
         margin-bottom: 30px;
     }
 
+    /* Keep the wrapper for structure, but remove its background */
     .grid-wrapper {
-        background-color: white;
-        border-radius: 8px;
-        padding: 20px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        background-color: transparent;
+        padding: 0;
+        box-shadow: none;
     }
     
     .grid-controls {
@@ -41,22 +47,28 @@
     .search-box {
         width: 300px;
     }
-
+    
     #locationGrid {
         height: 65vh;
         width: 100%;
+        border: 1px solid #dee2e6; /* Add border to the grid itself */
+        border-radius: 8px;
     }
 
-    /* --- Style Customizations to match Figma --- */
     /* Set grey background for column headers */
     #locationGrid .ag-header {
         background-color: #f8f9fa; /* Light grey */
         border-bottom: 1px solid #dee2e6;
     }
 
-    /* Remove background color from header cells to let the header background show */
     #locationGrid .ag-header-cell {
-        background-color: transparent;
+        background-color: transparent; /* Let the header background show through */
+        font-weight: 500;
+    }
+
+    /* Remove the grid's default border as we've added our own */
+    .ag-theme-alpine {
+        --ag-border-color: transparent;
     }
 
     /* Custom cell renderer styles */
@@ -68,7 +80,7 @@
     .location-icon {
         margin-right: 8px;
         color: var(--alchemy-blue);
-        width: 14px; /* Ensure icons align */
+        width: 14px; 
         text-align: center;
     }
 </style>
@@ -110,55 +122,37 @@
 
 <script>
 "use strict";
-/**
- * Location Tracking Page Script (TypeScript version)
- * Uses AG Grid to display a hierarchical view of locations.
- */
 document.addEventListener('DOMContentLoaded', function () {
     const gridDiv = document.getElementById('locationGrid');
     const searchFilterInput = document.getElementById('grid-search-filter');
     const adminMode = {% if admin_mode %}true{% else %}false{% endif %};
     let currentTenant = "{{ current_tenant }}";
 
-    /**
-     * Custom AG Grid cell renderer for displaying location hierarchy with icons.
-     */
     class LocationCellRenderer {
         init(params) {
             this.eGui = document.createElement('span');
-            const { value } = params;
-            // The value is the node's name (e.g., "Laboratory A1")
-            // The icon is determined by whether the node has children
             const iconClass = params.node.allChildrenCount > 0 ? 'fa-folder' : 'fa-map-marker-alt';
-            this.eGui.innerHTML = `<i class="fas ${iconClass} location-icon"></i> ${value}`;
+            this.eGui.innerHTML = `<i class="fas ${iconClass} location-icon"></i> ${params.value}`;
         }
-        getGui() {
-            return this.eGui;
-        }
-        refresh(params) {
-            return false;
-        }
+        getGui() { return this.eGui; }
+        refresh(params) { return false; }
     }
 
-    // --- Corrected AG Grid Configuration ---
     const gridOptions = {
-        // Define the secondary column here
         columnDefs: [
             {
                 headerName: 'Country / Address',
                 flex: 1,
-                valueGetter: () => 'Country Name / Address', // Placeholder data as in figma
+                valueGetter: () => 'Country Name / Address',
                 sortable: false,
             }
         ],
-        // Use autoGroupColumnDef to define the primary hierarchy column
         autoGroupColumnDef: {
             headerName: 'Location Hierarchy',
-            field: 'name', // The field to display in the hierarchy
+            field: 'name',
             flex: 2,
             minWidth: 350,
-            cellRenderer: LocationCellRenderer, // Use our custom renderer
-            // Disable the default expand/collapse icons to use our own folder/pin icons
+            cellRenderer: LocationCellRenderer,
             cellRendererParams: {
                 suppressCount: true,
                 innerRenderer: (params) => params.value, 
@@ -169,9 +163,9 @@ document.addEventListener('DOMContentLoaded', function () {
             sortable: true,
         },
         rowData: [],
-        treeData: true, // Enable tree data mode
-        getDataPath: (data) => data.hierarchy, // Specify the path for hierarchy
-        groupDefaultExpanded: 1, // Expand the first level by default
+        treeData: true,
+        getDataPath: (data) => data.hierarchy,
+        groupDefaultExpanded: 1,
         suppressRowClickSelection: true,
         animateRows: true,
     };
@@ -180,48 +174,33 @@ document.addEventListener('DOMContentLoaded', function () {
         new agGrid.Grid(gridDiv, gridOptions);
     }
     
-    /**
-     * Fetches location data and populates the grid.
-     * @param {string} tenantId - The ID of the tenant to fetch data for.
-     */
     async function fetchAndDisplayLocations(tenantId) {
         gridOptions.api?.showLoadingOverlay();
         try {
             const response = await fetch(`/get-locations/${tenantId}`);
-            if (!response.ok) throw new Error(`Failed to fetch locations: ${response.statusText}`);
+            if (!response.ok) throw new Error(`Failed to fetch: ${response.statusText}`);
             const data = await response.json();
             
-            // Transform data for AG Grid's tree structure
             const rowData = [];
             const processLocation = (location, parentHierarchy) => {
                 const currentHierarchy = [...parentHierarchy, location.name];
-                rowData.push({
-                    name: location.name, // Field for autoGroupColumnDef
-                    hierarchy: currentHierarchy,
-                });
-
+                rowData.push({ name: location.name, hierarchy: currentHierarchy });
                 if (location.sublocations) {
-                    // Sort sublocations alphabetically before processing
-                    const sortedSublocations = [...location.sublocations].sort((a,b) => a.name.localeCompare(b.name));
+                    const sortedSublocations = [...location.sublocations].sort((a, b) => a.name.localeCompare(b.name));
                     sortedSublocations.forEach(sub => processLocation(sub, currentHierarchy));
                 }
             };
             
-            // Sort top-level locations alphabetically before processing
-            data.sort((a,b) => a.name.localeCompare(b.name)).forEach(loc => processLocation(loc, []));
+            data.sort((a, b) => a.name.localeCompare(b.name)).forEach(loc => processLocation(loc, []));
             
             gridOptions.api?.setRowData(rowData);
-            gridOptions.api?.hideOverlay();
         } catch (error) {
             console.error(error);
             gridOptions.api?.showNoRowsOverlay();
         }
     }
 
-    // Event Listeners
-    searchFilterInput?.addEventListener('input', () => {
-        gridOptions.api?.setQuickFilter(searchFilterInput.value);
-    });
+    searchFilterInput?.addEventListener('input', () => gridOptions.api?.setQuickFilter(searchFilterInput.value));
 
     if (adminMode) {
         const tenantSelector = document.getElementById('tenantSelector');
@@ -243,9 +222,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Initial data load
     fetchAndDisplayLocations(currentTenant);
 });
-
 </script>
 {% endblock %}
