@@ -5,11 +5,11 @@
 
 {% block extra_css %}
 <style>
-  /* Background */
+  /* Page background (subtle full-bleed gradient), bottom hairline */
   html, body { height: 100%; }
   .page-content{
     min-height:100vh;
-    background:linear-gradient(135deg,#E4D0FF 0%,#D0FF5F 100%);
+    background:linear-gradient(135deg,#E4D0FF 0%, #D0FF5F 100%);
     border-bottom:1px solid #F9F7FA;
   }
 
@@ -20,7 +20,7 @@
     box-shadow:0 2px 8px rgba(0,0,0,.08);
   }
 
-  /* Type */
+  /* Typography */
   .page-title{ font-size:28px; color:#383F45; font-weight:600; margin-bottom:20px; }
   .instruction-text{ font-size:14px; color:#6B7280; line-height:1.6; margin-bottom:40px; }
   .section-title{ font-size:24px; color:#383F45; font-weight:600; margin-bottom:20px; padding-top:56px; }
@@ -36,20 +36,20 @@
   .barcode-input:focus{ outline:none; border-color:#0066FF; }
 
   /* Buttons */
-  .btn{ border:none; border-radius:6px; padding:12px 24px; font-size:14px; font-weight:700; text-transform:uppercase; cursor:pointer; transition:background-color .2s, opacity .2s, border-color .2s; }
+  .btn{ border:none; border-radius:6px; padding:12px 24px; font-size:14px; font-weight:700; text-transform:uppercase; cursor:pointer; }
   .btn-primary{ background:#0066FF; color:#fff; }
   .btn-primary:hover:not(:disabled){ background:#0052CC; }
-  .btn-primary:disabled{ background:#BFCFEF; cursor:not-allowed; opacity:.9; }
+  .btn-primary:disabled{ background:#BFCFEF; cursor:not-allowed; }
   .btn-outline{ background:#fff; color:#0066FF; border:1px solid #0066FF; }
   .btn-outline:hover{ background:#F0F7FF; }
 
-  /* Table container (no outer border) */
+  /* Table container: white card, no outer “table” border line */
   .scanned-table-container{
     background:#fff; border:none; border-radius:8px; margin-top:20px; overflow:hidden;
     box-shadow:0 2px 8px rgba(0,0,0,.06);
   }
 
-  /* Table look */
+  /* Table */
   .scanned-table{ width:100%; border-collapse:collapse; table-layout:fixed; }
   .scanned-table thead{ background:#F9FAFB; border-bottom:1px solid #E5E7EB; }
   .scanned-table th{
@@ -66,23 +66,23 @@
   .scanned-table tbody tr:last-child td{ border-bottom:none; }
   .scanned-table .td-select{ width:56px; padding:12px 0; text-align:center; }
 
-  /* Checkbox + under-cell actions (like your screenshot) */
-  .cell-with-controls{
-    display:flex; flex-direction:column; align-items:center; gap:6px;
+  /* Left cell with checkbox & actions below */
+  .cell-with-controls{ display:flex; flex-direction:column; align-items:center; gap:6px; }
+
+  /* Real checkbox, lightly styled */
+  .row-select{
+    width:18px; height:18px; accent-color:#0066FF; cursor:pointer;
   }
-  .checkbox{
-    width:18px; height:18px; border:2px solid #D1D5DB; border-radius:3px; display:block;
-  }
-  .cell-actions{ display:flex; gap:6px; }
+
+  /* Actions shown only when the checkbox is checked */
+  .cell-actions{ display:none; gap:6px; }
+  .row-select:checked + .cell-actions{ display:flex; }
+
   .action-btn{
     border:1px solid #D1D5DB; background:#fff; border-radius:6px;
     padding:2px 8px; font-size:12px; line-height:1.2; color:#6B7280; cursor:pointer;
   }
   .action-btn:hover{ border-color:#B6BCC3; }
-
-  /* Optional: hide actions until hover (comment out if you want always visible) */
-  .scanned-table tbody tr .cell-actions{ opacity:.0; transition:opacity .15s; pointer-events:none; }
-  .scanned-table tbody tr:hover .cell-actions{ opacity:1; pointer-events:auto; }
 
   /* Empty state */
   .empty-state{ text-align:center; padding:60px 20px; background:#F9FAFB; }
@@ -90,16 +90,8 @@
   .empty-state-title{ font-size:15px; font-weight:600; color:#6B7280; margin-bottom:8px; }
   .empty-state-text{ font-size:14px; color:#6B7280; }
 
-  /* Actions row */
+  /* Action row */
   .button-group{ display:flex; gap:16px; margin-top:56px; }
-  .has-tooltip{ position:relative; display:inline-block; }
-  .has-tooltip[data-tooltip]:hover::after{
-    content:attr(data-tooltip); position:absolute; left:0; top:calc(100% + 8px);
-    background:#111827; color:#fff; font-size:12px; padding:6px 8px; border-radius:4px; white-space:nowrap; box-shadow:0 2px 6px rgba(0,0,0,.15); z-index:10;
-  }
-  .has-tooltip[data-tooltip]:hover::before{
-    content:""; position:absolute; left:10px; top:100%; border:6px solid transparent; border-top-color:#111827;
-  }
 
   /* Processing / results */
   .processing-status{ background:#EFF6FF; border:1px solid #BFDBFE; border-radius:6px; padding:16px; margin-top:20px; display:none; }
@@ -187,9 +179,7 @@
 
       <!-- Actions -->
       <div class="button-group">
-        <div id="update-wrapper" class="has-tooltip" data-tooltip="">
-          <button id="update-button" class="btn btn-primary" disabled>Update Location</button>
-        </div>
+        <button id="update-button" class="btn btn-primary" disabled>Update Location</button>
         <button id="reset-button" class="btn btn-outline">Reset</button>
       </div>
 
@@ -225,7 +215,6 @@ document.addEventListener('DOMContentLoaded', function () {
   const barcodeInput = document.getElementById('barcode-input');
   const addButton = document.getElementById('add-barcode');
   const scannedItems = document.getElementById('scanned-items');
-  const updateWrapper = document.getElementById('update-wrapper');
   const updateButton = document.getElementById('update-button');
   const resetButton = document.getElementById('reset-button');
   const locationSelect = document.getElementById('location-select');
@@ -252,28 +241,18 @@ document.addEventListener('DOMContentLoaded', function () {
       </tr>`;
   }
 
-  function tooltipReason() {
-    const needsBarcode = scannedBarcodes.length === 0;
-    const needsLocation = !locationSelect.value;
-    if (!needsBarcode && !needsLocation) return '';
-    if (needsBarcode && needsLocation) return 'Add at least one barcode and choose a location';
-    if (needsBarcode) return 'Add at least one barcode';
-    return 'Choose a location';
-  }
-
   function refreshUpdateState() {
     const enabled = scannedBarcodes.length > 0 && !!locationSelect.value && !isProcessing;
     updateButton.disabled = !enabled;
-    updateWrapper.setAttribute('data-tooltip', enabled ? '' : tooltipReason());
   }
 
   function rowTemplate(barcode){
-    // left cell: checkbox with actions UNDER it; right cell: barcode text
+    // Checkbox with actions UNDER it (Delete shows only when checked)
     return `
       <tr>
         <td class="td-select">
           <div class="cell-with-controls">
-            <span class="checkbox" aria-hidden="true"></span>
+            <input type="checkbox" class="row-select" aria-label="Select row">
             <div class="cell-actions">
               <button class="action-btn action-delete" title="Remove">Delete</button>
             </div>
@@ -288,16 +267,18 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!barcode || scannedBarcodes.includes(barcode)) return;
 
     scannedBarcodes.push(barcode);
+
     const empty = document.getElementById('empty-state');
     if (empty) empty.remove();
 
-    // append row and wire delete
-    const wrapper = document.createElement('tbody'); // temp wrapper to parse string
+    const wrapper = document.createElement('tbody');
     wrapper.innerHTML = rowTemplate(barcode).trim();
     const row = wrapper.firstElementChild;
-    row.querySelector('.action-delete').addEventListener('click', () => removeBarcode(barcode, row));
-    scannedItems.appendChild(row);
 
+    // Delete action (only visible when checkbox is checked)
+    row.querySelector('.action-delete').addEventListener('click', () => removeBarcode(barcode, row));
+
+    scannedItems.appendChild(row);
     barcodeInput.value = '';
     barcodeInput.focus();
     refreshUpdateState();
@@ -317,10 +298,12 @@ document.addEventListener('DOMContentLoaded', function () {
   // Events
   addButton.addEventListener('click', addBarcode);
   barcodeInput.addEventListener('keypress', e => { if (e.key === 'Enter') addBarcode(); });
+
   locationSelect.addEventListener('change', () => {
     sublocationSelect.disabled = !locationSelect.value;
     refreshUpdateState();
   });
+
   resetButton.addEventListener('click', () => {
     if (isProcessing) return;
     scannedBarcodes = [];
@@ -333,7 +316,7 @@ document.addEventListener('DOMContentLoaded', function () {
     barcodeInput.focus();
   });
 
-  // (Optional) simulate update call
+  // (Optional) wire UPDATE button to your backend
   updateButton.addEventListener('click', async () => {
     if (updateButton.disabled || isProcessing) return;
     isProcessing = true; refreshUpdateState();
@@ -348,7 +331,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }, 100);
 
     try {
-      await new Promise(r => setTimeout(r, 1000));
+      // await api.updateLocation(scannedBarcodes, locationSelect.value, sublocationSelect.value);
+      await new Promise(r => setTimeout(r, 900));
       clearInterval(timer);
       progressBar.style.width = '100%';
       resultsContent.innerHTML = `<strong>Success:</strong> ${scannedBarcodes.length} item(s) moved.`;
