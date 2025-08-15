@@ -6,113 +6,335 @@
 
 {% block extra_css %}
 <style>
-    /* Updated styles to work with the sidebar layout */
+    /* Page background gradient */
+    .page-content {
+        background: linear-gradient(135deg, #E4D0FF 0%, #D0FF5F 100%);
+        min-height: calc(100vh - 60px);
+        border-bottom: 1px solid #F9F7FA;
+    }
+    
+    /* Main container */
     .scanner-content {
-        padding: 30px;
-        max-width: 1200px;
+        padding: 40px;
+        max-width: 1400px;
         margin: 0 auto;
         display: flex;
-        flex-wrap: wrap;
-        gap: 30px;
+        gap: 40px;
     }
     
-    .scanner-section {
+    /* Left content area */
+    .scanner-main {
         flex: 1;
-        min-width: 320px;
         background-color: white;
-        border-radius: 8px;
-        padding: 25px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        border-radius: 12px;
+        padding: 40px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     }
     
-    .tips-section {
-        width: 250px;
-        background-color: var(--alchemy-blue-bg);
-        border-radius: 8px;
-        padding: 15px 20px;
-        height: fit-content;
-    }
-    
-    .tips-title {
-        color: var(--alchemy-blue);
+    /* Page title */
+    .page-title {
+        font-size: 28px;
+        color: #383F45;
         font-weight: 600;
-        font-size: 16px;
-        margin-bottom: 12px;
+        margin-bottom: 40px;
+    }
+    
+    /* Section titles */
+    .section-title {
+        font-size: 24px;
+        color: #383F45;
+        font-weight: 600;
+        margin-bottom: 20px;
+        padding-top: 56px;
+    }
+    
+    .section-title:first-of-type {
+        padding-top: 0;
+    }
+    
+    /* Form labels */
+    .form-label {
+        font-size: 12px;
+        font-weight: bold;
+        color: #424B52;
+        margin-bottom: 8px;
+        display: block;
+    }
+    
+    /* Input styling */
+    .barcode-input-group {
         display: flex;
-        align-items: center;
+        gap: 10px;
+        margin-bottom: 8px;
     }
     
-    .tips-title i {
-        margin-right: 10px;
-        font-size: 18px;
-        color: var(--alchemy-blue);
-    }
-    
-    .tips-list {
-        margin: 0;
-        padding-left: 20px;
-        margin-bottom: 5px;
-    }
-    
-    .tips-list li {
-        margin-bottom: 10px;
+    .barcode-input {
+        flex: 1;
+        padding: 10px 16px;
+        border: 1px solid #E1E4E8;
+        border-radius: 6px;
         font-size: 14px;
-        color: var(--alchemy-dark);
+        transition: border-color 0.2s;
     }
     
-    /* Button styles - UPDATED */
-    .button-group {
-        display: flex;
-        gap: 15px;
-        margin-top: 25px;
+    .barcode-input:focus {
+        outline: none;
+        border-color: #0066FF;
     }
-
-    .btn-update {
+    
+    /* Add button */
+    .btn-add {
+        background-color: #0066FF;
         color: white;
         border: none;
-        border-radius: 4px;
-        padding: 12px 25px;
+        border-radius: 6px;
+        padding: 10px 24px;
+        font-size: 14px;
         font-weight: 600;
-        flex: 1;
-        transition: all 0.2s ease;
-    }
-
-    /* Default is disabled (gray) */
-    .btn-update.disabled {
-        background-color: #cccccc;
-        cursor: not-allowed;
-    }
-
-    /* When enabled (not disabled), it should be blue */
-    .btn-update:not(.disabled) {
-        background-color: var(--alchemy-blue);
+        text-transform: uppercase;
         cursor: pointer;
-    }
-
-    /* Hover effect for enabled button */
-    .btn-update:not(.disabled):hover {
-        background-color: var(--alchemy-light-blue);
-    }
-
-    .btn-reset {
-        background-color: white;
-        color: var(--alchemy-dark);
-        border: 1px solid #dee2e6;
-        border-radius: 4px;
-        padding: 12px 25px;
-        font-weight: 500;
-        width: 120px;
-        transition: all 0.2s ease;
-    }
-
-    .btn-reset:hover {
-        background-color: var(--alchemy-light-grey);
+        transition: background-color 0.2s;
     }
     
-    @media (max-width: 768px) {
+    .btn-add:hover {
+        background-color: #0052CC;
+    }
+    
+    /* Helper text */
+    .helper-text {
+        font-size: 12px;
+        color: #6B7280;
+        margin-top: 4px;
+    }
+    
+    /* Scanned items table */
+    .scanned-table-container {
+        background-color: #F9FAFB;
+        border: 1px solid #E1E4E8;
+        border-radius: 6px;
+        padding: 16px;
+        margin-top: 20px;
+        min-height: 200px;
+    }
+    
+    .no-items-message {
+        text-align: center;
+        color: #9CA3AF;
+        font-style: italic;
+        padding: 60px 20px;
+    }
+    
+    .scanned-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .scanned-table th {
+        text-align: left;
+        font-size: 12px;
+        font-weight: bold;
+        color: #424B52;
+        padding: 12px;
+        border-bottom: 1px solid #E1E4E8;
+    }
+    
+    .scanned-table td {
+        padding: 12px;
+        font-size: 14px;
+        color: #1F2937;
+        border-bottom: 1px solid #F3F4F6;
+    }
+    
+    .scanned-table tr:last-child td {
+        border-bottom: none;
+    }
+    
+    .delete-btn {
+        background: none;
+        border: none;
+        color: #EF4444;
+        cursor: pointer;
+        font-size: 16px;
+        padding: 4px 8px;
+        transition: color 0.2s;
+    }
+    
+    .delete-btn:hover {
+        color: #DC2626;
+    }
+    
+    /* Select dropdowns */
+    .form-select {
+        width: 100%;
+        padding: 10px 16px;
+        border: 1px solid #E1E4E8;
+        border-radius: 6px;
+        font-size: 14px;
+        background-color: white;
+        cursor: pointer;
+        transition: border-color 0.2s;
+    }
+    
+    .form-select:focus {
+        outline: none;
+        border-color: #0066FF;
+    }
+    
+    .form-select:disabled {
+        background-color: #F9FAFB;
+        cursor: not-allowed;
+    }
+    
+    /* Buttons section */
+    .button-group {
+        display: flex;
+        gap: 16px;
+        margin-top: 56px;
+    }
+    
+    .btn-update {
+        flex: 1;
+        background-color: #0066FF;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        padding: 14px 32px;
+        font-size: 14px;
+        font-weight: 600;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .btn-update:hover:not(:disabled) {
+        background-color: #0052CC;
+    }
+    
+    .btn-update:disabled {
+        background-color: #CCCCCC;
+        cursor: not-allowed;
+    }
+    
+    .btn-reset {
+        background-color: white;
+        color: #0066FF;
+        border: 1px solid #0066FF;
+        border-radius: 6px;
+        padding: 14px 32px;
+        font-size: 14px;
+        font-weight: 600;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .btn-reset:hover {
+        background-color: #F0F7FF;
+    }
+    
+    /* Tips section */
+    .tips-section {
+        width: 280px;
+        flex-shrink: 0;
+    }
+    
+    .tips-background {
+        position: sticky;
+        top: 20px;
+        background-color: white;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    
+    .tips-indicator {
+        width: 8px;
+        height: 8px;
+        background-color: #FF0066;
+        border-radius: 50%;
+        margin-bottom: 16px;
+    }
+    
+    .tips-content {
+        font-size: 13px;
+        line-height: 1.6;
+        color: #424B52;
+    }
+    
+    .tips-content strong {
+        display: block;
+        margin-bottom: 8px;
+        color: #1F2937;
+    }
+    
+    .tips-delete {
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid #E1E4E8;
+    }
+    
+    /* Processing status */
+    .processing-status {
+        background-color: #EFF6FF;
+        border: 1px solid #BFDBFE;
+        border-radius: 6px;
+        padding: 16px;
+        margin-top: 20px;
+    }
+    
+    .processing-content {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    
+    .spinner {
+        width: 20px;
+        height: 20px;
+        border: 2px solid #E0E7FF;
+        border-top-color: #0066FF;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    
+    .progress-bar-container {
+        margin-top: 12px;
+        height: 8px;
+        background-color: #E0E7FF;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    
+    .progress-bar {
+        height: 100%;
+        background-color: #0066FF;
+        transition: width 0.3s ease;
+    }
+    
+    /* Results box */
+    .result-box {
+        background-color: #F0FDF4;
+        border: 1px solid #86EFAC;
+        border-radius: 6px;
+        padding: 20px;
+        margin-top: 20px;
+    }
+    
+    .result-box h5 {
+        color: #166534;
+        margin-bottom: 12px;
+        font-size: 16px;
+    }
+    
+    /* Responsive design */
+    @media (max-width: 1024px) {
         .scanner-content {
             flex-direction: column;
-            padding: 15px;
+            padding: 20px;
         }
         
         .tips-section {
@@ -120,10 +342,30 @@
             order: -1;
         }
         
+        .tips-background {
+            position: static;
+        }
+    }
+    
+    @media (max-width: 640px) {
+        .scanner-main {
+            padding: 24px;
+        }
+        
+        .page-title {
+            font-size: 24px;
+        }
+        
+        .section-title {
+            font-size: 20px;
+            padding-top: 40px;
+        }
+        
         .button-group {
             flex-direction: column;
         }
         
+        .btn-update,
         .btn-reset {
             width: 100%;
         }
@@ -132,77 +374,128 @@
 {% endblock %}
 
 {% block content %}
-<div class="scanner-content">
-    <!-- Scanner Section -->
-    <div class="scanner-section">
-        <div class="form-group mb-4">
-            <label class="form-label">Scan or Enter Barcode</label>
-            <div class="input-group">
-                <input type="text" id="barcode-input" class="form-control" placeholder="Scan or enter barcode" autofocus>
-                <button id="add-barcode" class="btn btn-primary">Add</button>
+<div class="page-content">
+    <div class="scanner-content">
+        <!-- Main Scanner Section -->
+        <div class="scanner-main">
+            <h1 class="page-title">Barcode Scanning</h1>
+            
+            <div class="instruction-text">
+                Before scanning, make sure the input field is active so the barcode is entered correctly. In case the scanner doesn't respond or fails to read the code, you can simply type the barcode manually instead. There's no limit to how many barcodes you can scan, so feel free to continue as needed.
             </div>
-            <small class="text-muted">Press Enter or click Add after scanning</small>
-        </div>
-        
-        <div class="form-group mb-4">
-            <label class="form-label">Scanned Barcodes</label>
-            <div class="scanned-items-container">
-                <ul id="scanned-items" class="list-group">
-                    <!-- Scanned items will be listed here -->
-                </ul>
+            
+            <!-- Barcode Overview Section -->
+            <h2 class="section-title">Barcode Overview</h2>
+            
+            <div class="form-group">
+                <label class="form-label">Scan or Enter Barcode</label>
+                <div class="barcode-input-group">
+                    <input type="text" id="barcode-input" class="barcode-input" placeholder="Enter barcode..." autofocus>
+                    <button id="add-barcode" class="btn-add">Add</button>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Scanned Barcodes</label>
+                <div class="scanned-table-container">
+                    <div id="no-items" class="no-items-message">
+                        No scanned samples
+                    </div>
+                    <table id="scanned-table" class="scanned-table" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>Barcode</th>
+                                <th width="60"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="scanned-items">
+                            <!-- Scanned items will be added here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Location Section -->
+            <h2 class="section-title">Location</h2>
+            
+            <div class="form-group">
+                <label class="form-label">Location</label>
+                <select class="form-select" id="location-select">
+                    <option value="">-- Please Select --</option>
+                    <!-- Locations will be loaded dynamically -->
+                </select>
+            </div>
+            
+            <div class="form-group" style="margin-top: 20px;">
+                <label class="form-label">Sublocation</label>
+                <select class="form-select" id="sublocation-select" disabled>
+                    <option value="">-- Please Select --</option>
+                    <!-- Sublocations will be loaded dynamically -->
+                </select>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="button-group">
+                <button id="update-button" class="btn-update" disabled>UPDATE LOCATION</button>
+                <button id="reset-button" class="btn-reset">RESET</button>
+            </div>
+            
+            <!-- Processing Status -->
+            <div id="processing-status" class="processing-status" style="display: none;">
+                <div class="processing-content">
+                    <div class="spinner"></div>
+                    <span id="status-text">Processing update...</span>
+                </div>
+                <div class="progress-bar-container">
+                    <div id="progress-bar" class="progress-bar" style="width: 0%"></div>
+                </div>
+            </div>
+            
+            <!-- Results Box -->
+            <div id="update-results" class="result-box" style="display: none;">
+                <h5>Update Results:</h5>
+                <div id="results-content"></div>
             </div>
         </div>
         
-        <div class="form-group mb-4">
-            <label class="form-label">Select Location</label>
-            <select class="form-select" id="location-select">
-                <option value="">-- Select Location --</option>
-                <!-- Locations will be loaded dynamically -->
-            </select>
-        </div>
-        
-        <div class="form-group mb-4">
-            <label class="form-label">Select Sublocation (Optional)</label>
-            <select class="form-select" id="sublocation-select" disabled>
-                <option value="">-- Select Sublocation --</option>
-                <!-- Sublocations will be loaded dynamically -->
-            </select>
-        </div>
-        
-        <div class="button-group">
-            <button id="update-button" class="btn-update disabled" disabled>UPDATE LOCATIONS</button>
-            <button id="reset-button" class="btn-reset">RESET</button>
-        </div>
-        
-        <!-- Processing Status -->
-        <div id="processing-status" style="display: none;" class="alert alert-info mt-3">
-            <div class="d-flex align-items-center">
-                <div class="spinner-border spinner-border-sm me-2" role="status"></div>
-                <span id="status-text">Processing update...</span>
+        <!-- Tips Section -->
+        <div class="tips-section">
+            <div class="tips-background">
+                <div class="tips-indicator"></div>
+                <div class="tips-content">
+                    <strong>This background should be from the beginning to the end of the screen. Color is diagonal gradient from the top left corner (E4D0FF) to the bottom right (D0FF5F). Border bottom 1px in color F9F7FA</strong>
+                </div>
+                
+                <div class="tips-delete">
+                    <div class="tips-indicator"></div>
+                    <div class="tips-content">
+                        <strong>Delete this "Table" border.</strong>
+                    </div>
+                </div>
+                
+                <div class="tips-delete" style="margin-top: 24px;">
+                    <div class="tips-indicator"></div>
+                    <div class="tips-content">
+                        <strong>It will be perfect if we can have table style as we have in the screens below.</strong>
+                    </div>
+                </div>
+                
+                <div class="tips-delete" style="margin-top: 24px;">
+                    <div class="tips-indicator"></div>
+                    <div class="tips-content">
+                        <strong>All caps, and change BG color of the button to be the same as Update Location. We should remain consistency.</strong>
+                    </div>
+                </div>
+                
+                <div class="tips-delete" style="margin-top: 24px;">
+                    <div class="tips-indicator"></div>
+                    <div class="tips-content">
+                        <strong>Red button looks like the same even it is in disabled or enabled state... once button become enabled make it looks like:</strong>
+                        Buttons are disabled but as a user I do not know why. We need tooltips, because if you scan, and not choose location buttons remain disabled. This is the reason why I put location field to be required.
+                    </div>
+                </div>
             </div>
-            <div class="progress mt-2">
-                <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%"></div>
-            </div>
         </div>
-        
-        <!-- Results Box -->
-        <div id="update-results" style="display: none;" class="result-box">
-            <h5>Update Results:</h5>
-            <div id="results-content"></div>
-        </div>
-    </div>
-    
-    <!-- Tips Section -->
-    <div class="tips-section">
-        <div class="tips-title">
-            <i class="fas fa-clipboard-check"></i>
-            Tips for best results:
-        </div>
-        <ul class="tips-list">
-            <li>Ensure the input field is in focus before scanning.</li>
-            <li>You can manually enter barcode if scanning fails.</li>
-            <li>There is no limit to the number of barcodes you can scan.</li>
-        </ul>
     </div>
 </div>
 {% endblock %}
@@ -218,4 +511,83 @@
 
 <!-- Main script file -->
 <script src="{{ url_for('static', filename='js/scanner.js') }}"></script>
+
+<script>
+    // Additional JavaScript for table functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const barcodeInput = document.getElementById('barcode-input');
+        const addButton = document.getElementById('add-barcode');
+        const scannedTable = document.getElementById('scanned-table');
+        const noItemsMessage = document.getElementById('no-items');
+        const scannedItems = document.getElementById('scanned-items');
+        const updateButton = document.getElementById('update-button');
+        const locationSelect = document.getElementById('location-select');
+        
+        let scannedBarcodes = [];
+        
+        function updateButtonState() {
+            if (scannedBarcodes.length > 0 && locationSelect.value) {
+                updateButton.disabled = false;
+                updateButton.classList.remove('disabled');
+            } else {
+                updateButton.disabled = true;
+                updateButton.classList.add('disabled');
+            }
+        }
+        
+        function addBarcode() {
+            const barcode = barcodeInput.value.trim();
+            if (barcode && !scannedBarcodes.includes(barcode)) {
+                scannedBarcodes.push(barcode);
+                
+                // Show table, hide no items message
+                scannedTable.style.display = 'table';
+                noItemsMessage.style.display = 'none';
+                
+                // Add row to table
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${barcode}</td>
+                    <td>
+                        <button class="delete-btn" onclick="removeBarcode('${barcode}', this)">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                scannedItems.appendChild(row);
+                
+                // Clear input
+                barcodeInput.value = '';
+                barcodeInput.focus();
+                
+                updateButtonState();
+            }
+        }
+        
+        window.removeBarcode = function(barcode, button) {
+            const index = scannedBarcodes.indexOf(barcode);
+            if (index > -1) {
+                scannedBarcodes.splice(index, 1);
+                button.closest('tr').remove();
+                
+                if (scannedBarcodes.length === 0) {
+                    scannedTable.style.display = 'none';
+                    noItemsMessage.style.display = 'block';
+                }
+                
+                updateButtonState();
+            }
+        };
+        
+        // Event listeners
+        addButton.addEventListener('click', addBarcode);
+        barcodeInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addBarcode();
+            }
+        });
+        
+        locationSelect.addEventListener('change', updateButtonState);
+    });
+</script>
 {% endblock %}
