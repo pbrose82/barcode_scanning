@@ -98,6 +98,43 @@
   }
 
   .button-group{ display:flex; gap:16px; margin-top:24px; }
+
+  /* === Spec sizing overrides === */
+
+/* Input + Add button row should fit side-by-side: 432 + 10 gap + 72 = 514px */
+.barcode-input-group { max-width: 514px; }
+
+/* Fields: 432 × 46 */
+#barcode-input { width: 432px; height: 46px; }
+#location-select,
+#sublocation-select {
+  width: 432px;
+  height: 46px;
+  line-height: 46px;      /* keep text vertically centered */
+}
+
+/* Buttons: exact widths × heights */
+#add-barcode {
+  width: 72px;
+  height: 32px;
+  padding: 0;             /* remove default padding so height is exact */
+  line-height: 32px;      /* vertically center label */
+}
+
+#update-button {
+  width: 154px;
+  height: 32px;
+  padding: 0;
+  line-height: 32px;
+}
+
+#reset-button {
+  width: 85px;
+  height: 32px;
+  padding: 0;
+  line-height: 32px;
+}
+
 </style>
 {% endblock %}
 
