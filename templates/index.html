@@ -8,17 +8,19 @@
   /* Background */
   html, body { 
     height: 100%; 
-    background-color: #F9FAFB; /* Light gray background for the page */
   }
   .page-content{
     min-height:100vh;
+    /* UPDATED: Restored the gradient background as per the Figma notes */
+    background: linear-gradient(135deg, #E4D0FF 0%, #D0FF5F 100%);
+    padding: 56px 0; /* Add padding to the container */
   }
 
   /* Layout */
-  .scanner-content{ padding:56px; max-width:900px; margin:0 auto; }
+  .scanner-content{ max-width:900px; margin:0 auto; padding: 0 24px; }
   .scanner-main{
     background:#fff; border-radius:12px; padding:40px;
-    box-shadow:0 2px 8px rgba(0,0,0,.08);
+    box-shadow:0 4px 12px rgba(0,0,0,.1);
   }
 
   /* Type */
@@ -56,28 +58,31 @@
 
   /* Table container */
   .scanned-table-container{
-    background:#fff; border:1px solid #E5E7EB; border-radius:8px; margin-top:20px; 
-    overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.04);
+    /* UPDATED: Removed border, adjusted shadow to match Figma mock-up */
+    background:#fff; 
+    border-radius:8px; 
+    margin-top:20px; 
+    overflow:hidden; 
+    box-shadow:0 2px 8px rgba(0,0,0,.06);
   }
 
   /* Table */
   .scanned-table{ width:100%; border-collapse:collapse; table-layout:fixed; }
-  .scanned-table thead{ background:#F9FAFB; }
-  .scanned-table th, .scanned-table td { border-bottom:1px solid #E5E7EB; }
-  .scanned-table th{
+  .scanned-table thead{ background:#F9FAFB; border-bottom: 1px solid #E5E7EB; }
+  .scanned-table th {
     text-align:left; font-size:12px; font-weight:700; color:#424B52;
     text-transform:uppercase; letter-spacing:.02em; padding:14px 20px;
   }
+  .scanned-table td { 
+    border-bottom:1px solid #E5E7EB; 
+    padding:12px 20px; font-size:14px; color:#374151; vertical-align:middle;
+  }
   .scanned-table th.col-select, .scanned-table td.td-select { width:56px; text-align:center; padding: 12px; }
   
-  /* UPDATED: Aligns checkbox and bulk actions in header */
   .scanned-table th.col-select { 
     display: flex; align-items: center; gap: 16px; width: auto; 
   }
   
-  .scanned-table td{
-    padding:12px 20px; font-size:14px; color:#374151; vertical-align:middle;
-  }
   .scanned-table tbody tr:last-child td{ border-bottom:none; }
   
   /* Custom Checkbox */
@@ -95,11 +100,9 @@
     border-width: 0 2px 2px 0; transform: rotate(45deg);
   }
 
-  /* UPDATED: Bulk actions container (replaces popup) */
+  /* Bulk actions container in header */
   .bulk-actions {
-    display: flex; /* Toggled by JS */
-    align-items: center;
-    gap: 8px;
+    display: flex; align-items: center; gap: 8px;
   }
   .action-btn {
     border: none; background: transparent; cursor: pointer;
@@ -107,7 +110,6 @@
   }
   .action-btn:hover svg { fill: #374151; }
   .action-btn svg { width: 18px; height: 18px; fill: #9CA3AF; transition: fill .2s; }
-  .action-divider { width: 1px; height: 18px; background-color: #E5E7EB; }
 
   /* Empty state */
   .empty-state{ text-align:center; padding:60px 20px; }
@@ -118,7 +120,6 @@
   /* Actions row */
   .button-group{ display:flex; gap:16px; margin-top:56px; }
   
-  /* Other styles remain the same */
 </style>
 {% endblock %}
 
@@ -150,7 +151,7 @@
               <tr>
                 <th class="col-select">
                     <input type="checkbox" id="select-all-checkbox" class="checkbox-input">
-                    <div id="bulk-actions" style="display: none;">
+                    <div id="bulk-actions" class="bulk-actions" style="display: none;">
                         <button class="action-btn" title="Add Action">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" /></svg>
                         </button>
@@ -199,13 +200,11 @@ document.addEventListener('DOMContentLoaded', function () {
   const barcodeInput = document.getElementById('barcode-input');
   const addButton = document.getElementById('add-barcode');
   const scannedItems = document.getElementById('scanned-items');
-  const updateWrapper = document.getElementById('update-wrapper');
   const updateButton = document.getElementById('update-button');
   const resetButton = document.getElementById('reset-button');
   const locationSelect = document.getElementById('location-select');
   const sublocationSelect = document.getElementById('sublocation-select');
 
-  // UPDATED: Selection elements
   const selectAllCheckbox = document.getElementById('select-all-checkbox');
   const bulkActions = document.getElementById('bulk-actions');
   const deleteSelectedBtn = document.getElementById('delete-selected-btn');
@@ -227,19 +226,11 @@ document.addEventListener('DOMContentLoaded', function () {
   function refreshUpdateState() {
     const enabled = scannedBarcodes.length > 0 && !!locationSelect.value && !isProcessing;
     updateButton.disabled = !enabled;
-    // tooltip logic can be added here if needed
   }
   
-  // UPDATED: Logic to show/hide bulk actions in the header
   function updateSelectionState() {
-    const checkedCheckboxes = scannedItems.querySelectorAll('.row-checkbox:checked');
-    const selectedCount = checkedCheckboxes.length;
-
-    if (selectedCount > 0) {
-        bulkActions.style.display = 'flex';
-    } else {
-        bulkActions.style.display = 'none';
-    }
+    const selectedCount = scannedItems.querySelectorAll('.row-checkbox:checked').length;
+    bulkActions.style.display = selectedCount > 0 ? 'flex' : 'none';
   }
 
   function rowTemplate(barcode){
@@ -270,9 +261,7 @@ document.addEventListener('DOMContentLoaded', function () {
   
   function deleteSelected() {
     if (isProcessing) return;
-    const checkedCheckboxes = scannedItems.querySelectorAll('.row-checkbox:checked');
-    
-    checkedCheckboxes.forEach(checkbox => {
+    scannedItems.querySelectorAll('.row-checkbox:checked').forEach(checkbox => {
         const barcode = checkbox.dataset.barcode;
         const rowEl = checkbox.closest('tr');
         
@@ -283,7 +272,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (scannedBarcodes.length === 0) showEmptyState();
     
-    updateSelectionState(); // Hides bulk actions
+    updateSelectionState();
     refreshUpdateState();
   }
 
@@ -308,7 +297,6 @@ document.addEventListener('DOMContentLoaded', function () {
     barcodeInput.focus();
   });
   
-  // Selection logic listeners
   scannedItems.addEventListener('change', e => {
     if (e.target.classList.contains('row-checkbox')) {
         updateSelectionState();
@@ -327,7 +315,6 @@ document.addEventListener('DOMContentLoaded', function () {
   // --- Initialization ---
   showEmptyState();
   refreshUpdateState();
-  barcodeInput.focus();
 });
 </script>
 {% endblock %}
