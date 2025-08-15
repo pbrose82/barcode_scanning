@@ -12,7 +12,6 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   }
   .page-content{
-    /* UPDATED: Padding is applied directly, no max-width for gutters */
     padding: 40px; 
   }
 
@@ -60,7 +59,7 @@
   }
 
   /* Forms & Inputs */
-  .form-group { max-width: 450px; } /* Constrain input width */
+  .form-group { max-width: 450px; } 
   .barcode-input-group{ display:flex; gap:10px; margin-bottom: 24px; }
   .barcode-input, .form-select {
     padding: 10px 16px; font-size: 14px;
@@ -100,8 +99,8 @@
     border: 1px solid #E5E7EB;
     border-radius:8px; 
     margin-top:8px; 
-    overflow:visible; /* Allow popup to show */
-    position: relative; /* For popup positioning */
+    overflow:visible;
+    position: relative;
     max-width: 920px;
   }
   .scanned-table{ width:100%; border-collapse:collapse; }
@@ -120,10 +119,9 @@
   .scanned-table th.col-select, .scanned-table td.td-select { width: 48px; padding-left: 20px; }
   .scanned-table tbody tr:last-child td{ border-bottom:none; }
   
-  /* UPDATED: Pop-up that appears on checkbox click */
   #row-action-popup {
     position: absolute;
-    display: none; /* Hidden by default */
+    display: none;
     background-color: #fff;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
@@ -177,7 +175,8 @@
           <table class="scanned-table">
             <thead>
               <tr>
-                <th class="col-select"></th> <th>Name</th>
+                <th class="col-select"></th>
+                <th>Name</th>
                 <th>Column Name A</th>
               </tr>
             </thead>
@@ -220,8 +219,6 @@ document.addEventListener('DOMContentLoaded', function () {
   const resetButton = document.getElementById('reset-button');
   const locationSelect = document.getElementById('location-select');
   const sublocationSelect = document.getElementById('sublocation-select');
-  
-  // UPDATED: Get pop-up elements
   const rowActionPopup = document.getElementById('row-action-popup');
   const popupDeleteBtn = document.getElementById('popup-delete-btn');
 
@@ -260,7 +257,7 @@ document.addEventListener('DOMContentLoaded', function () {
     scannedItems.insertAdjacentHTML('beforeend', rowTemplate(barcode));
     barcodeInput.value = '';
     barcodeInput.focus();
-    updateButton.disabled = scannedBarcodes.length === 0;
+    refreshUpdateState();
   }
 
   function removeBarcode(barcodeToRemove) {
@@ -276,27 +273,51 @@ document.addEventListener('DOMContentLoaded', function () {
           showEmptyState();
       }
       rowActionPopup.style.display = 'none';
-      updateButton.disabled = scannedBarcodes.length === 0;
+      refreshUpdateState();
+  }
+  
+  function refreshUpdateState() {
+    const enabled = scannedBarcodes.length > 0 && locationSelect.value !== "";
+    updateButton.disabled = !enabled;
+  }
+  
+  // --- API Placeholder ---
+  async function fetchLocations() {
+    try {
+      // Replace with your actual API endpoint
+      const response = await fetch('/api/v1/locations'); 
+      if (!response.ok) throw new Error('Network response was not ok');
+      const locations = await response.json();
+
+      locations.forEach(location => {
+        const option = document.createElement('option');
+        option.value = location.id;
+        option.textContent = location.name;
+        locationSelect.appendChild(option);
+      });
+
+    } catch (error) {
+      console.error('Failed to fetch locations:', error);
+    }
   }
 
   // --- Event Listeners ---
   addButton.addEventListener('click', addBarcode);
   barcodeInput.addEventListener('keypress', e => { if (e.key === 'Enter') addBarcode(); });
+  locationSelect.addEventListener('change', refreshUpdateState);
   
   resetButton.addEventListener('click', () => {
     scannedBarcodes = [];
     showEmptyState();
-    updateButton.disabled = true;
+    refreshUpdateState();
     barcodeInput.focus();
   });
 
-  // UPDATED: Logic for per-row pop-up
   scannedItems.addEventListener('click', (e) => {
     if (e.target.classList.contains('row-checkbox')) {
         const checkbox = e.target;
         const row = checkbox.closest('tr');
         
-        // Uncheck all other checkboxes
         scannedItems.querySelectorAll('.row-checkbox').forEach(cb => {
             if (cb !== checkbox) cb.checked = false;
         });
@@ -306,7 +327,6 @@ document.addEventListener('DOMContentLoaded', function () {
             rowActionPopup.style.display = 'block';
             rowActionPopup.style.top = `${row.offsetTop + 10}px`;
             rowActionPopup.style.left = `${row.offsetLeft + 50}px`;
-            // Store the barcode to delete on the popup itself
             rowActionPopup.dataset.barcodeToDelete = barcode;
         } else {
             rowActionPopup.style.display = 'none';
@@ -314,7 +334,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
-  // Listener for the delete button in the pop-up
   popupDeleteBtn.addEventListener('click', () => {
       const barcode = rowActionPopup.dataset.barcodeToDelete;
       if (barcode) {
@@ -322,7 +341,6 @@ document.addEventListener('DOMContentLoaded', function () {
       }
   });
 
-  // Hide popup if clicking outside
   document.addEventListener('click', (e) => {
       if (!e.target.closest('.scanned-table-container')) {
           rowActionPopup.style.display = 'none';
@@ -330,8 +348,9 @@ document.addEventListener('DOMContentLoaded', function () {
       }
   });
 
-  // Initialization
+  // --- Initialization ---
   showEmptyState();
+  fetchLocations(); // Fetch locations when the page loads
 });
 </script>
 {% endblock %}
