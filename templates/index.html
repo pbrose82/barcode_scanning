@@ -8,14 +8,16 @@
   /* Base & Layout */
   html, body { 
     height: 100%; 
-    background-color: #FFFFFF; /* White page background */
+    background-color: #FFFFFF; /* White background */
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    margin: 0;
+    margin: 0; /* Ensures no default margin */
   }
+  /* UPDATED: Removed padding to allow content to go edge-to-edge */
   .page-content{
-    padding: 40px; 
+    padding: 0; 
   }
-/* UPDATED: Header with gradient, full width */
+  
+  /* UPDATED: Header with gradient, full width */
   .page-header {
     background: linear-gradient(135deg, #F4F6FF 0%, #F5FBFF 100%);
     padding: 40px;
@@ -27,12 +29,13 @@
       background-color: #FFFFFF;
       padding: 40px;
   }
+
   /* Typography */
   .page-title{ 
-    font-size: 24px; color: #111827; font-weight: 600; margin-bottom: 12px; 
+    font-size: 24px; color: #1F2937; font-weight: 600; margin: 0 0 12px 0;
   }
   .instruction-text{ 
-    font-size: 14px; color: #4B5563; line-height: 1.6; margin-bottom: 40px; max-width: 800px;
+    font-size: 14px; color: #4B5563; line-height: 1.6; max-width: 800px; margin: 0;
   }
   .section-title{ 
     font-size: 20px; color: #111827; font-weight: 600; margin-bottom: 20px; 
@@ -131,12 +134,17 @@
     width: 8px; height: 2px; background-color: white;
   }
 
-  /* UPDATED: Location layout is now a single column */
-  .location-container { 
-      display: flex;
-      flex-direction: column;
-      gap: 20px; 
-      max-width: 500px;
+  /* Location Grid */
+  .location-grid { 
+    display: grid; 
+    gap: 20px; 
+    grid-template-columns: 1fr; /* Stacked by default */
+    max-width: 920px;
+  }
+  @media (min-width: 768px) {
+    .location-grid {
+      grid-template-columns: 1fr 1fr; /* Side-by-side on larger screens */
+    }
   }
 
   /* Empty state */
@@ -151,7 +159,6 @@
 
 {% block content %}
 <div class="page-content">
-
     <div class="page-header">
         <h1 class="page-title">Barcode Scanning</h1>
         <p class="instruction-text">
@@ -160,60 +167,62 @@
     </div>
 
     <div class="scanner-main">
-        <h2 class="section-title">Barcode Overview</h2>
-        <div class="form-group">
-            <label class="form-label" for="barcode-input">Scan or Enter Barcode</label>
-            <div class="barcode-input-group">
-                <input type="text" id="barcode-input" class="barcode-input" placeholder="Enter text here" autofocus>
-                <button id="add-barcode" class="btn btn-primary">Add</button>
-            </div>
+      <h2 class="section-title">Barcode Overview</h2>
+      <div class="form-group">
+        <label class="form-label" for="barcode-input">Scan or Enter Barcode</label>
+        <div class="barcode-input-group">
+          <input type="text" id="barcode-input" class="barcode-input" placeholder="Enter text here" autofocus>
+          <button id="add-barcode" class="btn btn-primary">Add</button>
         </div>
-        <div class="form-group">
-            <label class="form-label">Scanned Barcodes</label>
-            <div class="scanned-table-container">
-                <div id="bulk-action-toolbar">
-                    <span id="selection-count">0 selected</span>
-                    <button id="bulk-delete-btn" class="toolbar-btn">
-                        <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg>
-                        Delete
-                    </button>
-                </div>
-                <table class="scanned-table">
-                    <thead>
-                        <tr>
-                            <th class="col-select">
-                                <input type="checkbox" id="select-all-checkbox" class="checkbox-input">
-                            </th>
-                            <th>Name</th>
-                            <th>Column Name A</th>
-                        </tr>
-                    </thead>
-                    <tbody id="scanned-items"></tbody>
-                </table>
-            </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Scanned Barcodes</label>
+        <div class="scanned-table-container">
+          <div id="bulk-action-toolbar">
+            <span id="selection-count">0 selected</span>
+            <button id="bulk-delete-btn" class="toolbar-btn">
+                <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg>
+                Delete
+            </button>
+          </div>
+          <table class="scanned-table">
+            <thead>
+              <tr>
+                <th class="col-select">
+                  <input type="checkbox" id="select-all-checkbox" class="checkbox-input">
+                </th>
+                <th>Name</th>
+                <th>Column Name A</th>
+              </tr>
+            </thead>
+            <tbody id="scanned-items"></tbody>
+          </table>
         </div>
+      </div>
 
-        <h2 class="section-title">Location</h2>
-        <div class="location-container">
-            <div class="form-group">
-                <label class="form-label" for="location-select">Location <span class="required-star">*</span></label>
-                <select class="form-select is-invalid" id="location-select">
-                <option value="">Please Select</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label" for="sublocation-select">Sublocation</label>
-                <select class="form-select" id="sublocation-select" disabled>
-                <option value="">-- Select Sublocation --</option>
-                </select>
-            </div>
+      <h2 class="section-title">Location</h2>
+      <div class="location-grid">
+        <div class="form-group">
+          <label class="form-label" for="location-select">Location <span class="required-star">*</span></label>
+          <select class="form-select is-invalid" id="location-select">
+          <option value="">Please Select</option>
+          </select>
         </div>
+        <div class="form-group">
+          <label class="form-label" for="sublocation-select">Sublocation</label>
+          <select class="form-select" id="sublocation-select" disabled>
+          <option value="">-- Select Sublocation --</option>
+          </select>
+        </div>
+      </div>
 
-        <div class="button-group">
-            <button id="update-button" class="btn btn-secondary" disabled>Update Location</button>
-            <button id="reset-button" class="btn btn-outline">Reset</button>
-        </div>
-    </div> </div> {% endblock %}
+      <div class="button-group">
+        <button id="update-button" class="btn btn-secondary" disabled>Update Location</button>
+        <button id="reset-button" class="btn btn-outline">Reset</button>
+      </div>
+    </div>
+</div>
+{% endblock %}
 
 {% block extra_js %}
 <script>
@@ -224,7 +233,6 @@
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-  // --- Element Selectors ---
   const barcodeInput = document.getElementById('barcode-input');
   const addButton = document.getElementById('add-barcode');
   const scannedItems = document.getElementById('scanned-items');
@@ -239,10 +247,9 @@ document.addEventListener('DOMContentLoaded', function () {
   const selectAllCheckbox = document.getElementById('select-all-checkbox');
   
   let scannedBarcodes = [];
-  let locationCache = []; // To store the full location data
+  let locationCache = [];
   const tenant = window.tenantInfo ? window.tenantInfo.tenant : null;
 
-  // --- UI Functions ---
   function showEmptyState() {
     scannedItems.innerHTML = `<tr id="empty-state"><td colspan="3" class="empty-state"><div class="empty-state-title">No scanned samples</div></td></tr>`;
   }
@@ -292,7 +299,6 @@ document.addEventListener('DOMContentLoaded', function () {
       }
   }
 
-  // --- API Functions (Corrected Logic) ---
   async function fetchLocations() {
     if (!tenant) return console.error("Tenant information is missing.");
     try {
@@ -300,7 +306,7 @@ document.addEventListener('DOMContentLoaded', function () {
       if (!response.ok) throw new Error('Failed to fetch locations');
       
       const locations = await response.json();
-      locationCache = locations; // Store the full response
+      locationCache = locations;
       
       locationSelect.innerHTML = '<option value="">Please Select</option>';
       locations.forEach(location => {
@@ -322,10 +328,7 @@ document.addEventListener('DOMContentLoaded', function () {
           sublocationSelect.disabled = true;
           return;
       }
-
-      // Find the selected location in the cached data
       const selectedLocation = locationCache.find(loc => loc.id == selectedLocationId);
-
       if (selectedLocation && selectedLocation.sublocations && selectedLocation.sublocations.length > 0) {
           selectedLocation.sublocations.forEach(sub => {
               const option = document.createElement('option');
@@ -338,8 +341,8 @@ document.addEventListener('DOMContentLoaded', function () {
           sublocationSelect.disabled = true;
       }
   }
-
-  // --- Event Listeners ---
+  
+  // Event Listeners
   addButton.addEventListener('click', addBarcode);
   barcodeInput.addEventListener('keypress', e => { if (e.key === 'Enter') addBarcode(); });
   
@@ -349,7 +352,7 @@ document.addEventListener('DOMContentLoaded', function () {
     } else {
       locationSelect.classList.add('is-invalid');
     }
-    populateSublocations(); // Populate sublocations from cache
+    populateSublocations();
     refreshUpdateState();
   });
   
@@ -382,13 +385,12 @@ document.addEventListener('DOMContentLoaded', function () {
           if (index > -1) scannedBarcodes.splice(index, 1);
           row.remove();
       });
-
       if (scannedBarcodes.length === 0) showEmptyState();
       updateSelectionState();
       refreshUpdateState();
   });
 
-  // --- Initialization ---
+  // Initialization
   showEmptyState();
   fetchLocations();
 });
