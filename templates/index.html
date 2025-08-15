@@ -8,168 +8,96 @@
   /* Base & Layout */
   html, body { 
     height: 100%; 
-    background-color: #FFFFFF; /* White background */
+    background-color: #FFFFFF;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    margin: 0; /* Ensures no default margin */
+    margin: 0;
   }
-  /* UPDATED: Removed padding to allow content to go edge-to-edge */
-  .page-content{
-    padding: 0; 
-  }
-  
-  /* Header with gradient, full width */
-  .page-header {
-    background: linear-gradient(135deg, #F4F6FF 0%, #F5FBFF 100%);
-    padding: 40px;
-    border-bottom: 1px solid #E5E7EB;
-  }
-  
-  /* Main content area is white with padding, full width */
-  .scanner-main {
-      background-color: #FFFFFF;
-      padding: 40px;
-  }
+  .page-content{ padding: 0; }
+  .page-header { background: linear-gradient(135deg, #F4F6FF 0%, #F5FBFF 100%); padding: 40px; border-bottom: 1px solid #E5E7EB; }
+  .scanner-main { background-color:#FFF; padding:40px; }
 
   /* Typography */
-  .page-title{ 
-    font-size: 24px; color: #1F2937; font-weight: 600; margin: 0 0 12px 0;
-  }
-  .instruction-text{ 
-    font-size: 14px; color: #4B5563; line-height: 1.6; max-width: 800px; margin: 0;
-  }
-  .section-title{ 
-    font-size: 24px; color: #383F45; font-weight: 600; margin-bottom: 20px; 
-    padding-top: 24px; border-top: 1px solid #F3F4F6;
-  }
-  .section-title:first-of-type { border-top: none; padding-top: 0; }
-  .form-label{ 
-    font-size: 12px; font-weight: 700; color: #424B52; 
-    margin-bottom: 8px; display: block; text-transform: capitalize; 
-  }
-  
-  /* Forms & Inputs */
-  .barcode-input-group{ display:flex; gap:10px; margin-bottom: 24px; align-items: center; max-width: 500px; }
-  .barcode-input, .form-select {
-    padding: 12px 16px; 
-    font-size: 14px;
-    border: 1px solid #D1D5DB; 
-    border-radius: 6px; 
-    height: 46px;
-    box-sizing: border-box;
-  }
-  .barcode-input { flex: 1; }
-  .barcode-input:focus, .form-select:focus { outline: none; border-color: #2563EB; }
+  .page-title{ font-size:24px; color:#1F2937; font-weight:600; margin:0 0 12px 0; }
+  .instruction-text{ font-size:14px; color:#4B5563; line-height:1.6; max-width:800px; margin:0; }
+  .section-title{ font-size:24px; color:#383F45; font-weight:600; margin-bottom:20px; padding-top:24px; border-top:1px solid #F3F4F6; }
+  .section-title:first-of-type{ border-top:none; padding-top:0; }
+  .form-label{ font-size:12px; font-weight:700; color:#424B52; margin-bottom:8px; display:block; text-transform:capitalize; }
 
-  .form-select{
-    width: 100%; background-color: #fff;
-    -webkit-appearance: none; appearance: none;
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-    background-position: right 0.5rem center; background-repeat: no-repeat; background-size: 1.5em 1.5em;
+  /* Forms & Inputs */
+  .barcode-input-group{ display:flex; gap:10px; margin-bottom:24px; align-items:center; max-width:500px; }
+  .barcode-input, .form-select{
+    padding:12px 16px; font-size:14px; border:1px solid #D1D5DB; border-radius:6px; height:46px; box-sizing:border-box;
   }
-  .required-star { color: #EF4444; }
-  .is-invalid { border-color: #EF4444 !important; }
+  .barcode-input{ flex:1; }
+  .barcode-input:focus, .form-select:focus{ outline:none; border-color:#2563EB; }
+  .form-select{ width:100%; background:#fff; -webkit-appearance:none; appearance:none;
+    background-image:url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position:right .5rem center; background-repeat:no-repeat; background-size:1.5em 1.5em;
+  }
+  .required-star{ color:#EF4444; }
+  .is-invalid{ border-color:#EF4444 !important; }
 
   /* Buttons */
-  .btn{ border:none; border-radius:6px; padding: 10px 24px; font-size:14px; font-weight:700; text-transform:uppercase; cursor:pointer; }
+  .btn{ border:none; border-radius:6px; padding:10px 24px; font-size:14px; font-weight:700; text-transform:uppercase; cursor:pointer; }
   .btn-primary{ background:#2196F3; color:#fff; }
-  .btn-outline { background-color: transparent; color: #2563EB; border: 1px solid #2563EB; }
-  .btn-outline:hover { background-color: #EFF6FF; }
-  .btn-secondary { background-color: #F9FAFB; color: #374151; border: 1px solid #E5E7EB; }
-  .btn:disabled { background-color: #F3F4F6; color: #9CA3AF; cursor: not-allowed; border: 1px solid #E5E7EB; }
+  .btn-outline{ background:transparent; color:#2563EB; border:1px solid #2563EB; }
+  .btn-outline:hover{ background:#EFF6FF; }
+  .btn-secondary{ background:#F9FAFB; color:#374151; border:1px solid #E5E7EB; }
+  .btn:disabled{ background:#F3F4F6; color:#9CA3AF; cursor:not-allowed; border:1px solid #E5E7EB; }
 
-  /* Location Grid (stacked) */
-  .location-grid { 
-    display: flex;
-    flex-direction: column;
-    gap: 20px; 
-    max-width: 450px;
-  }
-
-  .scanner-container{ 
-    max-width: 839px;
-    margin: 0 auto;
-    border-radius:12px; 
-    overflow:hidden;
-    box-shadow:0 4px 12px rgba(0,0,0,.08);
-  }
+  /* Location */
+  .location-grid{ display:flex; flex-direction:column; gap:20px; max-width:450px; }
 
   /* === SPEC-EXACT FRAME FOR SCANNED TABLE === */
   .scanner-spec-frame{
-    width: 839px;                 /* Fixed width per spec */
-    height: 162px;                /* Fixed height per spec */
-    border: 1px solid #E5E7EB;    /* 1px border */
-    border-radius: 8px;
-    background: #fff;
-    overflow: hidden;
-    position: relative;
-    box-sizing: border-box;
+    width:839px; height:162px; border:1px solid #E5E7EB; border-radius:8px; background:#fff;
+    overflow:hidden; position:relative; box-sizing:border-box;
   }
 
-  /* Bulk Action Toolbar (unchanged behavior, sits at top of frame when visible) */
+  /* Bulk toolbar */
   #bulk-action-toolbar{
-    display: none;
-    align-items: center;
-    gap: 16px;
-    padding: 8px 20px;
-    background-color: #F3F4F6;
-    border-bottom: 1px solid #E5E7EB;
+    display:none; align-items:center; gap:16px; padding:8px 20px; background:#F3F4F6; border-bottom:1px solid #E5E7EB;
   }
-  #selection-count { font-size: 14px; font-weight: 600; color: #374151; flex-grow: 1; }
-  .toolbar-btn { display:flex; align-items:center; gap:6px; background:none; border:none; cursor:pointer; font-size:14px; font-weight:600; color:#4B5563; }
-  .toolbar-btn:hover { color:#111827; }
-  .toolbar-btn svg { width:18px; height:18px; fill: currentColor; }
+  #selection-count{ font-size:14px; font-weight:600; color:#374151; flex-grow:1; }
+  .toolbar-btn{ display:flex; align-items:center; gap:6px; background:none; border:none; cursor:pointer; font-size:14px; font-weight:600; color:#4B5563; }
+  .toolbar-btn:hover{ color:#111827; }
+  .toolbar-btn svg{ width:18px; height:18px; fill:currentColor; }
 
-  /* Table region (shown when there are rows) */
-  .scanned-table-container{
-    height: 100%;
-    overflow: auto;
-    border: 0;
-  }
-
-  /* Table visuals */
-  .scanned-table{ width: 100%; border-collapse: collapse; table-layout: fixed; }
-  .scanned-table thead{ background: #F9FAFB; border-bottom: 1px solid #E5E7EB; }
+  /* Table */
+  .scanned-table-container{ height:100%; overflow:auto; border:0; }
+  .scanned-table{ width:100%; border-collapse:collapse; table-layout:fixed; }
+  .scanned-table thead{ background:#F9FAFB; border-bottom:1px solid #E5E7EB; }
   .scanned-table th, .scanned-table td{
-    text-align:left; padding:14px 20px; border-bottom:1px solid #E5E7EB; 
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    text-align:left; padding:14px 20px; border-bottom:1px solid #E5E7EB;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
-  .scanned-table th { font-size:12px; font-weight:500; color:#6B7280; text-transform:uppercase; }
-  .scanned-table td { font-size:14px; color:#111827; }
+  .scanned-table th{ font-size:12px; font-weight:500; color:#6B7280; text-transform:uppercase; }
+  .scanned-table td{ font-size:14px; color:#111827; }
   .scanned-table tbody tr:last-child td{ border-bottom:none; }
-  .scanned-table th.col-select, .scanned-table td.col-select { width: 48px; }
+  .scanned-table th.col-select, .scanned-table td.col-select{ width:48px; }
 
-  /* EXACT empty-state placement & spacing from spec:
-     Top: 26.5px, Right: 130px, Bottom: 26px, Left: 20px, gap: 10px */
-  .spec-empty{
-    position: absolute;
-    top: 26.5px; left: 20px; right: 130px; bottom: 26px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+  /* Empty state as a row under the header (exact paddings from spec) */
+  .spec-empty-cell{
+    padding-top:26.5px !important; padding-right:130px !important; padding-bottom:26px !important; padding-left:20px !important;
   }
-  .empty-state-title{ font-size: 15px; font-weight: 600; color:#374151; }
-  .empty-state-text{ font-size: 14px; color:#4B5563; }
+  .empty-state-title{ font-size:15px; font-weight:600; color:#374151; margin-bottom:8px; }
+  .empty-state-text{ font-size:14px; color:#4B5563; }
 
-  /* Custom Checkbox */
-  .checkbox-input {
-    appearance: none; -webkit-appearance: none;
-    width: 18px; height: 18px; border: 1.5px solid #D1D5DB; border-radius: 4px;
-    background-color: #fff; cursor: pointer; display: inline-block; position: relative; vertical-align: middle;
+  /* Checkbox */
+  .checkbox-input{
+    appearance:none; -webkit-appearance:none; width:18px; height:18px; border:1.5px solid #D1D5DB; border-radius:4px;
+    background:#fff; cursor:pointer; position:relative; vertical-align:middle;
   }
-  .checkbox-input:checked { background-color: #2563EB; border-color: #2563EB; }
-  .checkbox-input:checked::after {
-    content: ''; position: absolute; left: 5px; top: 2px;
-    width: 5px; height: 10px; border: solid white;
-    border-width: 0 2px 2px 0; transform: rotate(45deg);
+  .checkbox-input:checked{ background:#2563EB; border-color:#2563EB; }
+  .checkbox-input:checked::after{
+    content:''; position:absolute; left:5px; top:2px; width:5px; height:10px; border:solid #fff; border-width:0 2px 2px 0; transform:rotate(45deg);
   }
-  .checkbox-input:indeterminate { background-color: #2563EB; border-color: #2563EB; }
-  .checkbox-input:indeterminate::after {
-    content: ''; position: absolute; left: 4px; top: 7px;
-    width: 8px; height: 2px; background-color: white;
+  .checkbox-input:indeterminate{ background:#2563EB; border-color:#2563EB; }
+  .checkbox-input:indeterminate::after{
+    content:''; position:absolute; left:4px; top:7px; width:8px; height:2px; background:#fff;
   }
 
-  /* Actions row */
-  .button-group{ display:flex; gap:16px; margin-top: 24px; }
+  .button-group{ display:flex; gap:16px; margin-top:24px; }
 </style>
 {% endblock %}
 
@@ -192,7 +120,7 @@
       </div>
     </div>
 
-    <!-- SCANNED BARCODES (spec-exact frame) -->
+    <!-- Scanned Barcodes (header always visible) -->
     <div class="form-group">
       <label class="form-label">Scanned Barcodes</label>
 
@@ -207,7 +135,6 @@
           </button>
         </div>
 
-        <!-- Table (hidden when empty) -->
         <div class="scanned-table-container" id="scanned-table-wrap">
           <table class="scanned-table" id="scanned-table">
             <thead id="scanned-head">
@@ -221,15 +148,6 @@
             </thead>
             <tbody id="scanned-items"></tbody>
           </table>
-        </div>
-
-        <!-- Exact-position empty state (shown when no rows) -->
-        <div id="empty-state" class="spec-empty">
-          <div class="barcode-icon">||||</div>
-          <div class="empty-state-title">No scanned samples</div>
-          <div class="empty-state-text">
-            This table will automatically populate with samples as they are scanned or entered manually in the input field above.
-          </div>
         </div>
       </div>
     </div>
@@ -280,29 +198,33 @@ document.addEventListener('DOMContentLoaded', function () {
   const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
   const selectAllCheckbox = document.getElementById('select-all-checkbox');
 
-  const tableWrap = document.getElementById('scanned-table-wrap');
-  const emptyState = document.getElementById('empty-state');
-  
   let scannedBarcodes = [];
   let locationCache = [];
   const tenant = window.tenantInfo ? window.tenantInfo.tenant : null;
 
-  /* --- SPEC VIEW TOGGLERS (minimal change) --- */
-  function showTableView() {
-    tableWrap.style.display = 'block';
-    emptyState.style.display = 'none';
+  /* --- Empty/Table rendering with header always visible --- */
+  function renderEmptyRow() {
+    scannedItems.innerHTML = `
+      <tr id="empty-state-row">
+        <td colspan="3" class="spec-empty-cell">
+          <div class="barcode-icon">||||</div>
+          <div class="empty-state-title">No scanned samples</div>
+          <div class="empty-state-text">
+            This table will automatically populate with samples as they are scanned or entered manually in the input field above.
+          </div>
+        </td>
+      </tr>`;
   }
-  function showEmptyView() {
-    tableWrap.style.display = 'none';
-    emptyState.style.display = 'flex';
-    bulkActionToolbar.style.display = 'none';
-    selectAllCheckbox.checked = false;
-    selectAllCheckbox.indeterminate = false;
-    scannedItems.innerHTML = '';
+
+  function ensureEmptyIfNeeded() {
+    if (scannedBarcodes.length === 0) renderEmptyRow();
   }
-  function showEmptyState(){ showEmptyView(); }
 
   function addRow(barcode) {
+    // remove the empty-state row once we add the first record
+    const emptyRow = document.getElementById('empty-state-row');
+    if (emptyRow) emptyRow.remove();
+
     const rowHTML = `
       <tr data-barcode="${barcode}">
         <td class="col-select"><input type="checkbox" class="row-checkbox checkbox-input" data-barcode="${barcode}"></td>
@@ -316,7 +238,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const barcode = barcodeInput.value.trim();
     if (!barcode || scannedBarcodes.includes(barcode)) return;
     scannedBarcodes.push(barcode);
-    showTableView();
     addRow(barcode);
     barcodeInput.value = '';
     barcodeInput.focus();
@@ -406,7 +327,7 @@ document.addEventListener('DOMContentLoaded', function () {
   
   resetButton.addEventListener('click', () => {
     scannedBarcodes = [];
-    showEmptyView();
+    renderEmptyRow();
     locationSelect.value = '';
     sublocationSelect.value = '';
     sublocationSelect.disabled = true;
@@ -433,13 +354,13 @@ document.addEventListener('DOMContentLoaded', function () {
       if (index > -1) scannedBarcodes.splice(index, 1);
       row.remove();
     });
-    if (scannedBarcodes.length === 0) showEmptyView();
+    if (scannedBarcodes.length === 0) renderEmptyRow();
     updateSelectionState();
     refreshUpdateState();
   });
 
   // Initialization
-  showEmptyView();
+  renderEmptyRow();
   fetchLocations();
 });
 </script>
