@@ -8,41 +8,20 @@
   /* Base & Layout */
   html, body { 
     height: 100%; 
-    background-color: #F9FAFB; /* Light gray page background */
+    background-color: #FFFFFF; /* White page background */
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     margin: 0;
   }
   .page-content{
-    padding: 56px 24px; 
-  }
-  .scanner-container{ 
-    max-width: 1400px; 
-    margin: 0 auto;
-    border-radius:12px; 
-    overflow:hidden;
-    box-shadow:0 4px 12px rgba(0,0,0,.08);
-  }
-
-  /* Header with gradient */
-  .page-header {
-    /* UPDATED: Lighter gradient colors */
-    background: linear-gradient(135deg, #F4F6FF 0%, #F5FBFF 100%);
-    padding: 40px;
-    border-bottom: 1px solid #E5E7EB;
-  }
-  
-  /* Main content area is white */
-  .scanner-main {
-      background-color: #FFFFFF;
-      padding: 40px;
+    padding: 40px; 
   }
 
   /* Typography */
   .page-title{ 
-    font-size: 24px; color: #1F2937; font-weight: 600; margin: 0 0 12px 0;
+    font-size: 24px; color: #111827; font-weight: 600; margin-bottom: 12px; 
   }
   .instruction-text{ 
-    font-size: 14px; color: #4B5563; line-height: 1.6; max-width: 800px; margin: 0;
+    font-size: 14px; color: #4B5563; line-height: 1.6; margin-bottom: 40px; max-width: 800px;
   }
   .section-title{ 
     font-size: 20px; color: #111827; font-weight: 600; margin-bottom: 20px; 
@@ -55,8 +34,7 @@
   }
   
   /* Forms & Inputs */
-  .form-group { max-width: 450px; } 
-  .barcode-input-group{ display:flex; gap:10px; margin-bottom: 24px; }
+  .barcode-input-group{ display:flex; gap:10px; margin-bottom: 24px; max-width: 500px; }
   .barcode-input, .form-select {
     padding: 10px 16px; font-size: 14px;
     border: 1px solid #D1D5DB; border-radius: 6px; 
@@ -91,6 +69,7 @@
   .scanned-table-container{
     border: 1px solid #E5E7EB; border-radius:8px; 
     margin-top:8px; overflow:hidden;
+    min-height: 250px; 
   }
   .scanned-table{ width:100%; border-collapse:collapse; }
   .scanned-table thead{ 
@@ -141,14 +120,16 @@
     width: 8px; height: 2px; background-color: white;
   }
 
-  /* Location Grid */
-  .location-grid { display: grid; gap: 20px; }
-  @media (min-width: 768px) { .location-grid { grid-template-columns: 1fr 1fr; } }
-
+  /* UPDATED: Location layout is now a single column */
+  .location-container { 
+      display: flex;
+      flex-direction: column;
+      gap: 20px; 
+      max-width: 500px;
+  }
 
   /* Empty state */
   .empty-state{ text-align:center; padding:60px 20px; }
-  .barcode-icon { font-family:monospace; font-size:36px; color:#D1D5DB; margin-bottom:16px; letter-spacing:3px; font-weight:100; }
   .empty-state-title{ font-size:15px; font-weight:600; color:#374151; margin-bottom:8px; }
 
   /* Actions row */
@@ -159,15 +140,11 @@
 
 {% block content %}
 <div class="page-content">
-  <div class="scanner-container">
-    <div class="page-header">
-        <h1 class="page-title">Barcode Scanning</h1>
-        <p class="instruction-text">
-            Before scanning, make sure the input field is active so the barcode is entered correctly. In case the scanner doesn’t respond or fails to read the code, you can simply type the barcode manually instead. There's no limit to how many barcodes you can scan, so feel free to continue as needed.
-        </p>
-    </div>
+      <h1 class="page-title">Barcode Scanning</h1>
+      <p class="instruction-text">
+        Before scanning, make sure the input field is active so the barcode is entered correctly. In case the scanner doesn’t respond or fails to read the code, you can simply type the barcode manually instead. There's no limit to how many barcodes you can scan, so feel free to continue as needed.
+      </p>
 
-    <div class="scanner-main">
       <h2 class="section-title">Barcode Overview</h2>
       <div class="form-group">
         <label class="form-label" for="barcode-input">Scan or Enter Barcode</label>
@@ -202,7 +179,7 @@
       </div>
 
       <h2 class="section-title">Location</h2>
-      <div class="location-grid">
+      <div class="location-container">
         <div class="form-group">
           <label class="form-label" for="location-select">Location <span class="required-star">*</span></label>
           <select class="form-select is-invalid" id="location-select">
@@ -221,8 +198,6 @@
         <button id="update-button" class="btn btn-secondary" disabled>Update Location</button>
         <button id="reset-button" class="btn btn-outline">Reset</button>
       </div>
-    </div>
-  </div>
 </div>
 {% endblock %}
 
@@ -243,14 +218,13 @@ document.addEventListener('DOMContentLoaded', function () {
   const selectAllCheckbox = document.getElementById('select-all-checkbox');
   
   let scannedBarcodes = [];
+  const tenant = window.tenantInfo ? window.tenantInfo.tenant : null;
 
   function showEmptyState() {
     scannedItems.innerHTML = `
       <tr id="empty-state">
         <td colspan="3" class="empty-state">
-          <div class="barcode-icon">||||</div>
           <div class="empty-state-title">No scanned samples</div>
-          <div class="empty-state-text">This table will automatically populate with samples as they are scanned or entered manually in the input field above.</div>
         </td>
       </tr>`;
   }
@@ -309,10 +283,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // --- API Functions ---
   async function fetchLocations() {
+    if (!tenant) {
+        console.error("Tenant information is missing.");
+        return;
+    }
     try {
-      const response = await fetch('/api/v1/locations'); 
+      const response = await fetch(`/api/${tenant}/locations`); 
       if (!response.ok) throw new Error('Failed to fetch locations');
+      
       const locations = await response.json();
+      
+      locationSelect.innerHTML = '<option value="">Please Select</option>';
       
       locations.forEach(location => {
         const option = document.createElement('option');
@@ -327,14 +308,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
   async function fetchSublocations(locationId) {
       sublocationSelect.innerHTML = '<option value="">-- Select Sublocation --</option>';
-      if (!locationId) return;
+      if (!locationId || !tenant) {
+        sublocationSelect.disabled = true;
+        return;
+      }
 
       try {
-          const response = await fetch(`/api/v1/locations/${locationId}/sublocations`);
+          const response = await fetch(`/api/${tenant}/locations/${locationId}/sublocations`);
           if (!response.ok) throw new Error('Failed to fetch sublocations');
+          
           const sublocations = await response.json();
 
-          if (sublocations.length > 0) {
+          if (sublocations && sublocations.length > 0) {
               sublocations.forEach(sub => {
                   const option = document.createElement('option');
                   option.value = sub.id;
@@ -413,4 +398,3 @@ document.addEventListener('DOMContentLoaded', function () {
   fetchLocations();
 });
 </script>
-{% endblock %}
