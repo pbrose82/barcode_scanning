@@ -134,6 +134,17 @@
   padding: 0;
   line-height: 32px;
 }
+/* Make Update Location blue when active */
+#update-button:not(:disabled) {
+  background-color: #2196F3; /* same blue as .btn-primary */
+  color: #fff;
+  border-color: #2196F3;
+}
+
+#update-button:not(:disabled):hover {
+  background-color: #1976D2; /* darker blue on hover */
+  border-color: #1976D2;
+}
 
 </style>
 {% endblock %}
