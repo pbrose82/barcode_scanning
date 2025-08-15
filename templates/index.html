@@ -7,28 +7,48 @@
 <style>
   /* Base & Layout */
   html, body { 
-    height: 100%; background-color: #FFFFFF;
+    height: 100%; 
+    background-color: #F9FAFB; /* Light gray page background */
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     margin: 0;
   }
   .page-content{
-    padding: 40px; 
+    padding: 56px 24px; 
+  }
+  /* UPDATED: Centered card container */
+  .scanner-container{ 
+    max-width: 1100px; 
+    margin: 0 auto;
+    border-radius:12px; 
+    overflow:hidden;
+    box-shadow:0 4px 12px rgba(0,0,0,.08);
+  }
+
+  /* UPDATED: Header with gradient */
+  .page-header {
+    background: linear-gradient(135deg, #E4DDFF 0%, #DDF5FF 100%);
+    padding: 40px;
+    border-bottom: 1px solid #E5E7EB;
+  }
+  
+  /* UPDATED: Main content area is white */
+  .scanner-main {
+      background-color: #FFFFFF;
+      padding: 40px;
   }
 
   /* Typography */
   .page-title{ 
-    font-size: 24px; color: #111827; font-weight: 600; margin-bottom: 12px; 
+    font-size: 24px; color: #1F2937; font-weight: 600; margin: 0 0 12px 0;
   }
   .instruction-text{ 
-    font-size: 14px; color: #4B5563; line-height: 1.6; margin-bottom: 40px; max-width: 800px;
+    font-size: 14px; color: #4B5563; line-height: 1.6; max-width: 800px; margin: 0;
   }
   .section-title{ 
     font-size: 20px; color: #111827; font-weight: 600; margin-bottom: 20px; 
     padding-top: 24px; border-top: 1px solid #F3F4F6;
   }
-  .section-title:first-of-type {
-      border-top: none; padding-top: 0;
-  }
+  .section-title:first-of-type { border-top: none; padding-top: 0; }
   .form-label{ 
     font-size: 12px; font-weight: 500; color: #6B7280; 
     margin-bottom: 8px; display: block; text-transform: uppercase; 
@@ -50,14 +70,11 @@
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
     background-position: right 0.5rem center; background-repeat: no-repeat; background-size: 1.5em 1.5em;
   }
-  .form-group + .form-group {
-      margin-top: 20px;
-  }
   .required-star { color: #EF4444; }
   .is-invalid { border-color: #EF4444 !important; }
 
   /* Buttons */
-  .btn{ border:none; border-radius:6px; padding: 10px 24px; font-size:14px; font-weight:700; text-transform:uppercase; cursor:pointer; transition: background-color .2s, color .2s, border-color .2s; }
+  .btn{ border:none; border-radius:6px; padding: 10px 24px; font-size:14px; font-weight:700; text-transform:uppercase; cursor:pointer; }
   .btn-primary{ background:#2563EB; color:#fff; }
   .btn-outline {
       background-color: transparent; color: #2563EB; border: 1px solid #2563EB;
@@ -70,11 +87,10 @@
       background-color: #F3F4F6; color: #9CA3AF; cursor: not-allowed; border: 1px solid #E5E7EB;
   }
 
-
   /* Table & Bulk Actions */
   .scanned-table-container{
     border: 1px solid #E5E7EB; border-radius:8px; 
-    margin-top:8px; overflow:hidden; max-width: 1100px;
+    margin-top:8px; overflow:hidden;
     min-height: 250px; 
   }
   .scanned-table{ width:100%; border-collapse:collapse; }
@@ -91,20 +107,14 @@
   .scanned-table tbody tr:last-child td{ border-bottom:none; }
   .scanned-table th.col-select, .scanned-table td.col-select { width: 48px; }
 
-  /* UPDATED: Bulk Action Toolbar */
+  /* Bulk Action Toolbar */
   #bulk-action-toolbar {
-      display: none; /* Hidden by default */
-      align-items: center;
-      gap: 16px;
-      padding: 8px 20px;
-      background-color: #F3F4F6;
+      display: none; align-items: center; gap: 16px;
+      padding: 8px 20px; background-color: #F3F4F6;
       border-bottom: 1px solid #E5E7EB;
   }
   #selection-count {
-      font-size: 14px;
-      font-weight: 600;
-      color: #374151;
-      flex-grow: 1; /* Pushes other items to the right */
+      font-size: 14px; font-weight: 600; color: #374151; flex-grow: 1;
   }
   .toolbar-btn {
       display: flex; align-items: center; gap: 6px;
@@ -114,13 +124,11 @@
   .toolbar-btn:hover { color: #111827; }
   .toolbar-btn svg { width: 18px; height: 18px; fill: currentColor; }
 
-  /* UPDATED: Custom Checkbox */
+  /* Custom Checkbox */
   .checkbox-input {
     appearance: none; -webkit-appearance: none;
-    width: 18px; height: 18px;
-    border: 1.5px solid #D1D5DB; border-radius: 4px;
-    background-color: #fff; cursor: pointer;
-    display: inline-block; position: relative; vertical-align: middle;
+    width: 18px; height: 18px; border: 1.5px solid #D1D5DB; border-radius: 4px;
+    background-color: #fff; cursor: pointer; display: inline-block; position: relative; vertical-align: middle;
   }
   .checkbox-input:checked { background-color: #2563EB; border-color: #2563EB; }
   .checkbox-input:checked::after {
@@ -128,16 +136,14 @@
     width: 5px; height: 10px; border: solid white;
     border-width: 0 2px 2px 0; transform: rotate(45deg);
   }
-  .checkbox-input:indeterminate {
-    background-color: #2563EB; border-color: #2563EB;
-  }
+  .checkbox-input:indeterminate { background-color: #2563EB; border-color: #2563EB; }
   .checkbox-input:indeterminate::after {
     content: ''; position: absolute; left: 4px; top: 7px;
     width: 8px; height: 2px; background-color: white;
   }
 
   /* Location Grid */
-  .location-grid { display: grid; gap: 20px; max-width: 1100px;}
+  .location-grid { display: grid; gap: 20px; }
   @media (min-width: 768px) { .location-grid { grid-template-columns: 1fr 1fr; } }
 
 
@@ -153,11 +159,15 @@
 
 {% block content %}
 <div class="page-content">
-      <h1 class="page-title">Barcode Scanning</h1>
-      <p class="instruction-text">
-        Before scanning, make sure the input field is active so the barcode is entered correctly. In case the scanner doesn’t respond or fails to read the code, you can simply type the barcode manually instead. There's no limit to how many barcodes you can scan, so feel free to continue as needed.
-      </p>
+  <div class="scanner-container">
+    <div class="page-header">
+        <h1 class="page-title">Barcode Scanning</h1>
+        <p class="instruction-text">
+            Before scanning, make sure the input field is active so the barcode is entered correctly. In case the scanner doesn’t respond or fails to read the code, you can simply type the barcode manually instead. There's no limit to how many barcodes you can scan, so feel free to continue as needed.
+        </p>
+    </div>
 
+    <div class="scanner-main">
       <h2 class="section-title">Barcode Overview</h2>
       <div class="form-group">
         <label class="form-label" for="barcode-input">Scan or Enter Barcode</label>
@@ -211,6 +221,8 @@
         <button id="update-button" class="btn btn-secondary" disabled>Update Location</button>
         <button id="reset-button" class="btn btn-outline">Reset</button>
       </div>
+    </div>
+  </div>
 </div>
 {% endblock %}
 
@@ -225,7 +237,6 @@ document.addEventListener('DOMContentLoaded', function () {
   const locationSelect = document.getElementById('location-select');
   const sublocationSelect = document.getElementById('sublocation-select');
   
-  // UPDATED: Elements for bulk selection
   const bulkActionToolbar = document.getElementById('bulk-action-toolbar');
   const selectionCount = document.getElementById('selection-count');
   const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
@@ -270,7 +281,6 @@ document.addEventListener('DOMContentLoaded', function () {
     updateButton.disabled = !enabled;
   }
   
-  // UPDATED: Main function to handle selection changes
   function updateSelectionState() {
       const allCheckboxes = scannedItems.querySelectorAll('.row-checkbox');
       const checkedCheckboxes = scannedItems.querySelectorAll('.row-checkbox:checked');
@@ -283,7 +293,6 @@ document.addEventListener('DOMContentLoaded', function () {
           bulkActionToolbar.style.display = 'none';
       }
 
-      // Update "select all" checkbox state
       if (count > 0 && count === allCheckboxes.length) {
           selectAllCheckbox.checked = true;
           selectAllCheckbox.indeterminate = false;
@@ -296,30 +305,62 @@ document.addEventListener('DOMContentLoaded', function () {
       }
   }
 
-  // --- API Placeholder ---
-  async function fetchLocations() { /* ... function remains the same ... */ }
+  async function fetchLocations() {
+    try {
+      const response = await fetch('/api/v1/locations'); 
+      if (!response.ok) throw new Error('Network response was not ok');
+      const locations = await response.json();
+      locations.forEach(location => {
+        const option = document.createElement('option');
+        option.value = location.id;
+        option.textContent = location.name;
+        locationSelect.appendChild(option);
+      });
+    } catch (error) {
+      console.error('Failed to fetch locations:', error);
+    }
+  }
 
-  // --- Event Listeners ---
+  // Event Listeners
   addButton.addEventListener('click', addBarcode);
   barcodeInput.addEventListener('keypress', e => { if (e.key === 'Enter') addBarcode(); });
-  locationSelect.addEventListener('change', () => { /* ... function remains the same ... */ });
-  resetButton.addEventListener('click', () => { /* ... function remains the same, plus updateSelectionState() */ });
+  
+  locationSelect.addEventListener('change', () => {
+    if (locationSelect.value) {
+      locationSelect.classList.remove('is-invalid');
+      sublocationSelect.disabled = false;
+    } else {
+      locationSelect.classList.add('is-invalid');
+      sublocationSelect.disabled = true;
+      sublocationSelect.value = '';
+    }
+    refreshUpdateState();
+  });
+  
+  resetButton.addEventListener('click', () => {
+    scannedBarcodes = [];
+    showEmptyState();
+    locationSelect.value = '';
+    sublocationSelect.value = '';
+    sublocationSelect.disabled = true;
+    locationSelect.classList.add('is-invalid');
+    refreshUpdateState();
+    updateSelectionState(); // Hide toolbar
+    barcodeInput.focus();
+  });
 
-  // UPDATED: Listen for clicks on checkboxes in the table
   scannedItems.addEventListener('change', (e) => {
       if (e.target.classList.contains('row-checkbox')) {
           updateSelectionState();
       }
   });
 
-  // UPDATED: "Select All" functionality
   selectAllCheckbox.addEventListener('click', () => {
       const isChecked = selectAllCheckbox.checked;
       scannedItems.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = isChecked);
       updateSelectionState();
   });
 
-  // UPDATED: Bulk delete functionality
   bulkDeleteBtn.addEventListener('click', () => {
       const checkedCheckboxes = scannedItems.querySelectorAll('.row-checkbox:checked');
       checkedCheckboxes.forEach(checkbox => {
@@ -331,11 +372,11 @@ document.addEventListener('DOMContentLoaded', function () {
       });
 
       if (scannedBarcodes.length === 0) showEmptyState();
-      updateSelectionState(); // Hides the toolbar
+      updateSelectionState();
       refreshUpdateState();
   });
 
-  // --- Initialization ---
+  // Initialization
   showEmptyState();
   fetchLocations();
 });
