@@ -63,7 +63,7 @@
     overflow:hidden; position:relative; box-sizing:border-box;
   }
 
-  /* Bulk toolbar */
+  /* Bulk toolbar (above grid body) */
   #bulk-action-toolbar{
     display:none; align-items:center; gap:16px; padding:8px 20px; background:#F3F4F6; border-bottom:1px solid #E5E7EB;
   }
@@ -72,69 +72,58 @@
   .toolbar-btn:hover{ color:#111827; }
   .toolbar-btn svg{ width:18px; height:18px; fill:currentColor; }
 
-  /* Table */
-  .scanned-table-container{ height:100%; overflow:auto; border:0; }
-  .scanned-table{ width:100%; border-collapse:collapse; table-layout:fixed; }
-
-  /* Header visuals: exact divider + controlled height + smaller type, no ellipsis */
-  .scanned-table thead{ background:#F9FAFB; border-bottom:1px solid #E5E7EB; }
-  .scanned-table thead th{
-    height:48px; line-height:48px;
-    font-size:12px; font-weight:500; color:#6B7280; text-transform:uppercase;
-    border-bottom:1px solid #E5E7EB;
-    white-space:normal; overflow:visible; text-overflow:clip;
-    padding-top:0; padding-bottom:0;
+  /* === AG Grid host === */
+  #ag-grid {
+    width: 100%;
+    height: calc(185px - 0px); /* frame height; toolbar sits above when visible */
   }
 
-  /* Body cells keep truncation */
-  .scanned-table tbody td{
-    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  /* AG Grid header height & divider */
+  .ag-theme-alpine .ag-header {
+    min-height: 48px;
+    height: 48px;
+    border-bottom: 1px solid #E5E7EB;
+  }
+  .ag-theme-alpine .ag-header-row,
+  .ag-theme-alpine .ag-header-cell {
+    height: 48px !important;
+    line-height: 48px !important;
+  }
+  .ag-theme-alpine .ag-header-cell-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: #6B7280;
+    text-transform: uppercase;
   }
 
-  .scanned-table th, .scanned-table td{
-    text-align:left; padding:14px 20px; border-bottom:1px solid #E5E7EB;
-  }
-  .scanned-table td{ font-size:14px; color:#111827; }
-  .scanned-table tbody tr:last-child td{ border-bottom:none; }
-
-  /* Checkbox column: no truncation (removes the stray “…”), fixed width */
-  .scanned-table th.col-select, .scanned-table td.col-select{
-    width:48px; padding-left:20px; padding-right:0;
-    white-space:normal; overflow:visible; text-overflow:clip;
+  /* Cell typography */
+  .ag-theme-alpine .ag-cell {
+    font-size: 14px;
+    color: #111827;
   }
 
-  /* Empty state as a row under the header (exact paddings from spec) */
-  .spec-empty-cell{
-    padding-top:26.5px !important; padding-right:130px !important; padding-bottom:26px !important; padding-left:20px !important;
-  }
-  .empty-state-title{ font-size:15px; font-weight:600; color:#374151; margin-bottom:8px; }
-  .empty-state-text{ font-size:14px; color:#4B5563; }
-
-  /* Checkbox */
-  .checkbox-input{
-    appearance:none; -webkit-appearance:none; width:18px; height:18px; border:1.5px solid #D1D5DB; border-radius:4px;
-    background:#fff; cursor:pointer; position:relative; vertical-align:middle;
-  }
-  .checkbox-input:checked{ background:#2563EB; border-color:#2563EB; }
-  .checkbox-input:checked::after{
-    content:''; position:absolute; left:5px; top:2px; width:5px; height:10px; border:solid #fff; border-width:0 2px 2px 0; transform:rotate(45deg);
-  }
-  .checkbox-input:indeterminate{ background:#2563EB; border-color:#2563EB; }
-  .checkbox-input:indeterminate::after{
-    content:''; position:absolute; left:4px; top:7px; width:8px; height:2px; background:#fff;
+  /* Checkbox column width to match spec (48px incl. padding) */
+  .ag-theme-alpine .ag-checkbox-input-wrapper {
+    transform: scale(1); /* keep native size */
   }
 
-  .button-group{ display:flex; gap:16px; margin-top:24px; }
+  /* No-rows overlay styled to match your empty state paddings */
+  .no-rows-overlay {
+    padding-top: 26.5px; padding-right: 130px; padding-bottom: 26px; padding-left: 20px;
+  }
+  .no-rows-overlay .empty-state-title{ font-size:15px; font-weight:600; color:#374151; margin-bottom:8px; }
+  .no-rows-overlay .empty-state-text{ font-size:14px; color:#4B5563; }
 
-  /* === Spec sizing overrides === */
-  .barcode-input-group { max-width: 514px; }                /* 432 + 10 + 72 */
+  /* Inputs & buttons exact sizing */
+  .barcode-input-group { max-width: 514px; }               /* 432 + 10 + 72 */
   #barcode-input { width: 432px; height: 46px; }
   #location-select,#sublocation-select {
-  height: 46px;
-  padding: 0 40px 0 16px;   /* vertical padding = 0; keep left/right, extra on right for chevron */
-  line-height: normal;      /* prevent text clipping in WebKit */
-  color: #111827;           /* ensure readable text */
-}
+    width: 432px;
+    height: 46px;
+    padding: 0 40px 0 16px;
+    line-height: normal;
+    color: #111827;
+  }
   #add-barcode { width: 72px; height: 32px; padding: 0; line-height: 32px; }
   #update-button { width: 154px; height: 32px; padding: 0; line-height: 32px; }
   #reset-button { width: 85px; height: 32px; padding: 0; line-height: 32px; }
@@ -147,6 +136,10 @@
     background-color:#1976D2; border-color:#1976D2;
   }
 </style>
+
+<!-- AG Grid (Community) CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-grid.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-theme-alpine.css">
 {% endblock %}
 
 {% block content %}
@@ -172,7 +165,7 @@
     <div class="form-group">
       <label class="form-label">Scanned Barcodes</label>
 
-      <div class="scanner-spec-frame">
+      <div class="scanner-spec-frame ag-theme-alpine">
         <div id="bulk-action-toolbar">
           <span id="selection-count">0 selected</span>
           <button id="bulk-delete-btn" class="toolbar-btn">
@@ -183,20 +176,7 @@
           </button>
         </div>
 
-        <div class="scanned-table-container" id="scanned-table-wrap">
-          <table class="scanned-table" id="scanned-table">
-            <thead id="scanned-head">
-              <tr>
-                <th class="col-select">
-                  <input type="checkbox" id="select-all-checkbox" class="checkbox-input">
-                </th>
-                <th>Name</th>
-                <th>Column Name A</th>
-              </tr>
-            </thead>
-            <tbody id="scanned-items"></tbody>
-          </table>
-        </div>
+        <div id="ag-grid"></div>
       </div>
     </div>
 
@@ -231,52 +211,93 @@
     tenantName: "{{ tenant_name }}"
   };
 </script>
+
+<!-- AG Grid (Community) JS -->
+<script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.noStyle.js"></script>
+
 <script>
 document.addEventListener('DOMContentLoaded', function () {
   const barcodeInput = document.getElementById('barcode-input');
   const addButton = document.getElementById('add-barcode');
-  const scannedItems = document.getElementById('scanned-items');
   const updateButton = document.getElementById('update-button');
   const resetButton = document.getElementById('reset-button');
   const locationSelect = document.getElementById('location-select');
   const sublocationSelect = document.getElementById('sublocation-select');
-  
+
   const bulkActionToolbar = document.getElementById('bulk-action-toolbar');
   const selectionCount = document.getElementById('selection-count');
   const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
-  const selectAllCheckbox = document.getElementById('select-all-checkbox');
 
   let scannedBarcodes = [];
   let locationCache = [];
   const tenant = window.tenantInfo ? window.tenantInfo.tenant : null;
 
-  /* Empty state row under header */
-  function renderEmptyRow() {
-    scannedItems.innerHTML = `
-      <tr id="empty-state-row">
-        <td colspan="3" class="spec-empty-cell">
-          <div class="barcode-icon">||||</div>
-          <div class="empty-state-title">No scanned samples</div>
-          <div class="empty-state-text">
-            This table will automatically populate with samples as they are scanned or entered manually in the input field above.
-          </div>
-        </td>
-      </tr>`;
+  /* ========= AG Grid setup ========= */
+  const columnDefs = [
+    {
+      headerName: '',
+      width: 48,
+      checkboxSelection: true,
+      headerCheckboxSelection: true,
+      headerCheckboxSelectionFilteredOnly: false,
+      resizable: false,
+      sortable: false,
+      suppressMenu: true,
+    },
+    { headerName: 'Name', field: 'name', flex: 1 },
+    { headerName: 'Column Name A', field: 'colA', flex: 1 }
+  ];
+
+  const gridOptions = {
+    columnDefs,
+    rowData: [],
+    rowSelection: 'multiple',
+    suppressRowClickSelection: true,
+    animateRows: false,
+    getRowId: params => params.data.id, // stable IDs by barcode
+    defaultColDef: {
+      sortable: false,
+      resizable: false,
+      suppressMovable: true,
+      cellClass: 'ag-cell-wrap-text',
+      wrapText: false
+    },
+    overlayNoRowsTemplate: `
+      <div class="no-rows-overlay">
+        <div class="barcode-icon">||||</div>
+        <div class="empty-state-title">No scanned samples</div>
+        <div class="empty-state-text">
+          This table will automatically populate with samples as they are scanned or entered manually in the input field above.
+        </div>
+      </div>
+    `,
+    onGridReady: () => {
+      gridApi.showNoRowsOverlay();
+    },
+    onSelectionChanged: () => {
+      const count = gridApi.getSelectedRows().length;
+      bulkActionToolbar.style.display = count > 0 ? 'flex' : 'none';
+      if (count > 0) selectionCount.textContent = `${count} selected`;
+    }
+  };
+
+  const gridDiv = document.getElementById('ag-grid');
+  const gridApi = agGrid.createGrid(gridDiv, gridOptions);
+
+  function refreshEmptyOverlay() {
+    const rows = gridApi.getDisplayedRowCount();
+    if (rows === 0) gridApi.showNoRowsOverlay();
+    else gridApi.hideOverlay();
   }
 
+  /* ====== App logic (unchanged behavior) ====== */
   function addRow(barcode) {
-    const emptyRow = document.getElementById('empty-state-row');
-    if (emptyRow) emptyRow.remove();
-
-    const rowHTML = `
-      <tr data-barcode="${barcode}">
-        <td class="col-select"><input type="checkbox" class="row-checkbox checkbox-input" data-barcode="${barcode}"></td>
-        <td>${barcode}</td>
-        <td></td>
-      </tr>`;
-    scannedItems.insertAdjacentHTML('beforeend', rowHTML);
+    gridApi.applyTransaction({
+      add: [{ id: barcode, name: barcode, colA: '' }]
+    });
+    refreshEmptyOverlay();
   }
-  
+
   function addBarcode() {
     const barcode = barcodeInput.value.trim();
     if (!barcode || scannedBarcodes.includes(barcode)) return;
@@ -286,75 +307,68 @@ document.addEventListener('DOMContentLoaded', function () {
     barcodeInput.focus();
     refreshUpdateState();
   }
-  
+
   function refreshUpdateState() {
     updateButton.disabled = !(scannedBarcodes.length > 0 && locationSelect.value !== "");
   }
-  
-  function updateSelectionState() {
-    const allCheckboxes = scannedItems.querySelectorAll('.row-checkbox');
-    const checkedCheckboxes = scannedItems.querySelectorAll('.row-checkbox:checked');
-    const count = checkedCheckboxes.length;
 
-    bulkActionToolbar.style.display = count > 0 ? 'flex' : 'none';
-    if (count > 0) selectionCount.textContent = `${count} selected`;
-
-    if (allCheckboxes.length > 0 && count === allCheckboxes.length) {
-      selectAllCheckbox.checked = true;
-      selectAllCheckbox.indeterminate = false;
-    } else if (count > 0) {
-      selectAllCheckbox.checked = false;
-      selectAllCheckbox.indeterminate = true;
-    } else {
-      selectAllCheckbox.checked = false;
-      selectAllCheckbox.indeterminate = false;
-    }
+  function deleteSelected() {
+    const selectedRows = gridApi.getSelectedRows();
+    if (!selectedRows.length) return;
+    gridApi.applyTransaction({ remove: selectedRows });
+    // remove from scannedBarcodes array too
+    const toDelete = new Set(selectedRows.map(r => r.id));
+    scannedBarcodes = scannedBarcodes.filter(bc => !toDelete.has(bc));
+    refreshEmptyOverlay();
+    refreshUpdateState();
+    // hide toolbar
+    bulkActionToolbar.style.display = 'none';
   }
 
- function fetchLocations() {
-  if (!locationSelect) return;
+  /* Locations */
+  function fetchLocations() {
+    if (!locationSelect) return;
 
-  locationSelect.innerHTML = '<option value="">Loading locations...</option>';
+    locationSelect.innerHTML = '<option value="">Loading locations...</option>';
 
-  fetch(`/get-locations/${tenant}`)
-    .then(res => {
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.json();
-    })
-    .then(locations => {
-      locationCache = locations || [];
-      locationSelect.innerHTML = '<option value="">Please Select</option>';
-      locationCache.forEach(loc => {
-        if (loc && loc.id && loc.name) {
-          const opt = document.createElement('option');
-          opt.value = loc.id;
-          opt.textContent = loc.name;
-          locationSelect.appendChild(opt);
-        }
-      });
-    })
-    .catch(() => {
-      // fallback, same as your original file
-      fetch(`/get-test-locations/${tenant}`)
-        .then(res => res.json())
-        .then(locations => {
-          locationCache = locations || [];
-          locationSelect.innerHTML = '<option value="">Please Select</option>';
-          locationCache.forEach(loc => {
-            if (loc && loc.id && loc.name) {
-              const opt = document.createElement('option');
-              opt.value = loc.id;
-              opt.textContent = loc.name;
-              locationSelect.appendChild(opt);
-            }
-          });
-        })
-        .catch(() => {
-          locationSelect.innerHTML = '<option value="">Failed to load locations</option>';
+    fetch(`/get-locations/${tenant}`)
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then(locations => {
+        locationCache = locations || [];
+        locationSelect.innerHTML = '<option value="">Please Select</option>';
+        locationCache.forEach(loc => {
+          if (loc && loc.id && loc.name) {
+            const opt = document.createElement('option');
+            opt.value = loc.id;
+            opt.textContent = loc.name;
+            locationSelect.appendChild(opt);
+          }
         });
-    });
-}
-
+      })
+      .catch(() => {
+        // fallback, same as original
+        fetch(`/get-test-locations/${tenant}`)
+          .then(res => res.json())
+          .then(locations => {
+            locationCache = locations || [];
+            locationSelect.innerHTML = '<option value="">Please Select</option>';
+            locationCache.forEach(loc => {
+              if (loc && loc.id && loc.name) {
+                const opt = document.createElement('option');
+                opt.value = loc.id;
+                opt.textContent = loc.name;
+                locationSelect.appendChild(opt);
+              }
+            });
+          })
+          .catch(() => {
+            locationSelect.innerHTML = '<option value="">Failed to load locations</option>';
+          });
+      });
+  }
 
   function populateSublocations() {
     const selectedLocationId = locationSelect.value;
@@ -362,9 +376,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (!selectedLocationId) {
       sublocationSelect.disabled = true;
+      refreshUpdateState();
       return;
     }
-    const selectedLocation = locationCache.find(loc => loc.id == selectedLocationId);
+    const selectedLocation = locationCache.find(loc => String(loc.id) === String(selectedLocationId));
     if (selectedLocation && selectedLocation.sublocations && selectedLocation.sublocations.length > 0) {
       selectedLocation.sublocations.forEach(sub => {
         const option = document.createElement('option');
@@ -376,106 +391,78 @@ document.addEventListener('DOMContentLoaded', function () {
     } else {
       sublocationSelect.disabled = true;
     }
-  }
-  
-  // Event Listeners
-  addButton.addEventListener('click', addBarcode);
-  barcodeInput.addEventListener('keypress', e => { if (e.key === 'Enter') addBarcode(); });
-  
-  locationSelect.addEventListener('change', () => {
-    if (locationSelect.value) {
-      locationSelect.classList.remove('is-invalid');
-    } else {
-      locationSelect.classList.add('is-invalid');
-    }
-    populateSublocations();
     refreshUpdateState();
-  });
+  }
+
   function getSelectedBarcodes() {
-  return Array.from(document.querySelectorAll('.row-checkbox:checked'))
-    .map(cb => cb.dataset.barcode);
-}
-
-async function updateLocations() {
-  if (updateButton.disabled) return;
-
-  const locationId = locationSelect.value;
-  const sublocationId = sublocationSelect ? (sublocationSelect.value || '') : '';
-
-  // selected rows, or all scanned if none selected
-  const selected = Array.from(document.querySelectorAll('.row-checkbox:checked'))
-    .map(cb => cb.dataset.barcode);
-  const recordIds = selected.length ? selected : scannedBarcodes.slice();
-
-  if (!recordIds.length) { alert('Please scan at least one barcode.'); return; }
-  if (!locationId)       { alert('Please select a location.'); return; }
-
-  updateButton.disabled = true;
-
-  try {
-    const res = await fetch(`/update-location/${tenant}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ recordIds, locationId, sublocationId })
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const result = await res.json();
-
-    alert(result?.message || 'Location updated successfully.');
-
-    // clear selection + hide bulk bar
-    document.querySelectorAll('.row-checkbox:checked').forEach(cb => (cb.checked = false));
-    selectAllCheckbox.checked = false;
-    selectAllCheckbox.indeterminate = false;
-    bulkActionToolbar.style.display = 'none';
-  } catch (err) {
-    console.error(err);
-    alert('Failed to update location. Check console for details.');
-  } finally {
-    refreshUpdateState();
+    return gridApi.getSelectedRows().map(r => r.id);
   }
-}
 
-  resetButton.addEventListener('click', () => {
+  async function updateLocations() {
+    if (updateButton.disabled) return;
+
+    const locationId = locationSelect.value;
+    const sublocationId = sublocationSelect ? (sublocationSelect.value || '') : '';
+
+    const selected = getSelectedBarcodes();
+    const recordIds = selected.length ? selected : scannedBarcodes.slice();
+
+    if (!recordIds.length) { alert('Please scan at least one barcode.'); return; }
+    if (!locationId)       { alert('Please select a location.'); return; }
+
+    updateButton.disabled = true;
+
+    try {
+      const res = await fetch(`/update-location/${tenant}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recordIds, locationId, sublocationId })
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const result = await res.json();
+
+      alert(result?.message || 'Location updated successfully.');
+
+      // Clear selection + hide bulk bar
+      gridApi.deselectAll();
+      bulkActionToolbar.style.display = 'none';
+    } catch (err) {
+      console.error(err);
+      alert('Failed to update location. Check console for details.');
+    } finally {
+      refreshUpdateState();
+    }
+  }
+
+  function resetAll() {
     scannedBarcodes = [];
-    renderEmptyRow();
+    gridApi.setGridOption('rowData', []);
+    refreshEmptyOverlay();
     locationSelect.value = '';
-    sublocationSelect.value = '';
+    sublocationSelect.innerHTML = '<option value="">-- Select Sublocation --</option>';
     sublocationSelect.disabled = true;
     locationSelect.classList.add('is-invalid');
     refreshUpdateState();
-    updateSelectionState();
     barcodeInput.focus();
+  }
+
+  /* Event Listeners */
+  addButton.addEventListener('click', addBarcode);
+  barcodeInput.addEventListener('keypress', e => { if (e.key === 'Enter') addBarcode(); });
+
+  locationSelect.addEventListener('change', () => {
+    if (locationSelect.value) locationSelect.classList.remove('is-invalid');
+    else locationSelect.classList.add('is-invalid');
+    populateSublocations();
   });
 
-  scannedItems.addEventListener('change', (e) => {
-    if (e.target.classList.contains('row-checkbox')) updateSelectionState();
-  });
+  bulkDeleteBtn.addEventListener('click', deleteSelected);
+  updateButton.addEventListener('click', updateLocations);
+  resetButton.addEventListener('click', resetAll);
 
-  selectAllCheckbox.addEventListener('click', () => {
-    scannedItems.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = selectAllCheckbox.checked);
-    updateSelectionState();
-  });
-updateButton.addEventListener('click', updateLocations);
-
-  bulkDeleteBtn.addEventListener('click', () => {
-    scannedItems.querySelectorAll('.row-checkbox:checked').forEach(checkbox => {
-      const barcode = checkbox.dataset.barcode;
-      const row = checkbox.closest('tr');
-      const index = scannedBarcodes.indexOf(barcode);
-      if (index > -1) scannedBarcodes.splice(index, 1);
-      row.remove();
-    });
-    if (scannedBarcodes.length === 0) renderEmptyRow();
-    updateSelectionState();
-    refreshUpdateState();
-  });
-
-  // Initialization
-  renderEmptyRow();
+  /* Initialization */
   fetchLocations();
+  refreshEmptyOverlay();
 });
 </script>
-
-
 {% endblock %}
