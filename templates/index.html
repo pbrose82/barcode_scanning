@@ -135,16 +135,12 @@
   }
 
   /* Location Grid */
+ /* UPDATED: Location fields are now always stacked vertically */
   .location-grid { 
-    display: grid; 
+    display: flex;
+    flex-direction: column;
     gap: 20px; 
-    grid-template-columns: 1fr; /* Stacked by default */
-    max-width: 920px;
-  }
-  @media (min-width: 768px) {
-    .location-grid {
-      grid-template-columns: 1fr 1fr; /* Side-by-side on larger screens */
-    }
+    max-width: 450px; /* To match the width of other form fields */
   }
 
   /* Empty state */
@@ -251,8 +247,15 @@ document.addEventListener('DOMContentLoaded', function () {
   const tenant = window.tenantInfo ? window.tenantInfo.tenant : null;
 
   function showEmptyState() {
-    scannedItems.innerHTML = `<tr id="empty-state"><td colspan="3" class="empty-state"><div class="empty-state-title">No scanned samples</div></td></tr>`;
-  }
+  scannedItems.innerHTML = `
+    <tr id="empty-state">
+      <td colspan="3" class="empty-state">
+        <div class="barcode-icon">||||</div>
+        <div class="empty-state-title">No scanned samples</div>
+        <div class="empty-state-text">This table will automatically populate with samples as they are scanned or entered manually in the input field above.</div>
+      </td>
+    </tr>`;
+}
 
   function addRow(barcode) {
       const rowHTML = `
