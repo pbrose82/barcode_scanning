@@ -8,32 +8,26 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.0/styles/ag-grid.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.0/styles/ag-theme-alpine.css">
 <style>
-  /* Base & Layout from Barcode Scanner Page */
+  /* Base & Layout */
   html, body { 
     height: 100%; 
-    background-color: #F9FAFB; /* Light gray page background */
+    background-color: #FFFFFF;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     margin: 0;
   }
+  /* UPDATED: Removed padding from this wrapper */
   .page-content{
-    padding: 56px 24px; 
-  }
-  .scanner-container{ 
-    max-width: 1400px; /* Wider for the grid layout */
-    margin: 0 auto;
-    border-radius:12px; 
-    overflow:hidden;
-    box-shadow:0 4px 12px rgba(0,0,0,.08);
+    padding: 0; 
   }
 
-  /* Header with gradient */
+  /* Header with gradient, full width */
   .page-header {
     background: linear-gradient(135deg, #F4F6FF 0%, #F5FBFF 100%);
     padding: 40px;
     border-bottom: 1px solid #E5E7EB;
   }
   
-  /* Main content area is white */
+  /* Main content area is white with padding, full width */
   .scanner-main {
       background-color: #FFFFFF;
       padding: 40px;
@@ -59,7 +53,7 @@
       align-items: center;
       gap: 10px;
   }
-  .control-btn { /* Basic button style for controls */
+  .control-btn { 
       background-color: #FFFFFF;
       border: 1px solid #dee2e6;
   }
@@ -75,7 +69,7 @@
   }
   .location-icon {
       margin-right: 8px;
-      color: #2563EB; /* Matching the blue from scanner page */
+      color: #2563EB;
       width: 14px; 
       text-align: center;
   }
@@ -84,7 +78,6 @@
 
 {% block content %}
 <div class="page-content">
-  <div class="scanner-container">
     <div class="page-header">
         <h1 class="page-title">Location Tracking</h1>
         <p class="instruction-text">
@@ -99,7 +92,6 @@
               <button class="btn btn-sm control-btn"><i class="fas fa-layer-group"></i> Group By (2)</button>
               <button class="btn btn-sm control-btn"><i class="fas fa-sort-amount-down"></i> Sort</button>
           </div>
-
           <div class="control-group">
               <div class="input-group input-group-sm search-box">
                   <span class="input-group-text bg-white border-end-0"><i class="fas fa-search"></i></span>
@@ -125,7 +117,6 @@
       </div>
       <div id="locationGrid" class="ag-theme-alpine"></div>
     </div>
-  </div>
 </div>
 {% endblock %}
 
@@ -134,7 +125,7 @@
 
 <script>
 "use strict";
-// This JavaScript is the original logic for the AG Grid and does not need to be changed.
+// The JavaScript for the AG Grid does not need to be changed for this layout update.
 document.addEventListener('DOMContentLoaded', function () {
     const gridDiv = document.getElementById('locationGrid');
     const searchFilterInput = document.getElementById('grid-search-filter');
@@ -197,7 +188,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const topLevelLocations = locations.filter(location => !sublocationNames.has(location.name));
             
-            const rowData = [];
+        _highlight_start_      const rowData = [];
             const processLocation = (location, parentHierarchy) => {
                 const currentHierarchy = [...parentHierarchy, location.name];
                 rowData.push({ name: location.name, hierarchy: currentHierarchy });
