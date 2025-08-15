@@ -901,7 +901,7 @@ def location_tracking(tenant=None):
     # Get tenant name if tenant is available
     tenant_name = None
     if tenant and tenant in CONFIG["tenants"]:
-        tenant_name = CONFIG["tenants"][tenant].get("display_name", tenant)
+        tenant_name = CONFIG["tenants"][tenant].get("tenant_name", tenant)
         
     # Get all tenants for dropdown if needed in admin mode
     tenants = list(CONFIG["tenants"].keys())
