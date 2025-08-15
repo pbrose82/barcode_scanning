@@ -10,24 +10,34 @@
     height: 100%; 
     background-color: #FFFFFF;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    margin: 0;
   }
-  .page-content{
-    padding: 40px; 
+  
+  /* UPDATED: New header section with gradient */
+  .page-header {
+    background: linear-gradient(135deg, #E4DDFF 0%, #DDF5FF 100%);
+    padding: 40px;
+  }
+  
+  /* UPDATED: Main content area is white and has padding */
+  .scanner-main-content {
+      background-color: #FFFFFF;
+      padding: 40px;
   }
 
   /* Typography */
   .page-title{ 
     font-size: 24px; 
-    color: #111827; 
+    color: #1F2937; 
     font-weight: 600; 
-    margin-bottom: 12px; 
+    margin: 0 0 12px 0;
   }
   .instruction-text{ 
     font-size: 14px; 
     color: #4B5563; 
     line-height: 1.6; 
-    margin-bottom: 40px; 
     max-width: 800px;
+    margin: 0;
   }
   .section-title{ 
     font-size: 20px; 
@@ -115,11 +125,11 @@
       border: none;
       cursor: pointer;
       padding: 4px;
-      opacity: 0; /* Hidden by default */
+      opacity: 0;
       transition: opacity 0.2s ease-in-out;
   }
   .scanned-table tbody tr:hover .delete-btn {
-      opacity: 1; /* Appears on row hover */
+      opacity: 1;
   }
   .delete-btn svg { width: 18px; height: 18px; fill: #9CA3AF; }
   .delete-btn:hover svg { fill: #EF4444; }
@@ -136,12 +146,15 @@
 {% endblock %}
 
 {% block content %}
-<div class="page-content">
-      <h1 class="page-title">Barcode Scanning</h1>
-      <p class="instruction-text">
-        Before scanning, make sure the input field is active so the barcode is entered correctly. In case the scanner doesn’t respond or fails to read the code, you can simply type the barcode manually instead. There's no limit to how many barcodes you can scan, so feel free to continue as needed.
-      </p>
+<div>
+    <div class="page-header">
+        <h1 class="page-title">Barcode Scanning</h1>
+        <p class="instruction-text">
+            Before scanning, make sure the input field is active so the barcode is entered correctly. In case the scanner doesn’t respond or fails to read the code, you can simply type the barcode manually instead. There's no limit to how many barcodes you can scan, so feel free to continue as needed.
+        </p>
+    </div>
 
+    <div class="scanner-main-content">
       <h2 class="section-title">Barcode Overview</h2>
       <div class="form-group">
         <label class="form-label" for="barcode-input">Scan or Enter Barcode</label>
@@ -158,7 +171,8 @@
               <tr>
                 <th>Name</th>
                 <th>Column Name A</th>
-                <th class="col-actions"></th> </tr>
+                <th class="col-actions"></th>
+              </tr>
             </thead>
             <tbody id="scanned-items">
               </tbody>
@@ -186,6 +200,7 @@
         <button id="update-button" class="btn btn-secondary" disabled>Update Location</button>
         <button id="reset-button" class="btn btn-secondary">Reset</button>
       </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -236,11 +251,9 @@ document.addEventListener('DOMContentLoaded', function () {
         </tr>`;
       scannedItems.insertAdjacentHTML('beforeend', rowHTML);
 
-      // Find the row and button we just added
       const newRow = scannedItems.querySelector(`tr[data-barcode="${barcode}"]`);
       const deleteBtn = newRow.querySelector('.delete-btn');
 
-      // Add a specific event listener for this new button
       deleteBtn.addEventListener('click', () => {
           removeBarcode(barcode, newRow);
       });
@@ -255,7 +268,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     scannedBarcodes.push(barcode);
     document.getElementById('empty-state')?.remove();
-    addRow(barcode); // Use the new function to add the row and its listener
+    addRow(barcode);
     barcodeInput.value = '';
     barcodeInput.focus();
     refreshUpdateState();
