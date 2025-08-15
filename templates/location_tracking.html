@@ -5,274 +5,240 @@
 {% set active_page = 'location_tracking' %}
 
 {% block extra_css %}
-<!-- AG Grid CSS -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.0/styles/ag-grid.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.0/styles/ag-theme-alpine.css">
 <style>
-    /* --- Style Customizations to match Figma --- */
-    body, .content-area {
-        background-color: #FFFFFF !important; /* Set main background to white */
-    }
+  /* Base & Layout from Barcode Scanner Page */
+  html, body { 
+    height: 100%; 
+    background-color: #F9FAFB; /* Light gray page background */
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    margin: 0;
+  }
+  .page-content{
+    padding: 56px 24px; 
+  }
+  .scanner-container{ 
+    max-width: 1400px; /* Wider for the grid layout */
+    margin: 0 auto;
+    border-radius:12px; 
+    overflow:hidden;
+    box-shadow:0 4px 12px rgba(0,0,0,.08);
+  }
 
-    /* New subheader style for the top section */
-    .page-subheader {
-        background-color: #f8f9fa; /* Grey background for the header section */
-        padding: 30px;
-        margin-bottom: 30px;
-    }
+  /* Header with gradient */
+  .page-header {
+    background: linear-gradient(135deg, #F4F6FF 0%, #F5FBFF 100%);
+    padding: 40px;
+    border-bottom: 1px solid #E5E7EB;
+  }
+  
+  /* Main content area is white */
+  .scanner-main {
+      background-color: #FFFFFF;
+      padding: 40px;
+  }
 
-    .location-tracking-container {
-        padding: 0;
-        max-width: 100%;
-        background-color: transparent;
-    }
-
-    /* Center the content */
-    .subheader-content, .grid-content-wrapper {
-        max-width: 1400px;
-        margin: 0 auto;
-    }
-    
-    .page-header h2 {
-        color: var(--alchemy-dark);
-        font-weight: 600;
-    }
-    .page-header p {
-        color: var(--alchemy-grey);
-        max-width: 800px;
-        margin-bottom: 0;
-    }
-    
-    /* White card for the grid and its controls */
-    .grid-card {
-        background-color: #FFFFFF;
-        border-radius: 8px;
-        padding: 20px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    
-    .grid-controls {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding-bottom: 15px;
-    }
-
-    .control-group {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    .control-btn {
-        background-color: #FFFFFF;
-        border: 1px solid #dee2e6;
-        color: var(--alchemy-dark);
-    }
-    .control-btn i {
-        margin-right: 5px;
-    }
-    
-    .search-box {
-        width: 250px;
-    }
-    
-    #locationGrid {
-        height: 65vh;
-        width: 100%;
-        border: none;
-    }
-
-    #locationGrid .ag-header {
-        background-color: #f8f9fa;
-        border-bottom: 1px solid #dee2e6;
-    }
-
-    #locationGrid .ag-header-cell {
-        background-color: transparent;
-        font-weight: 500;
-    }
-
-    .ag-theme-alpine {
-        --ag-border-color: #dee2e6; /* Restore grid lines */
-        --ag-row-border-color: #dee2e6;
-    }
-
-    .location-icon {
-        margin-right: 8px;
-        color: var(--alchemy-blue);
-        width: 14px; 
-        text-align: center;
-    }
+  /* Typography */
+  .page-title{ 
+    font-size: 24px; color: #1F2937; font-weight: 600; margin: 0 0 12px 0;
+  }
+  .instruction-text{ 
+    font-size: 14px; color: #4B5563; line-height: 1.6; max-width: 800px; margin: 0;
+  }
+  
+  /* --- Styles specific to Location Tracking Grid --- */
+  .grid-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 20px;
+  }
+  .control-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+  }
+  .control-btn { /* Basic button style for controls */
+      background-color: #FFFFFF;
+      border: 1px solid #dee2e6;
+  }
+  .search-box { width: 250px; }
+  
+  #locationGrid {
+      height: 65vh;
+      width: 100%;
+  }
+  .ag-theme-alpine {
+      --ag-border-color: #dee2e6;
+      --ag-row-border-color: #dee2e6;
+  }
+  .location-icon {
+      margin-right: 8px;
+      color: #2563EB; /* Matching the blue from scanner page */
+      width: 14px; 
+      text-align: center;
+  }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="location-tracking-container">
-    <!-- Grey Subheader Section -->
-    <div class="page-subheader">
-        <div class="subheader-content">
-            <div class="page-header">
-                <h2>Location Tracking</h2>
-                <p>Here you can review all locations and their hierarchical relationships, such as Laboratory → Room → Cupboard. Use the grid or list view to explore and manage the structure in the way that suits you best.</p>
-            </div>
-        </div>
+<div class="page-content">
+  <div class="scanner-container">
+    <div class="page-header">
+        <h1 class="page-title">Location Tracking</h1>
+        <p class="instruction-text">
+            Here you can review all locations and their hierarchical relationships, such as Laboratory → Room → Cupboard. Use the grid or list view to explore and manage the structure in the way that suits you best.
+        </p>
     </div>
 
-    <!-- White Content Section for the Grid -->
-    <div class="grid-content-wrapper">
-        <div class="grid-card">
-            <div class="grid-controls">
-                <!-- Left Side Controls: Filters & Grouping -->
-                <div class="control-group">
-                    <button class="btn btn-sm control-btn"><i class="fas fa-filter"></i> Filters</button>
-                    <button class="btn btn-sm control-btn"><i class="fas fa-layer-group"></i> Group By (2)</button>
-                    <button class="btn btn-sm control-btn"><i class="fas fa-sort-amount-down"></i> Sort</button>
-                </div>
+    <div class="scanner-main">
+      <div class="grid-controls">
+          <div class="control-group">
+              <button class="btn btn-sm control-btn"><i class="fas fa-filter"></i> Filters</button>
+              <button class="btn btn-sm control-btn"><i class="fas fa-layer-group"></i> Group By (2)</button>
+              <button class="btn btn-sm control-btn"><i class="fas fa-sort-amount-down"></i> Sort</button>
+          </div>
 
-                <!-- Right Side Controls: Search & View Toggle -->
-                <div class="control-group">
-                     <div class="input-group input-group-sm search-box">
-                        <span class="input-group-text bg-white border-end-0"><i class="fas fa-search"></i></span>
-                        <input type="text" id="grid-search-filter" class="form-control border-start-0" placeholder="Search...">
-                    </div>
-                     <div class="btn-group btn-group-sm">
-                        <button type="button" class="btn control-btn active"><i class="fas fa-list"></i></button>
-                        <button type="button" class="btn control-btn"><i class="fas fa-th"></i></button>
-                    </div>
-                    {% if admin_mode %}
-                    <div class="admin-actions">
-                         <select id="tenantSelector" class="form-select form-select-sm d-inline-block" style="width: auto;">
-                            {% for tenant in tenants %}
-                            <option value="{{ tenant }}" {% if tenant == current_tenant %}selected{% endif %}>{{ tenant }}</option>
-                            {% endfor %}
-                        </select>
-                        <button id="refreshButton" class="btn btn-sm btn-outline-primary">
-                            <i class="fas fa-sync-alt"></i>
-                        </button>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-            <div id="locationGrid" class="ag-theme-alpine"></div>
-        </div>
+          <div class="control-group">
+              <div class="input-group input-group-sm search-box">
+                  <span class="input-group-text bg-white border-end-0"><i class="fas fa-search"></i></span>
+                  <input type="text" id="grid-search-filter" class="form-control border-start-0" placeholder="Search...">
+              </div>
+              <div class="btn-group btn-group-sm">
+                  <button type="button" class="btn control-btn active"><i class="fas fa-list"></i></button>
+                  <button type="button" class="btn control-btn"><i class="fas fa-th"></i></button>
+              </div>
+              {% if admin_mode %}
+              <div class="admin-actions">
+                  <select id="tenantSelector" class="form-select form-select-sm d-inline-block" style="width: auto;">
+                      {% for tenant in tenants %}
+                      <option value="{{ tenant }}" {% if tenant == current_tenant %}selected{% endif %}>{{ tenant }}</option>
+                      {% endfor %}
+                  </select>
+                  <button id="refreshButton" class="btn btn-sm btn-outline-primary">
+                      <i class="fas fa-sync-alt"></i>
+                  </button>
+              </div>
+              {% endif %}
+          </div>
+      </div>
+      <div id="locationGrid" class="ag-theme-alpine"></div>
     </div>
+  </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
-<!-- AG Grid JS -->
 <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.0/dist/ag-grid-community.min.js"></script>
 
 <script>
 "use strict";
+// This JavaScript is the original logic for the AG Grid and does not need to be changed.
 document.addEventListener('DOMContentLoaded', function () {
-    const gridDiv = document.getElementById('locationGrid');
-    const searchFilterInput = document.getElementById('grid-search-filter');
-    const adminMode = {% if admin_mode %}true{% else %}false{% endif %};
-    let currentTenant = "{{ current_tenant }}";
+    const gridDiv = document.getElementById('locationGrid');
+    const searchFilterInput = document.getElementById('grid-search-filter');
+    const adminMode = {% if admin_mode %}true{% else %}false{% endif %};
+    let currentTenant = "{{ current_tenant }}";
 
-    const gridOptions = {
-        columnDefs: [
-            {
-                headerName: 'Country / Address',
-                flex: 1,
-                valueGetter: () => 'Country Name / Address',
-                sortable: false,
-            }
-        ],
-        autoGroupColumnDef: {
-            headerName: 'Location Hierarchy',
-            field: 'name',
-            flex: 2,
-            minWidth: 350,
-            cellRendererParams: {
-                suppressCount: true,
-                innerRenderer: params => {
-                    const iconClass = params.node.group ? 'fa-folder' : 'fa-map-marker-alt';
-                    return `<i class="fas ${iconClass} location-icon"></i> ${params.value}`;
-                }
-            },
-        },
-        defaultColDef: {
-            resizable: true,
-            sortable: true,
-        },
-        rowData: [],
-        treeData: true,
-        getDataPath: (data) => data.hierarchy,
-        groupDefaultExpanded: 1,
-        suppressRowClickSelection: true,
-        animateRows: true,
-    };
+    const gridOptions = {
+        columnDefs: [
+            {
+                headerName: 'Country / Address',
+                flex: 1,
+                valueGetter: () => 'Country Name / Address',
+                sortable: false,
+            }
+        ],
+        autoGroupColumnDef: {
+            headerName: 'Location Hierarchy',
+            field: 'name',
+            flex: 2,
+            minWidth: 350,
+            cellRendererParams: {
+                suppressCount: true,
+                innerRenderer: params => {
+                    const iconClass = params.node.group ? 'fa-folder' : 'fa-map-marker-alt';
+                    return `<i class="fas ${iconClass} location-icon"></i> ${params.value}`;
+                }
+            },
+        },
+        defaultColDef: {
+            resizable: true,
+            sortable: true,
+        },
+        rowData: [],
+        treeData: true,
+        getDataPath: (data) => data.hierarchy,
+        groupDefaultExpanded: 1,
+        suppressRowClickSelection: true,
+        animateRows: true,
+    };
 
-    if (gridDiv) {
-        new agGrid.Grid(gridDiv, gridOptions);
-    }
-    
-    async function fetchAndDisplayLocations(tenantId) {
-        gridOptions.api?.showLoadingOverlay();
-        try {
-            const response = await fetch(`/get-locations/${tenantId}`);
-            if (!response.ok) throw new Error(`Failed to fetch: ${response.statusText}`);
-            const locations = await response.json();
-            
-            // Create a set of all sublocation names to identify true top-level locations
-            const sublocationNames = new Set();
-            locations.forEach(location => {
-                if (location.sublocations && location.sublocations.length > 0) {
-                    location.sublocations.forEach(sub => {
-                        sublocationNames.add(sub.name);
-                    });
-                }
-            });
+    if (gridDiv) {
+        new agGrid.Grid(gridDiv, gridOptions);
+    }
+    
+    async function fetchAndDisplayLocations(tenantId) {
+        gridOptions.api?.showLoadingOverlay();
+        try {
+            const response = await fetch(`/get-locations/${tenantId}`);
+            if (!response.ok) throw new Error(`Failed to fetch: ${response.statusText}`);
+            const locations = await response.json();
+            
+            const sublocationNames = new Set();
+            locations.forEach(location => {
+                if (location.sublocations && location.sublocations.length > 0) {
+                    location.sublocations.forEach(sub => {
+                        sublocationNames.add(sub.name);
+                    });
+                }
+            });
 
-            // Filter for top-level locations (those whose name is not in the sublocation set)
-            const topLevelLocations = locations.filter(location => !sublocationNames.has(location.name));
-            
-            const rowData = [];
-            const processLocation = (location, parentHierarchy) => {
-                const currentHierarchy = [...parentHierarchy, location.name];
-                rowData.push({ name: location.name, hierarchy: currentHierarchy });
-                if (location.sublocations) {
-                    const sortedSublocations = [...location.sublocations].sort((a, b) => a.name.localeCompare(b.name));
-                    sortedSublocations.forEach(sub => processLocation(sub, currentHierarchy));
-                }
-            };
-            
-            // Process only the filtered top-level locations
-            topLevelLocations.sort((a, b) => a.name.localeCompare(b.name)).forEach(loc => processLocation(loc, []));
-            
-            gridOptions.api?.setRowData(rowData);
-        } catch (error) {
-            console.error(error);
-            gridOptions.api?.showNoRowsOverlay();
-        }
-    }
+            const topLevelLocations = locations.filter(location => !sublocationNames.has(location.name));
+            
+            const rowData = [];
+            const processLocation = (location, parentHierarchy) => {
+                const currentHierarchy = [...parentHierarchy, location.name];
+                rowData.push({ name: location.name, hierarchy: currentHierarchy });
+                if (location.sublocations) {
+                    const sortedSublocations = [...location.sublocations].sort((a, b) => a.name.localeCompare(b.name));
+                    sortedSublocations.forEach(sub => processLocation(sub, currentHierarchy));
+                }
+            };
+            
+            topLevelLocations.sort((a, b) => a.name.localeCompare(b.name)).forEach(loc => processLocation(loc, []));
+            
+            gridOptions.api?.setRowData(rowData);
+        } catch (error) {
+            console.error(error);
+            gridOptions.api?.showNoRowsOverlay();
+        }
+    }
 
-    searchFilterInput?.addEventListener('input', () => gridOptions.api?.setQuickFilter(searchFilterInput.value));
+    searchFilterInput?.addEventListener('input', () => gridOptions.api?.setQuickFilter(searchFilterInput.value));
 
-    if (adminMode) {
-        const tenantSelector = document.getElementById('tenantSelector');
-        const refreshButton = document.getElementById('refreshButton');
-        tenantSelector?.addEventListener('change', (e) => {
-            currentTenant = e.target.value;
-            window.history.pushState({}, '', `/admin/location-tracking/${currentTenant}`);
-            fetchAndDisplayLocations(currentTenant);
-        });
-        refreshButton?.addEventListener('click', async () => {
-            refreshButton.disabled = true;
-            refreshButton.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i>';
-            await fetch(`/admin/refresh-location-cache/${currentTenant}`, { method: 'POST' });
-            setTimeout(() => {
-                fetchAndDisplayLocations(currentTenant);
-                refreshButton.disabled = false;
-                refreshButton.innerHTML = '<i class="fas fa-sync-alt"></i>';
-            }, 2000);
-        });
-    }
+    if (adminMode) {
+        const tenantSelector = document.getElementById('tenantSelector');
+        const refreshButton = document.getElementById('refreshButton');
+        tenantSelector?.addEventListener('change', (e) => {
+            currentTenant = e.target.value;
+            window.history.pushState({}, '', `/admin/location-tracking/${currentTenant}`);
+            fetchAndDisplayLocations(currentTenant);
+        });
+        refreshButton?.addEventListener('click', async () => {
+            refreshButton.disabled = true;
+            refreshButton.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i>';
+            await fetch(`/admin/refresh-location-cache/${currentTenant}`, { method: 'POST' });
+            setTimeout(() => {
+                fetchAndDisplayLocations(currentTenant);
+                refreshButton.disabled = false;
+                refreshButton.innerHTML = '<i class="fas fa-sync-alt"></i>';
+            }, 2000);
+        });
+    }
 
-    fetchAndDisplayLocations(currentTenant);
+    fetchAndDisplayLocations(currentTenant);
 });
 </script>
 {% endblock %}
