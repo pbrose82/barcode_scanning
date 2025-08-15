@@ -125,7 +125,6 @@
 
 <script>
 "use strict";
-// The JavaScript for the AG Grid does not need to be changed for this layout update.
 document.addEventListener('DOMContentLoaded', function () {
     const gridDiv = document.getElementById('locationGrid');
     const searchFilterInput = document.getElementById('grid-search-filter');
@@ -148,9 +147,23 @@ document.addEventListener('DOMContentLoaded', function () {
             minWidth: 350,
             cellRendererParams: {
                 suppressCount: true,
+                // UPDATED: The innerRenderer now creates hyperlinks
                 innerRenderer: params => {
                     const iconClass = params.node.group ? 'fa-folder' : 'fa-map-marker-alt';
-                    return `<i class="fas ${iconClass} location-icon"></i> ${params.value}`;
+                    const iconHtml = `<i class="fas ${iconClass} location-icon"></i>`;
+                    
+                    // Check if it's a final location (not a group) and has an ID
+                    if (!params.node.group && params.data && params.data.id) {
+                        const tenant = currentTenant;
+                        const recordId = params.data.id;
+                        const url = `https://app.alchemy.cloud/${tenant}/record/${recordId}`;
+                        
+                        // Return the name as a hyperlink
+                        return `${iconHtml} <a href="${url}" target="_blank">${params.value}</a>`;
+                    } else {
+                        // Otherwise, just return the name as text (for folders)
+                        return `${iconHtml} ${params.value}`;
+                    }
                 }
             },
         },
@@ -180,18 +193,17 @@ document.addEventListener('DOMContentLoaded', function () {
             const sublocationNames = new Set();
             locations.forEach(location => {
                 if (location.sublocations && location.sublocations.length > 0) {
-                    location.sublocations.forEach(sub => {
-                        sublocationNames.add(sub.name);
-                    });
+                    location.sublocations.forEach(sub => sublocationNames.add(sub.name));
                 }
             });
 
             const topLevelLocations = locations.filter(location => !sublocationNames.has(location.name));
             
-        _highlight_start_      const rowData = [];
+            const rowData = [];
             const processLocation = (location, parentHierarchy) => {
                 const currentHierarchy = [...parentHierarchy, location.name];
-                rowData.push({ name: location.name, hierarchy: currentHierarchy });
+                // UPDATED: Pass the location ID along with the name
+                rowData.push({ id: location.id, name: location.name, hierarchy: currentHierarchy });
                 if (location.sublocations) {
                     const sortedSublocations = [...location.sublocations].sort((a, b) => a.name.localeCompare(b.name));
                     sortedSublocations.forEach(sub => processLocation(sub, currentHierarchy));
