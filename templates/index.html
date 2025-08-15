@@ -129,7 +129,12 @@
   /* === Spec sizing overrides === */
   .barcode-input-group { max-width: 514px; }                /* 432 + 10 + 72 */
   #barcode-input { width: 432px; height: 46px; }
-  #location-select, #sublocation-select { width: 432px; height: 46px; line-height: 46px; }
+  #location-select,#sublocation-select {
+  height: 46px;
+  padding: 0 40px 0 16px;   /* vertical padding = 0; keep left/right, extra on right for chevron */
+  line-height: normal;      /* prevent text clipping in WebKit */
+  color: #111827;           /* ensure readable text */
+}
   #add-barcode { width: 72px; height: 32px; padding: 0; line-height: 32px; }
   #update-button { width: 154px; height: 32px; padding: 0; line-height: 32px; }
   #reset-button { width: 85px; height: 32px; padding: 0; line-height: 32px; }
@@ -362,7 +367,56 @@ document.addEventListener('DOMContentLoaded', function () {
     populateSublocations();
     refreshUpdateState();
   });
-  
+  function getSelectedBarcodes() {
+  return Array.from(document.querySelectorAll('.row-checkbox:checked'))
+    .map(cb => cb.dataset.barcode);
+}
+
+async function updateLocations() {
+  if (updateButton.disabled) return;
+
+  const locationId = locationSelect.value || null;
+  const sublocationId = sublocationSelect.value || null;
+  if (!locationId || scannedBarcodes.length === 0) return;
+
+  // selected rows, or all rows if none selected
+  const selected = getSelectedBarcodes();
+  const barcodesToUpdate = selected.length ? selected : scannedBarcodes.slice();
+
+  // Disable while working
+  updateButton.disabled = true;
+
+  try {
+    // TODO: replace URL with your real endpoint
+    const res = await fetch(`/api/${tenant}/barcodes/location`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        barcodes: barcodesToUpdate,
+        locationId,
+        sublocationId
+      })
+    });
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    // Optional: show a nicer toast
+    alert('Location updated successfully.');
+
+    // Clear selection and toolbar
+    document.querySelectorAll('.row-checkbox:checked').forEach(cb => (cb.checked = false));
+    selectAllCheckbox.checked = false;
+    selectAllCheckbox.indeterminate = false;
+    bulkActionToolbar.style.display = 'none';
+
+  } catch (err) {
+    console.error(err);
+    alert('Failed to update location. Check console for details.');
+  } finally {
+    // Re-evaluate enabled/disabled state
+    refreshUpdateState();
+  }
+}
+
   resetButton.addEventListener('click', () => {
     scannedBarcodes = [];
     renderEmptyRow();
@@ -383,6 +437,7 @@ document.addEventListener('DOMContentLoaded', function () {
     scannedItems.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = selectAllCheckbox.checked);
     updateSelectionState();
   });
+updateButton.addEventListener('click', updateLocations);
 
   bulkDeleteBtn.addEventListener('click', () => {
     scannedItems.querySelectorAll('.row-checkbox:checked').forEach(checkbox => {
