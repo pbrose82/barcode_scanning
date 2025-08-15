@@ -8,30 +8,19 @@
   /* Base & Layout */
   html, body { 
     height: 100%; 
-    background-color: #F9FAFB; /* Light gray page background */
+    background-color: #FFFFFF; /* White background for the page */
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     margin: 0;
   }
-  .page-content{
-    padding: 56px 24px; 
-  }
-  /* UPDATED: Centered card container */
-  .scanner-container{ 
-    max-width: 1100px; 
-    margin: 0 auto;
-    border-radius:12px; 
-    overflow:hidden;
-    box-shadow:0 4px 12px rgba(0,0,0,.08);
-  }
-
-  /* UPDATED: Header with gradient */
+  
+  /* UPDATED: Header with gradient, full width */
   .page-header {
     background: linear-gradient(135deg, #E4DDFF 0%, #DDF5FF 100%);
     padding: 40px;
     border-bottom: 1px solid #E5E7EB;
   }
   
-  /* UPDATED: Main content area is white */
+  /* UPDATED: Main content area is white with padding, full width */
   .scanner-main {
       background-color: #FFFFFF;
       padding: 40px;
@@ -55,8 +44,8 @@
   }
   
   /* Forms & Inputs */
-  .form-group { max-width: 450px; } 
-  .barcode-input-group{ display:flex; gap:10px; margin-bottom: 24px; }
+  .form-group { width: 100%; } 
+  .barcode-input-group{ display:flex; gap:10px; margin-bottom: 24px; max-width: 500px; }
   .barcode-input, .form-select {
     padding: 10px 16px; font-size: 14px;
     border: 1px solid #D1D5DB; border-radius: 6px; 
@@ -142,10 +131,13 @@
     width: 8px; height: 2px; background-color: white;
   }
 
-  /* Location Grid */
-  .location-grid { display: grid; gap: 20px; }
-  @media (min-width: 768px) { .location-grid { grid-template-columns: 1fr 1fr; } }
-
+  /* UPDATED: Location layout is now a single column */
+  .location-container { 
+      display: flex;
+      flex-direction: column;
+      gap: 20px; 
+      max-width: 500px;
+  }
 
   /* Empty state */
   .empty-state{ text-align:center; padding:60px 20px; }
@@ -158,8 +150,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="page-content">
-  <div class="scanner-container">
+<div>
     <div class="page-header">
         <h1 class="page-title">Barcode Scanning</h1>
         <p class="instruction-text">
@@ -202,7 +193,7 @@
       </div>
 
       <h2 class="section-title">Location</h2>
-      <div class="location-grid">
+      <div class="location-container">
         <div class="form-group">
           <label class="form-label" for="location-select">Location <span class="required-star">*</span></label>
           <select class="form-select is-invalid" id="location-select">
@@ -212,7 +203,7 @@
         <div class="form-group">
           <label class="form-label" for="sublocation-select">Sublocation</label>
           <select class="form-select" id="sublocation-select" disabled>
-          <option value="">Please Select</option>
+          <option value="">-- Select Sublocation --</option>
           </select>
         </div>
       </div>
@@ -222,7 +213,6 @@
         <button id="reset-button" class="btn btn-outline">Reset</button>
       </div>
     </div>
-  </div>
 </div>
 {% endblock %}
 
@@ -293,7 +283,7 @@ document.addEventListener('DOMContentLoaded', function () {
           bulkActionToolbar.style.display = 'none';
       }
 
-      if (count > 0 && count === allCheckboxes.length) {
+      if (allCheckboxes.length > 0 && count === allCheckboxes.length) {
           selectAllCheckbox.checked = true;
           selectAllCheckbox.indeterminate = false;
       } else if (count > 0) {
@@ -305,11 +295,13 @@ document.addEventListener('DOMContentLoaded', function () {
       }
   }
 
+  // --- API Functions ---
   async function fetchLocations() {
     try {
       const response = await fetch('/api/v1/locations'); 
-      if (!response.ok) throw new Error('Network response was not ok');
+      if (!response.ok) throw new Error('Failed to fetch locations');
       const locations = await response.json();
+      
       locations.forEach(location => {
         const option = document.createElement('option');
         option.value = location.id;
@@ -317,22 +309,50 @@ document.addEventListener('DOMContentLoaded', function () {
         locationSelect.appendChild(option);
       });
     } catch (error) {
-      console.error('Failed to fetch locations:', error);
+      console.error(error);
     }
   }
 
-  // Event Listeners
+  async function fetchSublocations(locationId) {
+      sublocationSelect.innerHTML = '<option value="">-- Select Sublocation --</option>';
+      if (!locationId) return;
+
+      try {
+          const response = await fetch(`/api/v1/locations/${locationId}/sublocations`);
+          if (!response.ok) throw new Error('Failed to fetch sublocations');
+          const sublocations = await response.json();
+
+          if (sublocations.length > 0) {
+              sublocations.forEach(sub => {
+                  const option = document.createElement('option');
+                  option.value = sub.id;
+                  option.textContent = sub.name;
+                  sublocationSelect.appendChild(option);
+              });
+              sublocationSelect.disabled = false;
+          } else {
+              sublocationSelect.disabled = true;
+          }
+      } catch (error) {
+          console.error(error);
+          sublocationSelect.disabled = true;
+      }
+  }
+
+
+  // --- Event Listeners ---
   addButton.addEventListener('click', addBarcode);
   barcodeInput.addEventListener('keypress', e => { if (e.key === 'Enter') addBarcode(); });
   
   locationSelect.addEventListener('change', () => {
-    if (locationSelect.value) {
+    const selectedLocationId = locationSelect.value;
+    if (selectedLocationId) {
       locationSelect.classList.remove('is-invalid');
-      sublocationSelect.disabled = false;
+      fetchSublocations(selectedLocationId);
     } else {
       locationSelect.classList.add('is-invalid');
+      sublocationSelect.innerHTML = '<option value="">-- Select Sublocation --</option>';
       sublocationSelect.disabled = true;
-      sublocationSelect.value = '';
     }
     refreshUpdateState();
   });
@@ -345,7 +365,7 @@ document.addEventListener('DOMContentLoaded', function () {
     sublocationSelect.disabled = true;
     locationSelect.classList.add('is-invalid');
     refreshUpdateState();
-    updateSelectionState(); // Hide toolbar
+    updateSelectionState();
     barcodeInput.focus();
   });
 
@@ -376,7 +396,7 @@ document.addEventListener('DOMContentLoaded', function () {
       refreshUpdateState();
   });
 
-  // Initialization
+  // --- Initialization ---
   showEmptyState();
   fetchLocations();
 });
