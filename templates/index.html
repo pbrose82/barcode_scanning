@@ -224,6 +224,7 @@
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+  // --- Element Selectors ---
   const barcodeInput = document.getElementById('barcode-input');
   const addButton = document.getElementById('add-barcode');
   const scannedItems = document.getElementById('scanned-items');
@@ -238,23 +239,18 @@ document.addEventListener('DOMContentLoaded', function () {
   const selectAllCheckbox = document.getElementById('select-all-checkbox');
   
   let scannedBarcodes = [];
+  let locationCache = []; // To store the full location data
   const tenant = window.tenantInfo ? window.tenantInfo.tenant : null;
 
+  // --- UI Functions ---
   function showEmptyState() {
-    scannedItems.innerHTML = `
-      <tr id="empty-state">
-        <td colspan="3" class="empty-state">
-          <div class="empty-state-title">No scanned samples</div>
-        </td>
-      </tr>`;
+    scannedItems.innerHTML = `<tr id="empty-state"><td colspan="3" class="empty-state"><div class="empty-state-title">No scanned samples</div></td></tr>`;
   }
 
   function addRow(barcode) {
       const rowHTML = `
         <tr data-barcode="${barcode}">
-            <td class="col-select">
-                <input type="checkbox" class="row-checkbox checkbox-input" data-barcode="${barcode}">
-            </td>
+            <td class="col-select"><input type="checkbox" class="row-checkbox checkbox-input" data-barcode="${barcode}"></td>
             <td>${barcode}</td>
             <td></td> 
         </tr>`;
@@ -273,8 +269,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   
   function refreshUpdateState() {
-    const enabled = scannedBarcodes.length > 0 && locationSelect.value !== "";
-    updateButton.disabled = !enabled;
+    updateButton.disabled = !(scannedBarcodes.length > 0 && locationSelect.value !== "");
   }
   
   function updateSelectionState() {
@@ -282,12 +277,8 @@ document.addEventListener('DOMContentLoaded', function () {
       const checkedCheckboxes = scannedItems.querySelectorAll('.row-checkbox:checked');
       const count = checkedCheckboxes.length;
 
-      if (count > 0) {
-          bulkActionToolbar.style.display = 'flex';
-          selectionCount.textContent = `${count} selected`;
-      } else {
-          bulkActionToolbar.style.display = 'none';
-      }
+      bulkActionToolbar.style.display = count > 0 ? 'flex' : 'none';
+      if (count > 0) selectionCount.textContent = `${count} selected`;
 
       if (allCheckboxes.length > 0 && count === allCheckboxes.length) {
           selectAllCheckbox.checked = true;
@@ -301,20 +292,17 @@ document.addEventListener('DOMContentLoaded', function () {
       }
   }
 
-  // --- API Functions ---
+  // --- API Functions (Corrected Logic) ---
   async function fetchLocations() {
-    if (!tenant) {
-        console.error("Tenant information is missing.");
-        return;
-    }
+    if (!tenant) return console.error("Tenant information is missing.");
     try {
       const response = await fetch(`/api/${tenant}/locations`); 
       if (!response.ok) throw new Error('Failed to fetch locations');
       
       const locations = await response.json();
+      locationCache = locations; // Store the full response
       
       locationSelect.innerHTML = '<option value="">Please Select</option>';
-      
       locations.forEach(location => {
         const option = document.createElement('option');
         option.value = location.id;
@@ -326,51 +314,42 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
-  async function fetchSublocations(locationId) {
+  function populateSublocations() {
+      const selectedLocationId = locationSelect.value;
       sublocationSelect.innerHTML = '<option value="">-- Select Sublocation --</option>';
-      if (!locationId || !tenant) {
-        sublocationSelect.disabled = true;
-        return;
+
+      if (!selectedLocationId) {
+          sublocationSelect.disabled = true;
+          return;
       }
 
-      try {
-          const response = await fetch(`/api/${tenant}/locations/${locationId}/sublocations`);
-          if (!response.ok) throw new Error('Failed to fetch sublocations');
-          
-          const sublocations = await response.json();
+      // Find the selected location in the cached data
+      const selectedLocation = locationCache.find(loc => loc.id == selectedLocationId);
 
-          if (sublocations && sublocations.length > 0) {
-              sublocations.forEach(sub => {
-                  const option = document.createElement('option');
-                  option.value = sub.id;
-                  option.textContent = sub.name;
-                  sublocationSelect.appendChild(option);
-              });
-              sublocationSelect.disabled = false;
-          } else {
-              sublocationSelect.disabled = true;
-          }
-      } catch (error) {
-          console.error(error);
+      if (selectedLocation && selectedLocation.sublocations && selectedLocation.sublocations.length > 0) {
+          selectedLocation.sublocations.forEach(sub => {
+              const option = document.createElement('option');
+              option.value = sub.id;
+              option.textContent = sub.name;
+              sublocationSelect.appendChild(option);
+          });
+          sublocationSelect.disabled = false;
+      } else {
           sublocationSelect.disabled = true;
       }
   }
-
 
   // --- Event Listeners ---
   addButton.addEventListener('click', addBarcode);
   barcodeInput.addEventListener('keypress', e => { if (e.key === 'Enter') addBarcode(); });
   
   locationSelect.addEventListener('change', () => {
-    const selectedLocationId = locationSelect.value;
-    if (selectedLocationId) {
+    if (locationSelect.value) {
       locationSelect.classList.remove('is-invalid');
-      fetchSublocations(selectedLocationId);
     } else {
       locationSelect.classList.add('is-invalid');
-      sublocationSelect.innerHTML = '<option value="">-- Select Sublocation --</option>';
-      sublocationSelect.disabled = true;
     }
+    populateSublocations(); // Populate sublocations from cache
     refreshUpdateState();
   });
   
@@ -387,20 +366,16 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   scannedItems.addEventListener('change', (e) => {
-      if (e.target.classList.contains('row-checkbox')) {
-          updateSelectionState();
-      }
+      if (e.target.classList.contains('row-checkbox')) updateSelectionState();
   });
 
   selectAllCheckbox.addEventListener('click', () => {
-      const isChecked = selectAllCheckbox.checked;
-      scannedItems.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = isChecked);
+      scannedItems.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = selectAllCheckbox.checked);
       updateSelectionState();
   });
 
   bulkDeleteBtn.addEventListener('click', () => {
-      const checkedCheckboxes = scannedItems.querySelectorAll('.row-checkbox:checked');
-      checkedCheckboxes.forEach(checkbox => {
+      scannedItems.querySelectorAll('.row-checkbox:checked').forEach(checkbox => {
           const barcode = checkbox.dataset.barcode;
           const row = checkbox.closest('tr');
           const index = scannedBarcodes.indexOf(barcode);
