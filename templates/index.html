@@ -402,4 +402,15 @@ document.addEventListener('DOMContentLoaded', function () {
   fetchLocations();
 });
 </script>
+{% block extra_js %}
+<!-- Add tenant info for JavaScript -->
+<script>
+    window.tenantInfo = {
+        tenant: "{{ tenant }}",
+        tenantName: "{{ tenant_name }}"
+    };
+</script>
+
+<!-- Main script file -->
+<script src="{{ url_for('static', filename='js/scanner.js') }}"></script>
 {% endblock %}
