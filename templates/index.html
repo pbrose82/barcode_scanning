@@ -311,26 +311,50 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
-  async function fetchLocations() {
-    if (!tenant) return console.error("Tenant information is missing.");
-    try {
-      const response = await fetch(`/api/${tenant}/locations`); 
-      if (!response.ok) throw new Error('Failed to fetch locations');
-      
-      const locations = await response.json();
-      locationCache = locations;
-      
+ function fetchLocations() {
+  if (!locationSelect) return;
+
+  locationSelect.innerHTML = '<option value="">Loading locations...</option>';
+
+  fetch(`/get-locations/${tenant}`)
+    .then(res => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    })
+    .then(locations => {
+      locationCache = locations || [];
       locationSelect.innerHTML = '<option value="">Please Select</option>';
-      locations.forEach(location => {
-        const option = document.createElement('option');
-        option.value = location.id;
-        option.textContent = location.name;
-        locationSelect.appendChild(option);
+      locationCache.forEach(loc => {
+        if (loc && loc.id && loc.name) {
+          const opt = document.createElement('option');
+          opt.value = loc.id;
+          opt.textContent = loc.name;
+          locationSelect.appendChild(opt);
+        }
       });
-    } catch (error) {
-      console.error(error);
-    }
-  }
+    })
+    .catch(() => {
+      // fallback, same as your original file
+      fetch(`/get-test-locations/${tenant}`)
+        .then(res => res.json())
+        .then(locations => {
+          locationCache = locations || [];
+          locationSelect.innerHTML = '<option value="">Please Select</option>';
+          locationCache.forEach(loc => {
+            if (loc && loc.id && loc.name) {
+              const opt = document.createElement('option');
+              opt.value = loc.id;
+              opt.textContent = loc.name;
+              locationSelect.appendChild(opt);
+            }
+          });
+        })
+        .catch(() => {
+          locationSelect.innerHTML = '<option value="">Failed to load locations</option>';
+        });
+    });
+}
+
 
   function populateSublocations() {
     const selectedLocationId = locationSelect.value;
@@ -375,44 +399,39 @@ document.addEventListener('DOMContentLoaded', function () {
 async function updateLocations() {
   if (updateButton.disabled) return;
 
-  const locationId = locationSelect.value || null;
-  const sublocationId = sublocationSelect.value || null;
-  if (!locationId || scannedBarcodes.length === 0) return;
+  const locationId = locationSelect.value;
+  const sublocationId = sublocationSelect ? (sublocationSelect.value || '') : '';
 
-  // selected rows, or all rows if none selected
-  const selected = getSelectedBarcodes();
-  const barcodesToUpdate = selected.length ? selected : scannedBarcodes.slice();
+  // selected rows, or all scanned if none selected
+  const selected = Array.from(document.querySelectorAll('.row-checkbox:checked'))
+    .map(cb => cb.dataset.barcode);
+  const recordIds = selected.length ? selected : scannedBarcodes.slice();
 
-  // Disable while working
+  if (!recordIds.length) { alert('Please scan at least one barcode.'); return; }
+  if (!locationId)       { alert('Please select a location.'); return; }
+
   updateButton.disabled = true;
 
   try {
-    // TODO: replace URL with your real endpoint
-    const res = await fetch(`/api/${tenant}/barcodes/location`, {
+    const res = await fetch(`/update-location/${tenant}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        barcodes: barcodesToUpdate,
-        locationId,
-        sublocationId
-      })
+      body: JSON.stringify({ recordIds, locationId, sublocationId })
     });
-
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    // Optional: show a nicer toast
-    alert('Location updated successfully.');
+    const result = await res.json();
 
-    // Clear selection and toolbar
+    alert(result?.message || 'Location updated successfully.');
+
+    // clear selection + hide bulk bar
     document.querySelectorAll('.row-checkbox:checked').forEach(cb => (cb.checked = false));
     selectAllCheckbox.checked = false;
     selectAllCheckbox.indeterminate = false;
     bulkActionToolbar.style.display = 'none';
-
   } catch (err) {
     console.error(err);
     alert('Failed to update location. Check console for details.');
   } finally {
-    // Re-evaluate enabled/disabled state
     refreshUpdateState();
   }
 }
