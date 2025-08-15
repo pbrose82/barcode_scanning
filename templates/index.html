@@ -30,9 +30,18 @@
   }
   .barcode-input{ flex:1; }
   .barcode-input:focus, .form-select:focus{ outline:none; border-color:#2563EB; }
+
+  /* Ensure invalid stays red even when focused (no blue ring) */
+  .form-select.is-invalid,
+  .form-select.is-invalid:focus {
+    border-color:#EF4444 !important;
+    box-shadow:none;
+  }
+
   .form-select{ width:100%; background:#fff; -webkit-appearance:none; appearance:none;
     background-image:url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
     background-position:right .5rem center; background-repeat:no-repeat; background-size:1.5em 1.5em;
+    padding-right:40px; /* keep room for chevron */
   }
   .required-star{ color:#EF4444; }
   .is-invalid{ border-color:#EF4444 !important; }
@@ -66,15 +75,33 @@
   /* Table */
   .scanned-table-container{ height:100%; overflow:auto; border:0; }
   .scanned-table{ width:100%; border-collapse:collapse; table-layout:fixed; }
+
+  /* Header visuals: exact divider + controlled height + smaller type, no ellipsis */
   .scanned-table thead{ background:#F9FAFB; border-bottom:1px solid #E5E7EB; }
-  .scanned-table th, .scanned-table td{
-    text-align:left; padding:14px 20px; border-bottom:1px solid #E5E7EB;
+  .scanned-table thead th{
+    height:48px; line-height:48px;
+    font-size:12px; font-weight:500; color:#6B7280; text-transform:uppercase;
+    border-bottom:1px solid #E5E7EB;
+    white-space:normal; overflow:visible; text-overflow:clip;
+    padding-top:0; padding-bottom:0;
+  }
+
+  /* Body cells keep truncation */
+  .scanned-table tbody td{
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
-  .scanned-table th{ font-size:12px; font-weight:500; color:#6B7280; text-transform:uppercase; }
+
+  .scanned-table th, .scanned-table td{
+    text-align:left; padding:14px 20px; border-bottom:1px solid #E5E7EB;
+  }
   .scanned-table td{ font-size:14px; color:#111827; }
   .scanned-table tbody tr:last-child td{ border-bottom:none; }
-  .scanned-table th.col-select, .scanned-table td.col-select{ width:48px; }
+
+  /* Checkbox column: no truncation (removes the stray “…”), fixed width */
+  .scanned-table th.col-select, .scanned-table td.col-select{
+    width:48px; padding-left:20px; padding-right:0;
+    white-space:normal; overflow:visible; text-overflow:clip;
+  }
 
   /* Empty state as a row under the header (exact paddings from spec) */
   .spec-empty-cell{
@@ -100,52 +127,20 @@
   .button-group{ display:flex; gap:16px; margin-top:24px; }
 
   /* === Spec sizing overrides === */
+  .barcode-input-group { max-width: 514px; }                /* 432 + 10 + 72 */
+  #barcode-input { width: 432px; height: 46px; }
+  #location-select, #sublocation-select { width: 432px; height: 46px; line-height: 46px; }
+  #add-barcode { width: 72px; height: 32px; padding: 0; line-height: 32px; }
+  #update-button { width: 154px; height: 32px; padding: 0; line-height: 32px; }
+  #reset-button { width: 85px; height: 32px; padding: 0; line-height: 32px; }
 
-/* Input + Add button row should fit side-by-side: 432 + 10 gap + 72 = 514px */
-.barcode-input-group { max-width: 514px; }
-
-/* Fields: 432 × 46 */
-#barcode-input { width: 432px; height: 46px; }
-#location-select,
-#sublocation-select {
-  width: 432px;
-  height: 46px;
-  line-height: 46px;      /* keep text vertically centered */
-}
-
-/* Buttons: exact widths × heights */
-#add-barcode {
-  width: 72px;
-  height: 32px;
-  padding: 0;             /* remove default padding so height is exact */
-  line-height: 32px;      /* vertically center label */
-}
-
-#update-button {
-  width: 154px;
-  height: 32px;
-  padding: 0;
-  line-height: 32px;
-}
-
-#reset-button {
-  width: 85px;
-  height: 32px;
-  padding: 0;
-  line-height: 32px;
-}
-/* Make Update Location blue when active */
-#update-button:not(:disabled) {
-  background-color: #2196F3; /* same blue as .btn-primary */
-  color: #fff;
-  border-color: #2196F3;
-}
-
-#update-button:not(:disabled):hover {
-  background-color: #1976D2; /* darker blue on hover */
-  border-color: #1976D2;
-}
-
+  /* Make Update Location blue when active */
+  #update-button:not(:disabled){
+    background-color:#2196F3; color:#fff; border-color:#2196F3;
+  }
+  #update-button:not(:disabled):hover{
+    background-color:#1976D2; border-color:#1976D2;
+  }
 </style>
 {% endblock %}
 
@@ -250,7 +245,7 @@ document.addEventListener('DOMContentLoaded', function () {
   let locationCache = [];
   const tenant = window.tenantInfo ? window.tenantInfo.tenant : null;
 
-  /* --- Empty/Table rendering with header always visible --- */
+  /* Empty state row under header */
   function renderEmptyRow() {
     scannedItems.innerHTML = `
       <tr id="empty-state-row">
@@ -264,12 +259,7 @@ document.addEventListener('DOMContentLoaded', function () {
       </tr>`;
   }
 
-  function ensureEmptyIfNeeded() {
-    if (scannedBarcodes.length === 0) renderEmptyRow();
-  }
-
   function addRow(barcode) {
-    // remove the empty-state row once we add the first record
     const emptyRow = document.getElementById('empty-state-row');
     if (emptyRow) emptyRow.remove();
 
