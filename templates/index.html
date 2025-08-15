@@ -17,14 +17,14 @@
     padding: 0; 
   }
   
-  /* UPDATED: Header with gradient, full width */
+  /* Header with gradient, full width */
   .page-header {
     background: linear-gradient(135deg, #F4F6FF 0%, #F5FBFF 100%);
     padding: 40px;
     border-bottom: 1px solid #E5E7EB;
   }
   
-  /* UPDATED: Main content area is white with padding, full width */
+  /* Main content area is white with padding, full width */
   .scanner-main {
       background-color: #FFFFFF;
       padding: 40px;
@@ -48,7 +48,7 @@
   }
   
   /* Forms & Inputs */
-   .barcode-input-group{ display:flex; gap:10px; margin-bottom: 24px; align-items: center; max-width: 500px; }
+  .barcode-input-group{ display:flex; gap:10px; margin-bottom: 24px; align-items: center; max-width: 500px; }
   .barcode-input, .form-select {
     padding: 12px 16px; 
     font-size: 14px;
@@ -72,53 +72,83 @@
   /* Buttons */
   .btn{ border:none; border-radius:6px; padding: 10px 24px; font-size:14px; font-weight:700; text-transform:uppercase; cursor:pointer; }
   .btn-primary{ background:#2196F3; color:#fff; }
-  .btn-outline {
-      background-color: transparent; color: #2563EB; border: 1px solid #2563EB;
-  }
+  .btn-outline { background-color: transparent; color: #2563EB; border: 1px solid #2563EB; }
   .btn-outline:hover { background-color: #EFF6FF; }
-  .btn-secondary {
-      background-color: #F9FAFB; color: #374151; border: 1px solid #E5E7EB;
-  }
-  .btn:disabled {
-      background-color: #F3F4F6; color: #9CA3AF; cursor: not-allowed; border: 1px solid #E5E7EB;
+  .btn-secondary { background-color: #F9FAFB; color: #374151; border: 1px solid #E5E7EB; }
+  .btn:disabled { background-color: #F3F4F6; color: #9CA3AF; cursor: not-allowed; border: 1px solid #E5E7EB; }
+
+  /* Location Grid (stacked) */
+  .location-grid { 
+    display: flex;
+    flex-direction: column;
+    gap: 20px; 
+    max-width: 450px;
   }
 
-  /* Table & Bulk Actions */
+  .scanner-container{ 
+    max-width: 839px;
+    margin: 0 auto;
+    border-radius:12px; 
+    overflow:hidden;
+    box-shadow:0 4px 12px rgba(0,0,0,.08);
+  }
+
+  /* === SPEC-EXACT FRAME FOR SCANNED TABLE === */
+  .scanner-spec-frame{
+    width: 839px;                 /* Fixed width per spec */
+    height: 162px;                /* Fixed height per spec */
+    border: 1px solid #E5E7EB;    /* 1px border */
+    border-radius: 8px;
+    background: #fff;
+    overflow: hidden;
+    position: relative;
+    box-sizing: border-box;
+  }
+
+  /* Bulk Action Toolbar (unchanged behavior, sits at top of frame when visible) */
+  #bulk-action-toolbar{
+    display: none;
+    align-items: center;
+    gap: 16px;
+    padding: 8px 20px;
+    background-color: #F3F4F6;
+    border-bottom: 1px solid #E5E7EB;
+  }
+  #selection-count { font-size: 14px; font-weight: 600; color: #374151; flex-grow: 1; }
+  .toolbar-btn { display:flex; align-items:center; gap:6px; background:none; border:none; cursor:pointer; font-size:14px; font-weight:600; color:#4B5563; }
+  .toolbar-btn:hover { color:#111827; }
+  .toolbar-btn svg { width:18px; height:18px; fill: currentColor; }
+
+  /* Table region (shown when there are rows) */
   .scanned-table-container{
-    border: 1px solid #E5E7EB; border-radius:8px; 
-    margin-top:8px; overflow:hidden;
-    min-height: 250px; 
+    height: 100%;
+    overflow: auto;
+    border: 0;
   }
-  .scanned-table{ width:100%; border-collapse:collapse; }
-  .scanned-table thead{ 
-    background: #F9FAFB; border-bottom: 1px solid #E5E7EB;
-  }
-  .scanned-table th, .scanned-table td {
+
+  /* Table visuals */
+  .scanned-table{ width: 100%; border-collapse: collapse; table-layout: fixed; }
+  .scanned-table thead{ background: #F9FAFB; border-bottom: 1px solid #E5E7EB; }
+  .scanned-table th, .scanned-table td{
     text-align:left; padding:14px 20px; border-bottom:1px solid #E5E7EB; 
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
-  .scanned-table th {
-     font-size:12px; font-weight: 500; color: #6B7280; text-transform:uppercase;
-  }
-  .scanned-table td { font-size:14px; color: #111827; }
+  .scanned-table th { font-size:12px; font-weight:500; color:#6B7280; text-transform:uppercase; }
+  .scanned-table td { font-size:14px; color:#111827; }
   .scanned-table tbody tr:last-child td{ border-bottom:none; }
   .scanned-table th.col-select, .scanned-table td.col-select { width: 48px; }
 
-  /* Bulk Action Toolbar */
-  #bulk-action-toolbar {
-      display: none; align-items: center; gap: 16px;
-      padding: 8px 20px; background-color: #F3F4F6;
-      border-bottom: 1px solid #E5E7EB;
+  /* EXACT empty-state placement & spacing from spec:
+     Top: 26.5px, Right: 130px, Bottom: 26px, Left: 20px, gap: 10px */
+  .spec-empty{
+    position: absolute;
+    top: 26.5px; left: 20px; right: 130px; bottom: 26px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
   }
-  #selection-count {
-      font-size: 14px; font-weight: 600; color: #374151; flex-grow: 1;
-  }
-  .toolbar-btn {
-      display: flex; align-items: center; gap: 6px;
-      background: none; border: none; cursor: pointer;
-      font-size: 14px; font-weight: 600; color: #4B5563;
-  }
-  .toolbar-btn:hover { color: #111827; }
-  .toolbar-btn svg { width: 18px; height: 18px; fill: currentColor; }
+  .empty-state-title{ font-size: 15px; font-weight: 600; color:#374151; }
+  .empty-state-text{ font-size: 14px; color:#4B5563; }
 
   /* Custom Checkbox */
   .checkbox-input {
@@ -138,62 +168,49 @@
     width: 8px; height: 2px; background-color: white;
   }
 
-  /* Location Grid */
- /* UPDATED: Location fields are now always stacked vertically */
-  .location-grid { 
-    display: flex;
-    flex-direction: column;
-    gap: 20px; 
-    max-width: 450px; /* To match the width of other form fields */
-  }
-
-  .scanner-container{ 
-    max-width: 839px; /* Controls the width */
-    margin: 0 auto;    /* Centers the container on the page */
-    border-radius:12px; 
-    overflow:hidden;
-    box-shadow:0 4px 12px rgba(0,0,0,.08);
-  }
-  /* Empty state */
-  .empty-state{ text-align:center; padding:60px 20px; }
-  .empty-state-title{ font-size:15px; font-weight:600; color:#374151; margin-bottom:8px; }
-
   /* Actions row */
   .button-group{ display:flex; gap:16px; margin-top: 24px; }
-  
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="page-content">
-    <div class="page-header">
-        <h1 class="page-title">Barcode Scanning</h1>
-        <p class="instruction-text">
-            Before scanning, make sure the input field is active so the barcode is entered correctly. In case the scanner doesn’t respond or fails to read the code, you can simply type the barcode manually instead. There's no limit to how many barcodes you can scan, so feel free to continue as needed.
-        </p>
+  <div class="page-header">
+    <h1 class="page-title">Barcode Scanning</h1>
+    <p class="instruction-text">
+      Before scanning, make sure the input field is active so the barcode is entered correctly. In case the scanner doesn’t respond or fails to read the code, you can simply type the barcode manually instead. There's no limit to how many barcodes you can scan, so feel free to continue as needed.
+    </p>
+  </div>
+
+  <div class="scanner-main">
+    <h2 class="section-title">Barcode Overview</h2>
+    <div class="form-group">
+      <label class="form-label" for="barcode-input">Scan or Enter Barcode</label>
+      <div class="barcode-input-group">
+        <input type="text" id="barcode-input" class="barcode-input" placeholder="Enter text here" autofocus>
+        <button id="add-barcode" class="btn btn-primary">Add</button>
+      </div>
     </div>
 
-    <div class="scanner-main">
-      <h2 class="section-title">Barcode Overview</h2>
-      <div class="form-group">
-        <label class="form-label" for="barcode-input">Scan or Enter Barcode</label>
-        <div class="barcode-input-group">
-          <input type="text" id="barcode-input" class="barcode-input" placeholder="Enter text here" autofocus>
-          <button id="add-barcode" class="btn btn-primary">Add</button>
+    <!-- SCANNED BARCODES (spec-exact frame) -->
+    <div class="form-group">
+      <label class="form-label">Scanned Barcodes</label>
+
+      <div class="scanner-spec-frame">
+        <div id="bulk-action-toolbar">
+          <span id="selection-count">0 selected</span>
+          <button id="bulk-delete-btn" class="toolbar-btn">
+            <svg viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd"/>
+            </svg>
+            Delete
+          </button>
         </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Scanned Barcodes</label>
-        <div class="scanned-table-container">
-          <div id="bulk-action-toolbar">
-            <span id="selection-count">0 selected</span>
-            <button id="bulk-delete-btn" class="toolbar-btn">
-                <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg>
-                Delete
-            </button>
-          </div>
-          <table class="scanned-table">
-            <thead>
+
+        <!-- Table (hidden when empty) -->
+        <div class="scanned-table-container" id="scanned-table-wrap">
+          <table class="scanned-table" id="scanned-table">
+            <thead id="scanned-head">
               <tr>
                 <th class="col-select">
                   <input type="checkbox" id="select-all-checkbox" class="checkbox-input">
@@ -205,38 +222,48 @@
             <tbody id="scanned-items"></tbody>
           </table>
         </div>
-      </div>
 
-      <h2 class="section-title">Location</h2>
-      <div class="location-grid">
-        <div class="form-group">
-          <label class="form-label" for="location-select">Location <span class="required-star">*</span></label>
-          <select class="form-select is-invalid" id="location-select">
-          <option value="">Please Select</option>
-          </select>
+        <!-- Exact-position empty state (shown when no rows) -->
+        <div id="empty-state" class="spec-empty">
+          <div class="barcode-icon">||||</div>
+          <div class="empty-state-title">No scanned samples</div>
+          <div class="empty-state-text">
+            This table will automatically populate with samples as they are scanned or entered manually in the input field above.
+          </div>
         </div>
-        <div class="form-group">
-          <label class="form-label" for="sublocation-select">Sublocation</label>
-          <select class="form-select" id="sublocation-select" disabled>
-          <option value="">-- Select Sublocation --</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="button-group">
-        <button id="update-button" class="btn btn-secondary" disabled>Update Location</button>
-        <button id="reset-button" class="btn btn-outline">Reset</button>
       </div>
     </div>
+
+    <h2 class="section-title">Location</h2>
+    <div class="location-grid">
+      <div class="form-group">
+        <label class="form-label" for="location-select">Location <span class="required-star">*</span></label>
+        <select class="form-select is-invalid" id="location-select">
+          <option value="">Please Select</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="sublocation-select">Sublocation</label>
+        <select class="form-select" id="sublocation-select" disabled>
+          <option value="">-- Select Sublocation --</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="button-group">
+      <button id="update-button" class="btn btn-secondary" disabled>Update Location</button>
+      <button id="reset-button" class="btn btn-outline">Reset</button>
+    </div>
+  </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    window.tenantInfo = {
-        tenant: "{{ tenant }}",
-        tenantName: "{{ tenant_name }}"
-    };
+  window.tenantInfo = {
+    tenant: "{{ tenant }}",
+    tenantName: "{{ tenant_name }}"
+  };
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
@@ -252,37 +279,44 @@ document.addEventListener('DOMContentLoaded', function () {
   const selectionCount = document.getElementById('selection-count');
   const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
   const selectAllCheckbox = document.getElementById('select-all-checkbox');
+
+  const tableWrap = document.getElementById('scanned-table-wrap');
+  const emptyState = document.getElementById('empty-state');
   
   let scannedBarcodes = [];
   let locationCache = [];
   const tenant = window.tenantInfo ? window.tenantInfo.tenant : null;
 
-  function showEmptyState() {
-  scannedItems.innerHTML = `
-    <tr id="empty-state">
-      <td colspan="3" class="empty-state">
-        <div class="barcode-icon">||||</div>
-        <div class="empty-state-title">No scanned samples</div>
-        <div class="empty-state-text">This table will automatically populate with samples as they are scanned or entered manually in the input field above.</div>
-      </td>
-    </tr>`;
-}
+  /* --- SPEC VIEW TOGGLERS (minimal change) --- */
+  function showTableView() {
+    tableWrap.style.display = 'block';
+    emptyState.style.display = 'none';
+  }
+  function showEmptyView() {
+    tableWrap.style.display = 'none';
+    emptyState.style.display = 'flex';
+    bulkActionToolbar.style.display = 'none';
+    selectAllCheckbox.checked = false;
+    selectAllCheckbox.indeterminate = false;
+    scannedItems.innerHTML = '';
+  }
+  function showEmptyState(){ showEmptyView(); }
 
   function addRow(barcode) {
-      const rowHTML = `
-        <tr data-barcode="${barcode}">
-            <td class="col-select"><input type="checkbox" class="row-checkbox checkbox-input" data-barcode="${barcode}"></td>
-            <td>${barcode}</td>
-            <td></td> 
-        </tr>`;
-      scannedItems.insertAdjacentHTML('beforeend', rowHTML);
+    const rowHTML = `
+      <tr data-barcode="${barcode}">
+        <td class="col-select"><input type="checkbox" class="row-checkbox checkbox-input" data-barcode="${barcode}"></td>
+        <td>${barcode}</td>
+        <td></td>
+      </tr>`;
+    scannedItems.insertAdjacentHTML('beforeend', rowHTML);
   }
   
   function addBarcode() {
     const barcode = barcodeInput.value.trim();
     if (!barcode || scannedBarcodes.includes(barcode)) return;
     scannedBarcodes.push(barcode);
-    document.getElementById('empty-state')?.remove();
+    showTableView();
     addRow(barcode);
     barcodeInput.value = '';
     barcodeInput.focus();
@@ -294,23 +328,23 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   
   function updateSelectionState() {
-      const allCheckboxes = scannedItems.querySelectorAll('.row-checkbox');
-      const checkedCheckboxes = scannedItems.querySelectorAll('.row-checkbox:checked');
-      const count = checkedCheckboxes.length;
+    const allCheckboxes = scannedItems.querySelectorAll('.row-checkbox');
+    const checkedCheckboxes = scannedItems.querySelectorAll('.row-checkbox:checked');
+    const count = checkedCheckboxes.length;
 
-      bulkActionToolbar.style.display = count > 0 ? 'flex' : 'none';
-      if (count > 0) selectionCount.textContent = `${count} selected`;
+    bulkActionToolbar.style.display = count > 0 ? 'flex' : 'none';
+    if (count > 0) selectionCount.textContent = `${count} selected`;
 
-      if (allCheckboxes.length > 0 && count === allCheckboxes.length) {
-          selectAllCheckbox.checked = true;
-          selectAllCheckbox.indeterminate = false;
-      } else if (count > 0) {
-          selectAllCheckbox.checked = false;
-          selectAllCheckbox.indeterminate = true;
-      } else {
-          selectAllCheckbox.checked = false;
-          selectAllCheckbox.indeterminate = false;
-      }
+    if (allCheckboxes.length > 0 && count === allCheckboxes.length) {
+      selectAllCheckbox.checked = true;
+      selectAllCheckbox.indeterminate = false;
+    } else if (count > 0) {
+      selectAllCheckbox.checked = false;
+      selectAllCheckbox.indeterminate = true;
+    } else {
+      selectAllCheckbox.checked = false;
+      selectAllCheckbox.indeterminate = false;
+    }
   }
 
   async function fetchLocations() {
@@ -335,25 +369,25 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function populateSublocations() {
-      const selectedLocationId = locationSelect.value;
-      sublocationSelect.innerHTML = '<option value="">-- Select Sublocation --</option>';
+    const selectedLocationId = locationSelect.value;
+    sublocationSelect.innerHTML = '<option value="">-- Select Sublocation --</option>';
 
-      if (!selectedLocationId) {
-          sublocationSelect.disabled = true;
-          return;
-      }
-      const selectedLocation = locationCache.find(loc => loc.id == selectedLocationId);
-      if (selectedLocation && selectedLocation.sublocations && selectedLocation.sublocations.length > 0) {
-          selectedLocation.sublocations.forEach(sub => {
-              const option = document.createElement('option');
-              option.value = sub.id;
-              option.textContent = sub.name;
-              sublocationSelect.appendChild(option);
-          });
-          sublocationSelect.disabled = false;
-      } else {
-          sublocationSelect.disabled = true;
-      }
+    if (!selectedLocationId) {
+      sublocationSelect.disabled = true;
+      return;
+    }
+    const selectedLocation = locationCache.find(loc => loc.id == selectedLocationId);
+    if (selectedLocation && selectedLocation.sublocations && selectedLocation.sublocations.length > 0) {
+      selectedLocation.sublocations.forEach(sub => {
+        const option = document.createElement('option');
+        option.value = sub.id;
+        option.textContent = sub.name;
+        sublocationSelect.appendChild(option);
+      });
+      sublocationSelect.disabled = false;
+    } else {
+      sublocationSelect.disabled = true;
+    }
   }
   
   // Event Listeners
@@ -372,7 +406,7 @@ document.addEventListener('DOMContentLoaded', function () {
   
   resetButton.addEventListener('click', () => {
     scannedBarcodes = [];
-    showEmptyState();
+    showEmptyView();
     locationSelect.value = '';
     sublocationSelect.value = '';
     sublocationSelect.disabled = true;
@@ -383,29 +417,29 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   scannedItems.addEventListener('change', (e) => {
-      if (e.target.classList.contains('row-checkbox')) updateSelectionState();
+    if (e.target.classList.contains('row-checkbox')) updateSelectionState();
   });
 
   selectAllCheckbox.addEventListener('click', () => {
-      scannedItems.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = selectAllCheckbox.checked);
-      updateSelectionState();
+    scannedItems.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = selectAllCheckbox.checked);
+    updateSelectionState();
   });
 
   bulkDeleteBtn.addEventListener('click', () => {
-      scannedItems.querySelectorAll('.row-checkbox:checked').forEach(checkbox => {
-          const barcode = checkbox.dataset.barcode;
-          const row = checkbox.closest('tr');
-          const index = scannedBarcodes.indexOf(barcode);
-          if (index > -1) scannedBarcodes.splice(index, 1);
-          row.remove();
-      });
-      if (scannedBarcodes.length === 0) showEmptyState();
-      updateSelectionState();
-      refreshUpdateState();
+    scannedItems.querySelectorAll('.row-checkbox:checked').forEach(checkbox => {
+      const barcode = checkbox.dataset.barcode;
+      const row = checkbox.closest('tr');
+      const index = scannedBarcodes.indexOf(barcode);
+      if (index > -1) scannedBarcodes.splice(index, 1);
+      row.remove();
+    });
+    if (scannedBarcodes.length === 0) showEmptyView();
+    updateSelectionState();
+    refreshUpdateState();
   });
 
   // Initialization
-  showEmptyState();
+  showEmptyView();
   fetchLocations();
 });
 </script>
