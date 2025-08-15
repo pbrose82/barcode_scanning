@@ -147,21 +147,19 @@ document.addEventListener('DOMContentLoaded', function () {
             minWidth: 350,
             cellRendererParams: {
                 suppressCount: true,
-                // UPDATED: The innerRenderer now creates hyperlinks
+                // UPDATED: This function now uses the correct tenant name for the URL
                 innerRenderer: params => {
                     const iconClass = params.node.group ? 'fa-folder' : 'fa-map-marker-alt';
                     const iconHtml = `<i class="fas ${iconClass} location-icon"></i>`;
                     
-                    // Check if it's a final location (not a group) and has an ID
                     if (!params.node.group && params.data && params.data.id) {
-                        const tenant = currentTenant;
+                        // Use the full tenantName for the hyperlink
+                        const tenantName = window.tenantInfo.tenantName; 
                         const recordId = params.data.id;
-                        const url = `https://app.alchemy.cloud/${tenant}/record/${recordId}`;
+                        const url = `https://app.alchemy.cloud/${tenantName}/record/${recordId}`;
                         
-                        // Return the name as a hyperlink
                         return `${iconHtml} <a href="${url}" target="_blank">${params.value}</a>`;
                     } else {
-                        // Otherwise, just return the name as text (for folders)
                         return `${iconHtml} ${params.value}`;
                     }
                 }
