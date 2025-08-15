@@ -12,52 +12,27 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     margin: 0;
   }
-  
-  /* UPDATED: New header section with gradient */
-  .page-header {
-    background: linear-gradient(135deg, #E4DDFF 0%, #DDF5FF 100%);
-    padding: 40px;
-  }
-  
-  /* UPDATED: Main content area is white and has padding */
-  .scanner-main-content {
-      background-color: #FFFFFF;
-      padding: 40px;
+  .page-content{
+    padding: 40px; 
   }
 
   /* Typography */
   .page-title{ 
-    font-size: 24px; 
-    color: #1F2937; 
-    font-weight: 600; 
-    margin: 0 0 12px 0;
+    font-size: 24px; color: #111827; font-weight: 600; margin-bottom: 12px; 
   }
   .instruction-text{ 
-    font-size: 14px; 
-    color: #4B5563; 
-    line-height: 1.6; 
-    max-width: 800px;
-    margin: 0;
+    font-size: 14px; color: #4B5563; line-height: 1.6; margin-bottom: 40px; max-width: 800px;
   }
   .section-title{ 
-    font-size: 20px; 
-    color: #111827; 
-    font-weight: 600; 
-    margin-bottom: 20px; 
-    padding-top: 24px;
-    border-top: 1px solid #F3F4F6;
+    font-size: 20px; color: #111827; font-weight: 600; margin-bottom: 20px; 
+    padding-top: 24px; border-top: 1px solid #F3F4F6;
   }
   .section-title:first-of-type {
-      border-top: none;
-      padding-top: 0;
+      border-top: none; padding-top: 0;
   }
   .form-label{ 
-    font-size: 12px; 
-    font-weight: 500; 
-    color: #6B7280; 
-    margin-bottom: 8px; 
-    display: block; 
-    text-transform: uppercase; 
+    font-size: 12px; font-weight: 500; color: #6B7280; 
+    margin-bottom: 8px; display: block; text-transform: uppercase; 
   }
   
   /* Forms & Inputs */
@@ -65,8 +40,7 @@
   .barcode-input-group{ display:flex; gap:10px; margin-bottom: 24px; }
   .barcode-input, .form-select {
     padding: 10px 16px; font-size: 14px;
-    border: 1px solid #D1D5DB;
-    border-radius: 6px; 
+    border: 1px solid #D1D5DB; border-radius: 6px; 
   }
   .barcode-input { flex: 1; }
   .barcode-input:focus, .form-select:focus { outline: none; border-color: #2563EB; }
@@ -77,12 +51,27 @@
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
     background-position: right 0.5rem center; background-repeat: no-repeat; background-size: 1.5em 1.5em;
   }
-  .location-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 920px; }
+  /* UPDATED: Stacked location fields */
+  .form-group + .form-group {
+      margin-top: 20px;
+  }
 
+  /* UPDATED: Mandatory/Invalid field styles */
+  .required-star { color: #EF4444; }
+  .is-invalid { border-color: #EF4444 !important; }
 
   /* Buttons */
-  .btn{ border:none; border-radius:6px; padding: 10px 24px; font-size:14px; font-weight:700; text-transform:uppercase; cursor:pointer; }
+  .btn{ border:none; border-radius:6px; padding: 10px 24px; font-size:14px; font-weight:700; text-transform:uppercase; cursor:pointer; transition: background-color .2s, color .2s, border-color .2s; }
   .btn-primary{ background:#2563EB; color:#fff; }
+  /* UPDATED: Blue outline button for Reset */
+  .btn-outline {
+      background-color: transparent;
+      color: #2563EB;
+      border: 1px solid #2563EB;
+  }
+  .btn-outline:hover {
+      background-color: #EFF6FF;
+  }
   .btn-secondary {
       background-color: #F9FAFB;
       color: #374151;
@@ -98,39 +87,31 @@
 
   /* Table & Hover Actions */
   .scanned-table-container{
-    border: 1px solid #E5E7EB;
-    border-radius:8px; 
-    margin-top:8px; 
-    overflow:hidden;
-    max-width: 920px;
+    border: 1px solid #E5E7EB; border-radius:8px; 
+    margin-top:8px; overflow:hidden; max-width: 920px;
+    /* UPDATED: Table is longer */
+    min-height: 250px; 
+    display: flex; flex-direction: column;
   }
   .scanned-table{ width:100%; border-collapse:collapse; }
   .scanned-table thead{ 
-    background: #F9FAFB; 
-    border-bottom: 1px solid #E5E7EB;
+    background: #F9FAFB; border-bottom: 1px solid #E5E7EB;
   }
   .scanned-table th {
     text-align:left; font-size:12px; font-weight: 500; color: #6B7280;
     text-transform:uppercase; padding:14px 20px;
   }
   .scanned-table td { 
-    border-bottom:1px solid #E5E7EB; 
-    padding:12px 20px; font-size:14px; color: #111827;
+    border-bottom:1px solid #E5E7EB; padding:12px 20px; font-size:14px; color: #111827;
   }
   .scanned-table tbody tr:last-child td{ border-bottom:none; }
-  .scanned-table .col-actions { width: 48px; }
+  .scanned-table .col-actions { width: 48px; text-align: right; }
 
   .delete-btn {
-      background: transparent;
-      border: none;
-      cursor: pointer;
-      padding: 4px;
-      opacity: 0;
-      transition: opacity 0.2s ease-in-out;
+      background: transparent; border: none; cursor: pointer;
+      padding: 4px; opacity: 0; transition: opacity 0.2s ease-in-out;
   }
-  .scanned-table tbody tr:hover .delete-btn {
-      opacity: 1;
-  }
+  .scanned-table tbody tr:hover .delete-btn { opacity: 1; }
   .delete-btn svg { width: 18px; height: 18px; fill: #9CA3AF; }
   .delete-btn:hover svg { fill: #EF4444; }
 
@@ -146,15 +127,12 @@
 {% endblock %}
 
 {% block content %}
-<div>
-    <div class="page-header">
-        <h1 class="page-title">Barcode Scanning</h1>
-        <p class="instruction-text">
-            Before scanning, make sure the input field is active so the barcode is entered correctly. In case the scanner doesn’t respond or fails to read the code, you can simply type the barcode manually instead. There's no limit to how many barcodes you can scan, so feel free to continue as needed.
-        </p>
-    </div>
+<div class="page-content">
+      <h1 class="page-title">Barcode Scanning</h1>
+      <p class="instruction-text">
+        Before scanning, make sure the input field is active so the barcode is entered correctly. In case the scanner doesn’t respond or fails to read the code, you can simply type the barcode manually instead. There's no limit to how many barcodes you can scan, so feel free to continue as needed.
+      </p>
 
-    <div class="scanner-main-content">
       <h2 class="section-title">Barcode Overview</h2>
       <div class="form-group">
         <label class="form-label" for="barcode-input">Scan or Enter Barcode</label>
@@ -181,26 +159,23 @@
       </div>
 
       <h2 class="section-title">Location</h2>
-      <div class="location-grid">
-        <div class="form-group">
-            <label class="form-label" for="location-select">Location</label>
-            <select class="form-select" id="location-select">
-            <option value="">Please Select</option>
-            </select>
-        </div>
-        <div class="form-group">
-            <label class="form-label" for="sublocation-select">Sublocation</label>
-            <select class="form-select" id="sublocation-select" disabled>
-            <option value="">Please Select</option>
-            </select>
-        </div>
+      <div class="form-group">
+          <label class="form-label" for="location-select">Location <span class="required-star">*</span></label>
+          <select class="form-select is-invalid" id="location-select">
+          <option value="">Please Select</option>
+          </select>
+      </div>
+      <div class="form-group">
+          <label class="form-label" for="sublocation-select">Sublocation</label>
+          <select class="form-select" id="sublocation-select" disabled>
+          <option value="">Please Select</option>
+          </select>
       </div>
 
       <div class="button-group">
         <button id="update-button" class="btn btn-secondary" disabled>Update Location</button>
-        <button id="reset-button" class="btn btn-secondary">Reset</button>
+        <button id="reset-button" class="btn btn-outline">Reset</button>
       </div>
-    </div>
 </div>
 {% endblock %}
 
@@ -213,6 +188,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const updateButton = document.getElementById('update-button');
   const resetButton = document.getElementById('reset-button');
   const locationSelect = document.getElementById('location-select');
+  const sublocationSelect = document.getElementById('sublocation-select');
   
   let scannedBarcodes = [];
 
@@ -228,13 +204,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function removeBarcode(barcodeToRemove, rowElement) {
       const index = scannedBarcodes.indexOf(barcodeToRemove);
-      if (index > -1) {
-          scannedBarcodes.splice(index, 1);
-      }
+      if (index > -1) scannedBarcodes.splice(index, 1);
       rowElement.remove();
-      if (scannedBarcodes.length === 0) {
-          showEmptyState();
-      }
+      if (scannedBarcodes.length === 0) showEmptyState();
       refreshUpdateState();
   }
 
@@ -250,13 +222,9 @@ document.addEventListener('DOMContentLoaded', function () {
             </td>
         </tr>`;
       scannedItems.insertAdjacentHTML('beforeend', rowHTML);
-
       const newRow = scannedItems.querySelector(`tr[data-barcode="${barcode}"]`);
       const deleteBtn = newRow.querySelector('.delete-btn');
-
-      deleteBtn.addEventListener('click', () => {
-          removeBarcode(barcode, newRow);
-      });
+      deleteBtn.addEventListener('click', () => removeBarcode(barcode, newRow));
   }
   
   function addBarcode() {
@@ -265,7 +233,6 @@ document.addEventListener('DOMContentLoaded', function () {
         barcodeInput.value = '';
         return;
     };
-
     scannedBarcodes.push(barcode);
     document.getElementById('empty-state')?.remove();
     addRow(barcode);
@@ -295,19 +262,36 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
-  // Event Listeners
+  // --- Event Listeners ---
   addButton.addEventListener('click', addBarcode);
   barcodeInput.addEventListener('keypress', e => { if (e.key === 'Enter') addBarcode(); });
-  locationSelect.addEventListener('change', refreshUpdateState);
+  
+  locationSelect.addEventListener('change', () => {
+    // UPDATED: Handle validation and sublocation state
+    if (locationSelect.value) {
+      locationSelect.classList.remove('is-invalid');
+      sublocationSelect.disabled = false;
+      // Here you would typically fetch sublocations based on the selected location
+    } else {
+      locationSelect.classList.add('is-invalid');
+      sublocationSelect.disabled = true;
+      sublocationSelect.value = '';
+    }
+    refreshUpdateState();
+  });
   
   resetButton.addEventListener('click', () => {
     scannedBarcodes = [];
     showEmptyState();
+    locationSelect.value = '';
+    sublocationSelect.value = '';
+    sublocationSelect.disabled = true;
+    locationSelect.classList.add('is-invalid'); // Reset to invalid state
     refreshUpdateState();
     barcodeInput.focus();
   });
 
-  // Initialization
+  // --- Initialization ---
   showEmptyState();
   fetchLocations();
 });
