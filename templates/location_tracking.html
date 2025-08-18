@@ -364,7 +364,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 const currentHierarchy = [...parentHierarchy, location.name];
                 rowData.push({ id: location.id, name: location.name, hierarchy: currentHierarchy });
                 if (location.sublocations) {
-                    const sortedSublocations = [...location.sublocations].sort((a, b) => a.name.localeCompare(b.name));
+                    const sortedSublocations = [...location.sublocations.sort((a, b) => a.name.localeCompare(b.name))];
                     sortedSublocations.forEach(sub => processLocation(sub, currentHierarchy));
                 }
             };
