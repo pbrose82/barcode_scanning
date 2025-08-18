@@ -5,474 +5,491 @@
 
 {% block extra_css %}
 <style>
-  /* Base & Layout */
-  html, body { 
-    height: 100%; 
-    background-color: #FFFFFF;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    margin: 0;
-  }
-  .page-content{ padding: 0; }
-  .page-header { background: linear-gradient(135deg, #F4F6FF 0%, #F5FBFF 100%); padding: 40px; border-bottom: 1px solid #E5E7EB; }
-  .scanner-main { background-color:#FFF; padding:40px; }
+  /* Base & Layout */
+  html, body { 
+    height: 100%; 
+    background-color: #FFFFFF;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    margin: 0;
+  }
+  .page-content{ padding: 0; }
+  .page-header { background: linear-gradient(135deg, #F4F6FF 0%, #F5FBFF 100%); padding: 40px; border-bottom: 1px solid #E5E7EB; }
+  .scanner-main { background-color:#FFF; padding:40px; }
 
-  /* Typography */
-  .page-title{ font-size:28px; color:#383F45; font-weight:600; margin:0 0 12px 0; }
-  .instruction-text{ font-size:14px; color:#4B5563; line-height:1.6; max-width:800px; margin:0; }
-  .section-title{ font-size:24px; color:#383F45; font-weight:600; margin-bottom:20px; padding-top:24px; border-top:1px solid #F3F4F6; }
-  .section-title:first-of-type{ border-top:none; padding-top:0; }
-  .form-label{ font-size:12px; font-weight:700; color:#424B52; margin-bottom:8px; display:block; text-transform:capitalize; }
+  /* Typography */
+  .page-title{ font-size:28px; color:#383F45; font-weight:600; margin:0 0 12px 0; }
+  .instruction-text{ font-size:14px; color:#4B5563; line-height:1.6; max-width:800px; margin:0; }
+  .section-title{ font-size:24px; color:#383F45; font-weight:600; margin-bottom:20px; padding-top:24px; border-top:1px solid #F3F4F6; }
+  .section-title:first-of-type{ border-top:none; padding-top:0; }
+  .form-label{ font-size:12px; font-weight:700; color:#424B52; margin-bottom:8px; display:block; text-transform:capitalize; }
 
-  /* Forms & Inputs */
-  .barcode-input-group{ display:flex; gap:10px; margin-bottom:24px; align-items:center; max-width:500px; }
-  .barcode-input, .form-select{
-    padding:12px 16px; font-size:14px; border:1px solid #D1D5DB; border-radius:6px; height:46px; box-sizing:border-box;
-  }
-  .barcode-input{ flex:1; }
-  .barcode-input:focus, .form-select:focus{ outline:none; border-color:#2563EB; }
+  /* Forms & Inputs */
+  .barcode-input-group{ display:flex; gap:10px; margin-bottom:24px; align-items:center; max-width:500px; }
+  .barcode-input, .form-select{
+    padding:12px 16px; font-size:14px; border:1px solid #D1D5DB; border-radius:6px; height:46px; box-sizing:border-box;
+  }
+  .barcode-input{ flex:1; }
+  .barcode-input:focus, .form-select:focus{ outline:none; border-color:#2563EB; }
 
-  /* Ensure invalid stays red even when focused (no blue ring) */
-  .form-select.is-invalid,
-  .form-select.is-invalid:focus {
-    border-color:#EF4444 !important;
-    box-shadow:none;
-  }
+  /* Ensure invalid stays red even when focused (no blue ring) */
+  .form-select.is-invalid,
+  .form-select.is-invalid:focus {
+    border-color:#EF4444 !important;
+    box-shadow:none;
+  }
 
-  .form-select{ width:100%; background:#fff; -webkit-appearance:none; appearance:none;
-    background-image:url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-    background-position:right .5rem center; background-repeat:no-repeat; background-size:1.5em 1.5em;
-    padding-right:40px; /* keep room for chevron */
-  }
-  .required-star{ color:#EF4444; }
-  .is-invalid{ border-color:#EF4444 !important; }
+  .form-select{ width:100%; background:#fff; -webkit-appearance:none; appearance:none;
+    background-image:url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position:right .5rem center; background-repeat:no-repeat; background-size:1.5em 1.5em;
+    padding-right:40px; /* keep room for chevron */
+  }
+  .required-star{ color:#EF4444; }
+  .is-invalid{ border-color:#EF4444 !important; }
 
-  /* Buttons */
-  .btn{ border:none; border-radius:6px; padding:10px 46px; font-size:14px; font-weight:700; text-transform:uppercase; cursor:pointer; }
-  .btn-primary{ background:#2196F3; color:#fff; }
-  .btn-outline{ background:transparent; color:#2563EB; border:1px solid #2563EB; }
-  .btn-outline:hover{ background:#EFF6FF; }
-  .btn-secondary{ background:#F9FAFB; color:#374151; border:1px solid #E5E7EB; }
-  .btn:disabled{ background:#F3F4F6; color:#9CA3AF; cursor:not-allowed; border:1px solid #E5E7EB; }
+  /* Buttons */
+  .btn{ border:none; border-radius:6px; padding:10px 46px; font-size:14px; font-weight:700; text-transform:uppercase; cursor:pointer; }
+  .btn-primary{ background:#2196F3; color:#fff; }
+  .btn-outline{ background:transparent; color:#2563EB; border:1px solid #2563EB; }
+  .btn-outline:hover{ background:#EFF6FF; }
+  .btn-secondary{ background:#F9FAFB; color:#374151; border:1px solid #E5E7EB; }
+  .btn:disabled{ background:#F3F4F6; color:#9CA3AF; cursor:not-allowed; border:1px solid #E5E7EB; }
 
-  /* Location */
-  .location-grid{ display:flex; flex-direction:column; gap:20px; max-width:450px; }
+  /* Location */
+  .location-grid{ display:flex; flex-direction:column; gap:20px; max-width:450px; }
 
-  /* === SPEC-EXACT FRAME FOR SCANNED TABLE === */
-  .scanner-spec-frame{
-    width:839px; height:185px; border:1px solid #E5E7EB; border-radius:8px; background:#fff;
-    overflow:hidden; position:relative; box-sizing:border-box;
-  }
+  /* === SPEC-EXACT FRAME FOR SCANNED TABLE === */
+  .scanner-spec-frame{
+    width:839px;
+    height: 528px; /* UPDATED: Height to show header (48px) + 10 rows (480px) */
+    border:1px solid #E5E7EB; border-radius:8px; background:#fff;
+    overflow:hidden; position:relative; box-sizing:border-box;
+  }
 
-  /* Bulk toolbar (inside frame, above grid) */
-  #bulk-action-toolbar{
-    display:none; align-items:center; gap:16px; padding:8px 20px; background:#F3F4F6; border-bottom:1px solid #E5E7EB;
-  }
-  #selection-count{ font-size:14px; font-weight:600; color:#374151; flex-grow:1; }
-  .toolbar-btn{ display:flex; align-items:center; gap:6px; background:none; border:none; cursor:pointer; font-size:14px; font-weight:600; color:#4B5563; }
-  .toolbar-btn:hover{ color:#111827; }
-  .toolbar-btn svg{ width:18px; height:18px; fill:currentColor; }
+  /* Bulk toolbar (inside frame, above grid) */
+  #bulk-action-toolbar{
+    display:none; align-items:center; gap:16px; padding:8px 20px; background:#F3F4F6; border-bottom:1px solid #E5E7EB;
+  }
+  #selection-count{ font-size:14px; font-weight:600; color:#374151; flex-grow:1; }
+  .toolbar-btn{ display:flex; align-items:center; gap:6px; background:none; border:none; cursor:pointer; font-size:14px; font-weight:600; color:#4B5563; }
+  .toolbar-btn:hover{ color:#111827; }
+  .toolbar-btn svg{ width:18px; height:18px; fill:currentColor; }
 
-  /* When toolbar visible, reduce grid height */
-  .scanner-spec-frame.toolbar-visible #ag-grid { height: calc(100% - 41px); }
-  .scanner-spec-frame:not(.toolbar-visible) #ag-grid { height: 100%; }
+  /* When toolbar visible, reduce grid height */
+  .scanner-spec-frame.toolbar-visible #ag-grid { height: calc(100% - 41px); }
+  .scanner-spec-frame:not(.toolbar-visible) #ag-grid { height: 100%; }
 
-  /* === AG Grid host === */
-  #ag-grid {
-    width: 100%;
-  }
+  /* === AG Grid host === */
+  #ag-grid {
+    width: 100%;
+  }
 
-  /* ---- AG Grid cleanup to match spec ---- */
-  .ag-grid-clean {
-    --ag-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    --ag-background-color: #fff;
-    --ag-foreground-color: #111827;
-    --ag-header-background-color: #F9FAFB;
-    --ag-header-foreground-color: #6B7280;
-  }
-  /* Remove AG outer borders */
-  .ag-grid-clean .ag-root-wrapper,
-  .ag-grid-clean .ag-root,
-  .ag-grid-clean .ag-center-cols-viewport {
-    border: 0 !important;
-    box-shadow: none !important;
-  }
-  /* Header height & divider */
-  .ag-grid-clean .ag-header {
-    min-height: 48px; height: 48px;
-    border-bottom: 1px solid #E5E7EB !important;
-  }
-  .ag-grid-clean .ag-header-row,
-  .ag-grid-clean .ag-header-cell {
-    height: 48px !important;
-    line-height: 48px !important;
-  }
-  .ag-grid-clean .ag-header-cell { padding: 0 20px !important; }
-  .ag-grid-clean .ag-header-cell-label {
-    font-size: 12px; font-weight: 500; color: #6B7280; text-transform: none;
-  }
-  /* Cells: no vertical borders, only row divider */
-  .ag-grid-clean .ag-cell {
-    border: 0 !important;
-    padding: 14px 20px !important;
-    font-size: 14px; color: #111827;
-  }
-  .ag-grid-clean .ag-row:not(.ag-row-last) .ag-cell {
-    border-bottom: 1px solid #E5E7EB !important;
-  }
-  /* Checkbox column: 48px width with left padding 20 */
-  .ag-grid-clean .ag-header-cell:first-child,
-  .ag-grid-clean .ag-row .ag-cell:first-child {
-    min-width: 48px !important; max-width: 48px !important; width: 48px !important;
-    padding-left: 20px !important; padding-right: 0 !important;
-  }
+  /* ---- AG Grid cleanup to match spec ---- */
+  .ag-grid-clean {
+    --ag-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --ag-background-color: #fff;
+    --ag-foreground-color: #111827;
+    --ag-header-background-color: #F9FAFB;
+    --ag-header-foreground-color: #6B7280;
+  }
+  /* Remove AG outer borders */
+  .ag-grid-clean .ag-root-wrapper,
+  .ag-grid-clean .ag-root,
+  .ag-grid-clean .ag-center-cols-viewport {
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+  /* Header height & divider */
+  .ag-grid-clean .ag-header {
+    min-height: 48px; height: 48px;
+    border-bottom: 1px solid #E5E7EB !important;
+  }
+  .ag-grid-clean .ag-header-row,
+  .ag-grid-clean .ag-header-cell {
+    height: 48px !important;
+    line-height: 48px !important;
+  }
+  .ag-grid-clean .ag-header-cell { padding: 0 20px !important; }
+  .ag-grid-clean .ag-header-cell-label {
+    font-size: 12px; font-weight: 500; color: #6B7280; text-transform: none;
+  }
+  /* Cells: no vertical borders, only row divider */
+  .ag-grid-clean .ag-cell {
+    border: 0 !important;
+    padding: 14px 20px !important;
+    font-size: 14px; color: #111827;
+  }
+  .ag-grid-clean .ag-row:not(.ag-row-last) .ag-cell {
+    border-bottom: 1px solid #E5E7EB !important;
+  }
+  /* Checkbox column: 48px width with left padding 20 */
+  .ag-grid-clean .ag-header-cell:first-child,
+  .ag-grid-clean .ag-row .ag-cell:first-child {
+    min-width: 48px !important; max-width: 48px !important; width: 48px !important;
+    padding-left: 20px !important; padding-right: 0 !important;
+  }
 
-  /* No-rows overlay (empty state) */
-  .no-rows-overlay { padding: 26.5px 130px 26px 20px; text-align: left; }
-  .no-rows-overlay .empty-state-title{ font-size:15px; font-weight:600; color:#374151; margin-bottom:8px; }
-  .no-rows-overlay .empty-state-text{ font-size:14px; color:#4B5563; }
+  /* No-rows overlay (empty state) */
+  .no-rows-overlay { padding: 40px; text-align: left; }
+  .no-rows-overlay .empty-state-title{ font-size:15px; font-weight:600; color:#374151; margin-bottom:8px; }
+  .no-rows-overlay .empty-state-text{ font-size:14px; color:#4B5563; }
+  .no-rows-overlay .barcode-svg-icon {
+    margin-bottom: 16px; /* CONFIRMED: 16px space between icon and text */
+  }
 
-  /* === Spec sizing overrides === */
-  .barcode-input-group { max-width: 514px; }               /* 432 + 10 + 72 */
-  #barcode-input { width: 432px; height: 46px; }
-  #location-select,#sublocation-select {
-    width: 432px;
-    height: 46px;
-    padding: 0 40px 0 16px;
-    line-height: normal;
-    color: #111827;
-  }
-  #add-barcode { width: 72px; height: 46px; padding: 0; line-height: 32px; }
-  #update-button { width: 154px; height: 46px; padding: 0; line-height: 32px; }
-  #reset-button { width: 85px; height: 46px; padding: 0; line-height: 32px; }
+  /* === Spec sizing overrides === */
+  .barcode-input-group { max-width: 514px; }               /* 432 + 10 + 72 */
+  #barcode-input { width: 432px; height: 46px; }
+  #location-select,#sublocation-select {
+    width: 432px;
+    height: 46px;
+    padding: 0 40px 0 16px;
+    line-height: normal;
+    color: #111827;
+  }
+  #add-barcode { width: 72px; height: 46px; padding: 0; line-height: 32px; }
+  #update-button { width: 154px; height: 46px; padding: 0; line-height: 32px; }
+  #reset-button { width: 85px; height: 46px; padding: 0; line-height: 32px; }
 
-  /* Make Update Location blue when active */
-  #update-button:not(:disabled){
-    background-color:#2196F3; color:#fff; border-color:#2196F3;
-  }
-  #update-button:not(:disabled):hover{
-    background-color:#1976D2; border-color:#1976D2;
-  }
+  /* Make Update Location blue when active */
+  #update-button:not(:disabled){
+    background-color:#2196F3; color:#fff; border-color:#2196F3;
+  }
+  #update-button:not(:disabled):hover{
+    background-color:#1976D2; border-color:#1976D2;
+  }
 </style>
 
-<!-- AG Grid (Community) CSS -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-grid.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-theme-alpine.css">
 {% endblock %}
 
 {% block content %}
 <div class="page-content">
-  <div class="page-header">
-    <h1 class="page-title">Barcode Scanning</h1>
-    <p class="instruction-text">
-      Before scanning, make sure the input field is active so the barcode is entered correctly. In case the scanner doesn’t respond or fails to read the code, you can simply type the barcode manually instead. There's no limit to how many barcodes you can scan, so feel free to continue as needed.
-    </p>
-  </div>
+  <div class="page-header">
+    <h1 class="page-title">Barcode Scanning</h1>
+    <p class="instruction-text">
+      Before scanning, make sure the input field is active so the barcode is entered correctly. In case the scanner doesn’t respond or fails to read the code, you can simply type the barcode manually instead. There's no limit to how many barcodes you can scan, so feel free to continue as needed.
+    </p>
+  </div>
 
-  <div class="scanner-main">
-    <h2 class="section-title">Barcode Overview</h2>
-    <div class="form-group">
-      <label class="form-label" for="barcode-input">Scan or Enter Barcode</label>
-      <div class="barcode-input-group">
-        <input type="text" id="barcode-input" class="barcode-input" placeholder="Enter text here" autofocus>
-        <button id="add-barcode" class="btn btn-primary">Add</button>
-      </div>
-    </div>
+  <div class="scanner-main">
+    <h2 class="section-title">Barcode Overview</h2>
+    <div class="form-group">
+      <label class="form-label" for="barcode-input">Scan or Enter Barcode</label>
+      <div class="barcode-input-group">
+        <input type="text" id="barcode-input" class="barcode-input" placeholder="Enter text here" autofocus>
+        <button id="add-barcode" class="btn btn-primary">Add</button>
+      </div>
+    </div>
 
-    <!-- Scanned Barcodes (header always visible via AG Grid) -->
-    <div class="form-group">
-      <label class="form-label">Scanned Barcodes</label>
+        <div class="form-group">
+      <label class="form-label">Scanned Barcodes</label>
 
-      <div class="scanner-spec-frame ag-theme-alpine ag-grid-clean" id="grid-frame">
-        <div id="bulk-action-toolbar">
-          <span id="selection-count">0 selected</span>
-          <button id="bulk-delete-btn" class="toolbar-btn">
-            <svg viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd"/>
-            </svg>
-            Delete
-          </button>
-        </div>
+      <div class="scanner-spec-frame ag-theme-alpine ag-grid-clean" id="grid-frame">
+        <div id="bulk-action-toolbar">
+          <span id="selection-count">0 selected</span>
+          <button id="bulk-delete-btn" class="toolbar-btn">
+            <svg viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd"/>
+            </svg>
+            Delete
+          </button>
+        </div>
 
-        <div id="ag-grid"></div>
-      </div>
-    </div>
+        <div id="ag-grid"></div>
+      </div>
+    </div>
 
-    <h2 class="section-title">Location</h2>
-    <div class="location-grid">
-      <div class="form-group">
-        <label class="form-label" for="location-select">Location <span class="required-star">*</span></label>
-        <select class="form-select is-invalid" id="location-select">
-          <option value="">Please Select</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label" for="sublocation-select">Sublocation</label>
-        <select class="form-select" id="sublocation-select" disabled>
-          <option value="">-- Select Sublocation --</option>
-        </select>
-      </div>
-    </div>
+    <h2 class="section-title">Location</h2>
+    <div class="location-grid">
+      <div class="form-group">
+        <label class="form-label" for="location-select">Location <span class="required-star">*</span></label>
+        <select class="form-select is-invalid" id="location-select">
+          <option value="">Please Select</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="sublocation-select">Sublocation</label>
+        <select class="form-select" id="sublocation-select" disabled>
+          <option value="">-- Select Sublocation --</option>
+        </select>
+      </div>
+    </div>
 
-    <div class="button-group">
-      <button id="update-button" class="btn btn-secondary" disabled>Update Location</button>
-      <button id="reset-button" class="btn btn-outline">Reset</button>
-    </div>
-  </div>
+    <div class="button-group">
+      <button id="update-button" class="btn btn-secondary" disabled>Update Location</button>
+      <button id="reset-button" class="btn btn-outline">Reset</button>
+    </div>
+  </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-  window.tenantInfo = {
-    tenant: "{{ tenant }}",
-    tenantName: "{{ tenant_name }}"
-  };
+  window.tenantInfo = {
+    tenant: "{{ tenant }}",
+    tenantName: "{{ tenant_name }}"
+  };
 </script>
 
-<!-- AG Grid JS -->
 <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.noStyle.js"></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-  const barcodeInput = document.getElementById('barcode-input');
-  const addButton = document.getElementById('add-barcode');
-  const updateButton = document.getElementById('update-button');
-  const resetButton = document.getElementById('reset-button');
-  const locationSelect = document.getElementById('location-select');
-  const sublocationSelect = document.getElementById('sublocation-select');
+  const barcodeInput = document.getElementById('barcode-input');
+  const addButton = document.getElementById('add-barcode');
+  const updateButton = document.getElementById('update-button');
+  const resetButton = document.getElementById('reset-button');
+  const locationSelect = document.getElementById('location-select');
+  const sublocationSelect = document.getElementById('sublocation-select');
 
-  const frame = document.getElementById('grid-frame');
-  const bulkActionToolbar = document.getElementById('bulk-action-toolbar');
-  const selectionCount = document.getElementById('selection-count');
-  const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
+  const frame = document.getElementById('grid-frame');
+  const bulkActionToolbar = document.getElementById('bulk-action-toolbar');
+  const selectionCount = document.getElementById('selection-count');
+  const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
 
-  let scannedBarcodes = [];
-  let locationCache = [];
-  const tenant = window.tenantInfo ? window.tenantInfo.tenant : null;
+  let scannedBarcodes = [];
+  let locationCache = [];
+  const tenant = window.tenantInfo ? window.tenantInfo.tenant : null;
 
-  /* ========= AG Grid setup ========= */
-  const columnDefs = [
-    {
-      headerName: '',
-      field: 'select',
-      width: 48, minWidth: 48, maxWidth: 48,
-      checkboxSelection: true,
-      headerCheckboxSelection: true,
-      headerCheckboxSelectionFilteredOnly: false,
-      resizable: false, sortable: false, suppressMenu: true,
-    },
-    { headerName: 'Name', field: 'name', flex: 1 },
-    { headerName: 'Column Name A', field: 'colA', flex: 1 }
-  ];
+  /* ========= AG Grid setup ========= */
+  const columnDefs = [
+    {
+      headerName: '',
+      field: 'select',
+      width: 48, minWidth: 48, maxWidth: 48,
+      checkboxSelection: true,
+      headerCheckboxSelection: true,
+      headerCheckboxSelectionFilteredOnly: false,
+      resizable: false, sortable: false, suppressMenu: true,
+    },
+    { headerName: 'Name', field: 'name', flex: 1 },
+    { headerName: 'Column Name A', field: 'colA', flex: 1 }
+  ];
 
-  const gridOptions = {
-    columnDefs,
-    rowData: [],
-    rowSelection: 'multiple',
-    suppressRowClickSelection: true,
-    suppressCellFocus: true,
-    headerHeight: 48,
-    rowHeight: 48,
-    animateRows: false,
-    getRowId: p => p.data.id,
-    overlayNoRowsTemplate: `
-      <div class="no-rows-overlay">
-        <div class="barcode-icon">||||</div>
-        <div class="empty-state-title">No scanned samples</div>
-        <div class="empty-state-text">
-          This table will automatically populate with samples as they are scanned or entered manually in the input field above.
-        </div>
-      </div>
-    `,
-    onGridReady: () => gridApi.showNoRowsOverlay(),
-    onSelectionChanged: () => {
-      const count = gridApi.getSelectedRows().length;
-      bulkActionToolbar.style.display = count > 0 ? 'flex' : 'none';
-      frame.classList.toggle('toolbar-visible', count > 0);
-      if (count > 0) selectionCount.textContent = `${count} selected`;
-    }
-  };
+  const gridOptions = {
+    columnDefs,
+    rowData: [],
+    rowSelection: 'multiple',
+    suppressRowClickSelection: true,
+    suppressCellFocus: true,
+    headerHeight: 48,
+    rowHeight: 48,
+    animateRows: false,
+    getRowId: p => p.data.id,
+    overlayNoRowsTemplate: `
+      <div class="no-rows-overlay">
+        <svg class="barcode-svg-icon" width="60" height="40" viewBox="0 0 60 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="2" height="40" fill="#D1D5DB"/>
+            <rect x="4" width="4" height="40" fill="#D1D5DB"/>
+            <rect x="10" width="1" height="40" fill="#D1D5DB"/>
+            <rect x="13" width="3" height="40" fill="#D1D5DB"/>
+            <rect x="18" width="2" height="40" fill="#D1D5DB"/>
+            <rect x="22" width="1" height="40" fill="#D1D5DB"/>
+            <rect x="25" width="5" height="40" fill="#D1D5DB"/>
+            <rect x="32" width="2" height="40" fill="#D1D5DB"/>
+            <rect x="36" width="3" height="40" fill="#D1D5DB"/>
+            <rect x="41" width="1" height="40" fill="#D1D5DB"/>
+            <rect x="44" width="4" height="40" fill="#D1D5DB"/>
+            <rect x="50" width="2" height="40" fill="#D1D5DB"/>
+            <rect x="54" width="1" height="40" fill="#D1D5DB"/>
+            <rect x="57" width="3" height="40" fill="#D1D5DB"/>
+        </svg>
+        <div class="empty-state-title">No scanned samples</div>
+        <div class="empty-state-text">
+          This table will automatically populate with samples as they are scanned or entered manually in the input field above.
+        </div>
+      </div>
+    `,
+    onGridReady: () => gridApi.showNoRowsOverlay(),
+    onSelectionChanged: () => {
+      const count = gridApi.getSelectedRows().length;
+      bulkActionToolbar.style.display = count > 0 ? 'flex' : 'none';
+      frame.classList.toggle('toolbar-visible', count > 0);
+      if (count > 0) selectionCount.textContent = `${count} selected`;
+    }
+  };
 
-  const gridDiv = document.getElementById('ag-grid');
-  const gridApi = agGrid.createGrid(gridDiv, gridOptions);
+  const gridDiv = document.getElementById('ag-grid');
+  const gridApi = agGrid.createGrid(gridDiv, gridOptions);
 
-  function refreshEmptyOverlay() {
-    const rows = gridApi.getDisplayedRowCount();
-    if (rows === 0) gridApi.showNoRowsOverlay();
-    else gridApi.hideOverlay();
-  }
+  function refreshEmptyOverlay() {
+    const rows = gridApi.getDisplayedRowCount();
+    if (rows === 0) gridApi.showNoRowsOverlay();
+    else gridApi.hideOverlay();
+  }
 
-  /* ====== App logic ====== */
-  function addRow(barcode) {
-    gridApi.applyTransaction({
-      add: [{ id: barcode, name: barcode, colA: '' }]
-    });
-    refreshEmptyOverlay();
-  }
+  /* ====== App logic ====== */
+  function addRow(barcode) {
+    gridApi.applyTransaction({
+      add: [{ id: barcode, name: barcode, colA: '' }]
+    });
+    refreshEmptyOverlay();
+  }
 
-  function addBarcode() {
-    const barcode = barcodeInput.value.trim();
-    if (!barcode || scannedBarcodes.includes(barcode)) return;
-    scannedBarcodes.push(barcode);
-    addRow(barcode);
-    barcodeInput.value = '';
-    barcodeInput.focus();
-    refreshUpdateState();
-  }
+  function addBarcode() {
+    const barcode = barcodeInput.value.trim();
+    if (!barcode || scannedBarcodes.includes(barcode)) return;
+    scannedBarcodes.push(barcode);
+    addRow(barcode);
+    barcodeInput.value = '';
+    barcodeInput.focus();
+    refreshUpdateState();
+  }
 
-  function refreshUpdateState() {
-    updateButton.disabled = !(scannedBarcodes.length > 0 && locationSelect.value !== "");
-  }
+  function refreshUpdateState() {
+    updateButton.disabled = !(scannedBarcodes.length > 0 && locationSelect.value !== "");
+  }
 
-  function deleteSelected() {
-    const selectedRows = gridApi.getSelectedRows();
-    if (!selectedRows.length) return;
-    gridApi.applyTransaction({ remove: selectedRows });
-    const toDelete = new Set(selectedRows.map(r => r.id));
-    scannedBarcodes = scannedBarcodes.filter(bc => !toDelete.has(bc));
-    refreshEmptyOverlay();
-    refreshUpdateState();
-    bulkActionToolbar.style.display = 'none';
-    frame.classList.remove('toolbar-visible');
-  }
+  function deleteSelected() {
+    const selectedRows = gridApi.getSelectedRows();
+    if (!selectedRows.length) return;
+    gridApi.applyTransaction({ remove: selectedRows });
+    const toDelete = new Set(selectedRows.map(r => r.id));
+    scannedBarcodes = scannedBarcodes.filter(bc => !toDelete.has(bc));
+    refreshEmptyOverlay();
+    refreshUpdateState();
+    bulkActionToolbar.style.display = 'none';
+    frame.classList.remove('toolbar-visible');
+  }
 
-  /* Locations */
-  function fetchLocations() {
-    if (!locationSelect) return;
+  /* Locations */
+  function fetchLocations() {
+    if (!locationSelect) return;
 
-    locationSelect.innerHTML = '<option value="">Loading locations...</option>';
+    locationSelect.innerHTML = '<option value="">Loading locations...</option>';
 
-    fetch(`/get-locations/${tenant}`)
-      .then(res => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then(locations => {
-        locationCache = locations || [];
-        locationSelect.innerHTML = '<option value="">Please Select</option>';
-        locationCache.forEach(loc => {
-          if (loc && loc.id && loc.name) {
-            const opt = document.createElement('option');
-            opt.value = loc.id;
-            opt.textContent = loc.name;
-            locationSelect.appendChild(opt);
-          }
-        });
-      })
-      .catch(() => {
-        fetch(`/get-test-locations/${tenant}`)
-          .then(res => res.json())
-          .then(locations => {
-            locationCache = locations || [];
-            locationSelect.innerHTML = '<option value="">Please Select</option>';
-            locationCache.forEach(loc => {
-              if (loc && loc.id && loc.name) {
-                const opt = document.createElement('option');
-                opt.value = loc.id;
-                opt.textContent = loc.name;
-                locationSelect.appendChild(opt);
-              }
-            });
-          })
-          .catch(() => {
-            locationSelect.innerHTML = '<option value="">Failed to load locations</option>';
-          });
-      });
-  }
+    fetch(`/get-locations/${tenant}`)
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then(locations => {
+        locationCache = locations || [];
+        locationSelect.innerHTML = '<option value="">Please Select</option>';
+        locationCache.forEach(loc => {
+          if (loc && loc.id && loc.name) {
+            const opt = document.createElement('option');
+            opt.value = loc.id;
+            opt.textContent = loc.name;
+            locationSelect.appendChild(opt);
+          }
+        });
+      })
+      .catch(() => {
+        fetch(`/get-test-locations/${tenant}`)
+          .then(res => res.json())
+          .then(locations => {
+            locationCache = locations || [];
+            locationSelect.innerHTML = '<option value="">Please Select</option>';
+            locationCache.forEach(loc => {
+              if (loc && loc.id && loc.name) {
+                const opt = document.createElement('option');
+                opt.value = loc.id;
+                opt.textContent = loc.name;
+                locationSelect.appendChild(opt);
+              }
+            });
+          })
+          .catch(() => {
+            locationSelect.innerHTML = '<option value="">Failed to load locations</option>';
+          });
+      });
+  }
 
-  function populateSublocations() {
-    const selectedLocationId = locationSelect.value;
-    sublocationSelect.innerHTML = '<option value="">-- Select Sublocation --</option>';
+  function populateSublocations() {
+    const selectedLocationId = locationSelect.value;
+    sublocationSelect.innerHTML = '<option value="">-- Select Sublocation --</option>';
 
-    if (!selectedLocationId) {
-      sublocationSelect.disabled = true;
-      refreshUpdateState();
-      return;
-    }
-    const selectedLocation = locationCache.find(loc => String(loc.id) === String(selectedLocationId));
-    if (selectedLocation && selectedLocation.sublocations && selectedLocation.sublocations.length > 0) {
-      selectedLocation.sublocations.forEach(sub => {
-        const option = document.createElement('option');
-        option.value = sub.id;
-        option.textContent = sub.name;
-        sublocationSelect.appendChild(option);
-      });
-      sublocationSelect.disabled = false;
-    } else {
-      sublocationSelect.disabled = true;
-    }
-    refreshUpdateState();
-  }
+    if (!selectedLocationId) {
+      sublocationSelect.disabled = true;
+      refreshUpdateState();
+      return;
+    }
+    const selectedLocation = locationCache.find(loc => String(loc.id) === String(selectedLocationId));
+    if (selectedLocation && selectedLocation.sublocations && selectedLocation.sublocations.length > 0) {
+      selectedLocation.sublocations.forEach(sub => {
+        const option = document.createElement('option');
+        option.value = sub.id;
+        option.textContent = sub.name;
+        sublocationSelect.appendChild(option);
+      });
+      sublocationSelect.disabled = false;
+    } else {
+      sublocationSelect.disabled = true;
+    }
+    refreshUpdateState();
+  }
 
-  function getSelectedBarcodes() {
-    return gridApi.getSelectedRows().map(r => r.id);
-  }
+  function getSelectedBarcodes() {
+    return gridApi.getSelectedRows().map(r => r.id);
+  }
 
-  async function updateLocations() {
-    if (updateButton.disabled) return;
+  async function updateLocations() {
+    if (updateButton.disabled) return;
 
-    const locationId = locationSelect.value;
-    const sublocationId = sublocationSelect ? (sublocationSelect.value || '') : '';
+    const locationId = locationSelect.value;
+    const sublocationId = sublocationSelect ? (sublocationSelect.value || '') : '';
 
-    const selected = getSelectedBarcodes();
-    const recordIds = selected.length ? selected : scannedBarcodes.slice();
+    const selected = getSelectedBarcodes();
+    const recordIds = selected.length ? selected : scannedBarcodes.slice();
 
-    if (!recordIds.length) { alert('Please scan at least one barcode.'); return; }
-    if (!locationId)       { alert('Please select a location.'); return; }
+    if (!recordIds.length) { alert('Please scan at least one barcode.'); return; }
+    if (!locationId)       { alert('Please select a location.'); return; }
 
-    updateButton.disabled = true;
+    updateButton.disabled = true;
 
-    try {
-      const res = await fetch(`/update-location/${tenant}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recordIds, locationId, sublocationId })
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const result = await res.json();
+    try {
+      const res = await fetch(`/update-location/${tenant}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recordIds, locationId, sublocationId })
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const result = await res.json();
 
-      alert(result?.message || 'Location updated successfully.');
+      alert(result?.message || 'Location updated successfully.');
 
-      gridApi.deselectAll();
-      bulkActionToolbar.style.display = 'none';
-      frame.classList.remove('toolbar-visible');
-    } catch (err) {
-      console.error(err);
-      alert('Failed to update location. Check console for details.');
-    } finally {
-      refreshUpdateState();
-    }
-  }
+      gridApi.deselectAll();
+      bulkActionToolbar.style.display = 'none';
+      frame.classList.remove('toolbar-visible');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to update location. Check console for details.');
+    } finally {
+      refreshUpdateState();
+    }
+  }
 
-  function resetAll() {
-    scannedBarcodes = [];
-    gridApi.setGridOption('rowData', []);
-    refreshEmptyOverlay();
-    locationSelect.value = '';
-    sublocationSelect.innerHTML = '<option value="">-- Select Sublocation --</option>';
-    sublocationSelect.disabled = true;
-    locationSelect.classList.add('is-invalid');
-    refreshUpdateState();
-    barcodeInput.focus();
-  }
+  function resetAll() {
+    scannedBarcodes = [];
+    gridApi.setGridOption('rowData', []);
+    refreshEmptyOverlay();
+    locationSelect.value = '';
+    sublocationSelect.innerHTML = '<option value="">-- Select Sublocation --</option>';
+    sublocationSelect.disabled = true;
+    locationSelect.classList.add('is-invalid');
+    refreshUpdateState();
+    barcodeInput.focus();
+  }
 
-  /* Event Listeners */
-  addButton.addEventListener('click', addBarcode);
-  barcodeInput.addEventListener('keypress', e => { if (e.key === 'Enter') addBarcode(); });
+  /* Event Listeners */
+  addButton.addEventListener('click', addBarcode);
+  barcodeInput.addEventListener('keypress', e => { if (e.key === 'Enter') addBarcode(); });
 
-  locationSelect.addEventListener('change', () => {
-    if (locationSelect.value) locationSelect.classList.remove('is-invalid');
-    else locationSelect.classList.add('is-invalid');
-    populateSublocations();
-  });
+  locationSelect.addEventListener('change', () => {
+    if (locationSelect.value) locationSelect.classList.remove('is-invalid');
+    else locationSelect.classList.add('is-invalid');
+    populateSublocations();
+  });
 
-  bulkDeleteBtn.addEventListener('click', deleteSelected);
-  updateButton.addEventListener('click', updateLocations);
-  resetButton.addEventListener('click', resetAll);
+  bulkDeleteBtn.addEventListener('click', deleteSelected);
+  updateButton.addEventListener('click', updateLocations);
+  resetButton.addEventListener('click', resetAll);
 
-  /* Initialization */
-  fetchLocations();
-  refreshEmptyOverlay();
+  /* Initialization */
+  fetchLocations();
+  refreshEmptyOverlay();
 });
 </script>
 {% endblock %}
