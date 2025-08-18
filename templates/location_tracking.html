@@ -13,7 +13,7 @@
   /* Base & Layout */
   html, body {
     height: 100%;
-    background-color: #FFFFFF; /* UPDATED: Background is now white */
+    background-color: #FFFFFF; /* UPDATED: Entire page background is now white */
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     margin: 0;
   }
@@ -43,25 +43,28 @@
 
   /* Main content area below the header */
   .main-content-area {
-      padding: 40px; /* Increased top padding */
+      background-color: #FFFFFF;
+      padding: 40px;
   }
-
-  /* ADDED: Section title for "Location Hierarchy" */
+  
   .section-title {
     font-size: 24px;
     color: #383F45;
     font-weight: 600;
     margin: 0 0 20px 0;
-    padding-top: 0;
   }
   
   /* Grid Toolbar */
   .grid-toolbar {
     display: flex;
-    justify-content: flex-end; /* Aligns all controls to the right */
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 20px;
+  }
+  .toolbar-left, .toolbar-right {
+    display: flex;
     align-items: center;
     gap: 24px;
-    padding-bottom: 20px;
   }
   .control-group {
     display: flex;
@@ -188,28 +191,32 @@
         <h2 class="section-title">Location Hierarchy</h2>
 
         <div class="grid-toolbar">
-            <div class="control-group">
-                <button id="columns-btn" class="toolbar-btn"><i class="fas fa-columns"></i> Columns</button>
-                <button id="filters-btn" class="toolbar-btn"><i class="fas fa-filter"></i> Filters</button>
-                <button id="group-by-btn" class="toolbar-btn"><i class="fas fa-layer-group"></i> Group By (2)</button>
-                <button id="sort-btn" class="toolbar-btn"><i class="fas fa-sort"></i> Sort</button>
+            <div class="toolbar-left">
+                <div class="control-group">
+                    <button id="columns-btn" class="toolbar-btn"><i class="fas fa-columns"></i> Columns</button>
+                    <button id="filters-btn" class="toolbar-btn"><i class="fas fa-filter"></i> Filters</button>
+                    <button id="group-by-btn" class="toolbar-btn"><i class="fas fa-layer-group"></i> Group By (2)</button>
+                    <button id="sort-btn" class="toolbar-btn"><i class="fas fa-sort"></i> Sort</button>
+                </div>
             </div>
-            <div class="search-box">
-                <i class="fas fa-search search-icon"></i>
-                <input type="text" id="grid-search-filter" class="form-control" placeholder="Search">
+            <div class="toolbar-right">
+                {% if admin_mode %}
+                <div class="admin-actions">
+                    <select id="tenantSelector" class="form-select form-select-sm d-inline-block" style="width: auto;">
+                        {% for tenant in tenants %}
+                        <option value="{{ tenant }}" {% if tenant == current_tenant %}selected{% endif %}>{{ tenant }}</option>
+                        {% endfor %}
+                    </select>
+                    <button id="refreshButton" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+                {% endif %}
+                <div class="search-box">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" id="grid-search-filter" class="form-control" placeholder="Search">
+                </div>
             </div>
-            {% if admin_mode %}
-            <div class="admin-actions">
-                <select id="tenantSelector" class="form-select form-select-sm d-inline-block" style="width: auto;">
-                    {% for tenant in tenants %}
-                    <option value="{{ tenant }}" {% if tenant == current_tenant %}selected{% endif %}>{{ tenant }}</option>
-                    {% endfor %}
-                </select>
-                <button id="refreshButton" class="btn btn-sm btn-outline-primary">
-                    <i class="fas fa-sync-alt"></i>
-                </button>
-            </div>
-            {% endif %}
         </div>
         <div id="locationGrid" class="ag-theme-alpine ag-grid-clean"></div>
     </div>
