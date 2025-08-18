@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 
-{% block title %}Location Hierarchy - Alchemy{% endblock %}
+{% block title %}Location Tracking - Alchemy{% endblock %}
 
 {% set active_page = 'location_tracking' %}
 
@@ -11,41 +11,47 @@
   /* Base & Layout */
   html, body {
     height: 100%;
-    background-color: #F9FAFB; /* Lighter page background */
+    background-color: #FFFFFF;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     margin: 0;
   }
-  .content-wrapper {
-    padding: 40px;
+  .page-content {
+      padding: 0;
   }
 
-  /* New Toolbar (replaces old header) */
-  .grid-toolbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 16px 20px;
-    background-color: #FFFFFF;
-    border: 1px solid #E5E7EB;
-    border-bottom: none;
-    border-radius: 8px 8px 0 0;
-  }
-  .toolbar-left {
-    flex-grow: 1;
-  }
-  .toolbar-right {
-    display: flex;
-    align-items: center;
-    gap: 24px;
+  /* RESTORED: Main Page Header */
+  .page-header {
+    background: linear-gradient(135deg, #F4F6FF 0%, #F5FBFF 100%);
+    padding: 40px;
+    border-bottom: 1px solid #E5E7EB;
   }
   .page-title {
-    font-size: 20px;
-    color: #111827;
+    font-size: 28px;
+    color: #383F45;
     font-weight: 600;
+    margin: 0 0 12px 0;
+  }
+  .instruction-text {
+    font-size: 14px;
+    color: #4B5563;
+    line-height: 1.6;
+    max-width: 800px;
     margin: 0;
   }
 
-  /* Toolbar Controls */
+  /* Main content area below the header */
+  .main-content-area {
+      padding: 24px 40px 40px 40px;
+  }
+  
+  /* Grid Toolbar */
+  .grid-toolbar {
+    display: flex;
+    justify-content: flex-end; /* Align controls to the right */
+    align-items: center;
+    gap: 24px;
+    padding-bottom: 20px;
+  }
   .control-group {
     display: flex;
     align-items: center;
@@ -77,19 +83,27 @@
     font-size: 14px;
   }
   .search-box input {
-    padding: 8px 12px 8px 32px; /* Left padding for icon */
+    padding: 8px 12px 8px 32px;
     border: 1px solid #D1D5DB;
     border-radius: 6px;
     font-size: 14px;
+    height: 38px;
+    box-sizing: border-box;
   }
   .search-box input:focus {
     outline: none;
     border-color: #2563EB;
   }
+  .admin-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+  }
+  #tenantSelector { height: 38px; }
 
   /* AG Grid */
   #locationGrid {
-      height: 75vh; /* Increased height */
+      height: 65vh;
       width: 100%;
   }
 
@@ -98,13 +112,13 @@
     --ag-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     --ag-background-color: #fff;
     --ag-header-background-color: #F9FAFB;
-    --ag-header-foreground-color: #374151; /* Darker header text */
+    --ag-header-foreground-color: #374151;
     --ag-border-color: #E5E7EB;
     --ag-row-border-color: #E5E7EB;
   }
   .ag-grid-clean .ag-root-wrapper {
       border: 1px solid #E5E7EB;
-      border-radius: 0 0 8px 8px; /* Rounded bottom corners */
+      border-radius: 8px; /* Full radius for the grid container */
   }
   .ag-grid-clean .ag-root-wrapper,
   .ag-grid-clean .ag-center-cols-viewport {
@@ -113,11 +127,10 @@
   .ag-grid-clean .ag-header {
       border-bottom-color: #E5E7EB !important;
   }
-  .ag-grid-clean .ag-header-cell-label {
-      font-size: 14px; /* Larger header font */
-      font-weight: 500;
-      text-transform: none;
-      line-height: 1.4;
+  .custom-header-label {
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.4;
   }
   .header-subtitle {
     font-weight: normal;
@@ -127,7 +140,7 @@
   .ag-grid-clean .ag-cell {
       font-size: 14px;
       color: #111827;
-      line-height: 48px; /* Center text vertically in cells */
+      line-height: 48px;
   }
   .ag-grid-clean .ag-cell, .ag-grid-clean .ag-header-cell {
       border-right: none !important;
@@ -145,7 +158,6 @@
   .ag-grid-clean a:hover {
     text-decoration: underline;
   }
-  /* Blue selection highlight */
   .ag-theme-alpine .ag-row-selected {
       background-color: #EFF6FF !important;
   }
@@ -153,12 +165,16 @@
 {% endblock %}
 
 {% block content %}
-<div class="content-wrapper">
-    <div class="grid-toolbar">
-        <div class="toolbar-left">
-            <h1 class="page-title">Location Hierarchy</h1>
-        </div>
-        <div class="toolbar-right">
+<div class="page-content">
+    <div class="page-header">
+        <h1 class="page-title">Location Tracking</h1>
+        <p class="instruction-text">
+            Here you can review all locations and their hierarchical relationships, such as Laboratory → Room → Cupboard. Use the grid or list view to explore and manage the structure in the way that suits you best.
+        </p>
+    </div>
+
+    <div class="main-content-area">
+        <div class="grid-toolbar">
             <div class="control-group">
                 <button class="toolbar-btn"><i class="fas fa-columns"></i> Columns</button>
                 <button class="toolbar-btn"><i class="fas fa-filter"></i> Filters</button>
@@ -169,9 +185,21 @@
                 <i class="fas fa-search search-icon"></i>
                 <input type="text" id="grid-search-filter" class="form-control" placeholder="Search">
             </div>
+            {% if admin_mode %}
+            <div class="admin-actions">
+                <select id="tenantSelector" class="form-select form-select-sm d-inline-block" style="width: auto;">
+                    {% for tenant in tenants %}
+                    <option value="{{ tenant }}" {% if tenant == current_tenant %}selected{% endif %}>{{ tenant }}</option>
+                    {% endfor %}
+                </select>
+                <button id="refreshButton" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
+            {% endif %}
         </div>
+        <div id="locationGrid" class="ag-theme-alpine ag-grid-clean"></div>
     </div>
-    <div id="locationGrid" class="ag-theme-alpine ag-grid-clean"></div>
 </div>
 {% endblock %}
 
@@ -180,6 +208,22 @@
 
 <script>
 "use strict";
+
+class CustomHeader {
+    init(params) {
+        this.params = params;
+        this.eGui = document.createElement('div');
+        this.eGui.innerHTML = `
+            <div class="custom-header-label">${this.params.displayName}</div>
+            <div class="header-subtitle">${this.params.subtitle}</div>
+        `;
+    }
+    getGui() {
+        return this.eGui;
+    }
+    destroy() {}
+}
+
 document.addEventListener('DOMContentLoaded', function () {
     const gridDiv = document.getElementById('locationGrid');
     const searchFilterInput = document.getElementById('grid-search-filter');
@@ -187,21 +231,29 @@ document.addEventListener('DOMContentLoaded', function () {
     let currentTenant = "{{ current_tenant }}";
 
     const gridOptions = {
-        // Set header height to accommodate subtitles
         headerHeight: 64,
         rowHeight: 48,
+        components: {
+            customHeader: CustomHeader,
+        },
         columnDefs: [
             {
-                // ADDED subtitle via HTML in headerName
-                headerName: 'Country / Address<br><span class="header-subtitle">Location</span>',
+                headerComponent: 'customHeader',
+                headerComponentParams: {
+                    displayName: 'Country / Address',
+                    subtitle: 'Location'
+                },
                 flex: 1,
                 valueGetter: () => 'Country Name / Address',
                 sortable: false,
             }
         ],
         autoGroupColumnDef: {
-            // ADDED subtitle via HTML in headerName
-            headerName: 'Location Hierarchy<br><span class="header-subtitle">Location</span>',
+            headerComponent: 'customHeader',
+            headerComponentParams: {
+                displayName: 'Location Hierarchy',
+                subtitle: 'Location'
+            },
             field: 'name',
             flex: 2,
             minWidth: 350,
@@ -231,7 +283,7 @@ document.addEventListener('DOMContentLoaded', function () {
         treeData: true,
         getDataPath: (data) => data.hierarchy,
         groupDefaultExpanded: 1,
-        rowSelection: 'multiple', // Allow row selection
+        rowSelection: 'multiple',
         suppressRowClickSelection: false,
         animateRows: true,
     };
@@ -277,9 +329,24 @@ document.addEventListener('DOMContentLoaded', function () {
 
     searchFilterInput?.addEventListener('input', () => gridOptions.api?.setQuickFilter(searchFilterInput.value));
 
-    // Admin functionality remains the same but is not visible in the new toolbar
     if (adminMode) {
-        // You would need to add the admin controls back to the new toolbar if needed
+        const tenantSelector = document.getElementById('tenantSelector');
+        const refreshButton = document.getElementById('refreshButton');
+        tenantSelector?.addEventListener('change', (e) => {
+            currentTenant = e.target.value;
+            window.history.pushState({}, '', `/admin/location-tracking/${currentTenant}`);
+            fetchAndDisplayLocations(currentTenant);
+        });
+        refreshButton?.addEventListener('click', async () => {
+            refreshButton.disabled = true;
+            refreshButton.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i>';
+            await fetch(`/admin/refresh-location-cache/${currentTenant}`, { method: 'POST' });
+            setTimeout(() => {
+                fetchAndDisplayLocations(currentTenant);
+                refreshButton.disabled = false;
+                refreshButton.innerHTML = '<i class="fas fa-sync-alt"></i>';
+            }, 2000);
+        });
     }
 
     fetchAndDisplayLocations(currentTenant);
