@@ -59,7 +59,7 @@
 
   /* === SPEC-EXACT FRAME FOR SCANNED TABLE === */
   .scanner-spec-frame{
-    width:839px; height:185px; border:1px solid #E5E7EB; border-radius:8px; background:#fff;
+    width:839px; height:528px; border:1px solid #E5E7EB; border-radius:8px; background:#fff;
     overflow:hidden; position:relative; box-sizing:border-box;
   }
 
@@ -152,6 +152,10 @@
   #update-button:not(:disabled):hover{
     background-color:#1976D2; border-color:#1976D2;
   }
+  /* Add this new rule for spacing */
+  .no-rows-overlay .barcode-svg-icon {
+    margin-bottom: 16px;
+  }
 </style>
 
 <!-- AG Grid (Community) CSS -->
@@ -275,15 +279,30 @@ document.addEventListener('DOMContentLoaded', function () {
     rowHeight: 48,
     animateRows: false,
     getRowId: p => p.data.id,
-    overlayNoRowsTemplate: `
-      <div class="no-rows-overlay">
-        <div class="barcode-icon">||||</div>
-        <div class="empty-state-title">No scanned samples</div>
-        <div class="empty-state-text">
-          This table will automatically populate with samples as they are scanned or entered manually in the input field above.
-        </div>
-      </div>
-    `,
+   overlayNoRowsTemplate: `
+      <div class="no-rows-overlay">
+        <svg class="barcode-svg-icon" width="60" height="40" viewBox="0 0 60 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="2" height="40" fill="#D1D5DB"/>
+            <rect x="4" width="4" height="40" fill="#D1D5DB"/>
+            <rect x="10" width="1" height="40" fill="#D1D5DB"/>
+            <rect x="13" width="3" height="40" fill="#D1D5DB"/>
+            <rect x="18" width="2" height="40" fill="#D1D5DB"/>
+            <rect x="22" width="1" height="40" fill="#D1D5DB"/>
+            <rect x="25" width="5" height="40" fill="#D1D5DB"/>
+            <rect x="32" width="2" height="40" fill="#D1D5DB"/>
+            <rect x="36" width="3" height="40" fill="#D1D5DB"/>
+            <rect x="41" width="1" height="40" fill="#D1D5DB"/>
+            <rect x="44" width="4" height="40" fill="#D1D5DB"/>
+            <rect x="50" width="2" height="40" fill="#D1D5DB"/>
+            <rect x="54" width="1" height="40" fill="#D1D5DB"/>
+            <rect x="57" width="3" height="40" fill="#D1D5DB"/>
+        </svg>
+        <div class="empty-state-title">No scanned samples</div>
+        <div class="empty-state-text">
+          This table will automatically populate with samples as they are scanned or entered manually in the input field above.
+        </div>
+      </div>
+    `,
     onGridReady: () => gridApi.showNoRowsOverlay(),
     onSelectionChanged: () => {
       const count = gridApi.getSelectedRows().length;
