@@ -5,6 +5,8 @@
 {% set active_page = 'location_tracking' %}
 
 {% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/ag-grid-enterprise@31.0.0/dist/ag-grid-enterprise.min.js"></script>
+
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.0/styles/ag-grid.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.0/styles/ag-theme-alpine.css">
 <style>
@@ -19,7 +21,7 @@
       padding: 0;
   }
 
-  /* RESTORED: Main Page Header */
+  /* Main Page Header */
   .page-header {
     background: linear-gradient(135deg, #F4F6FF 0%, #F5FBFF 100%);
     padding: 40px;
@@ -47,7 +49,7 @@
   /* Grid Toolbar */
   .grid-toolbar {
     display: flex;
-    justify-content: flex-end; /* Align controls to the right */
+    justify-content: flex-end; /* Aligns all controls to the right */
     align-items: center;
     gap: 24px;
     padding-bottom: 20px;
@@ -118,7 +120,7 @@
   }
   .ag-grid-clean .ag-root-wrapper {
       border: 1px solid #E5E7EB;
-      border-radius: 8px; /* Full radius for the grid container */
+      border-radius: 8px;
   }
   .ag-grid-clean .ag-root-wrapper,
   .ag-grid-clean .ag-center-cols-viewport {
@@ -176,10 +178,10 @@
     <div class="main-content-area">
         <div class="grid-toolbar">
             <div class="control-group">
-                <button class="toolbar-btn"><i class="fas fa-columns"></i> Columns</button>
-                <button class="toolbar-btn"><i class="fas fa-filter"></i> Filters</button>
-                <button class="toolbar-btn"><i class="fas fa-layer-group"></i> Group By (2)</button>
-                <button class="toolbar-btn"><i class="fas fa-sort"></i> Sort</button>
+                <button id="columns-btn" class="toolbar-btn"><i class="fas fa-columns"></i> Columns</button>
+                <button id="filters-btn" class="toolbar-btn"><i class="fas fa-filter"></i> Filters</button>
+                <button id="group-by-btn" class="toolbar-btn"><i class="fas fa-layer-group"></i> Group By (2)</button>
+                <button id="sort-btn" class="toolbar-btn"><i class="fas fa-sort"></i> Sort</button>
             </div>
             <div class="search-box">
                 <i class="fas fa-search search-icon"></i>
@@ -204,8 +206,6 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.0/dist/ag-grid-community.min.js"></script>
-
 <script>
 "use strict";
 
@@ -230,33 +230,53 @@ document.addEventListener('DOMContentLoaded', function () {
     const adminMode = {% if admin_mode %}true{% else %}false{% endif %};
     let currentTenant = "{{ current_tenant }}";
 
+    // Button elements
+    const columnsBtn = document.getElementById('columns-btn');
+    const filtersBtn = document.getElementById('filters-btn');
+    const groupByBtn = document.getElementById('group-by-btn');
+    const sortBtn = document.getElementById('sort-btn');
+
     const gridOptions = {
         headerHeight: 64,
         rowHeight: 48,
         components: {
             customHeader: CustomHeader,
         },
+        // ADDED: Side Bar configuration for tool panels
+        sideBar: {
+            toolPanels: [
+                {
+                    id: 'columns',
+                    labelDefault: 'Columns',
+                    iconKey: 'columns',
+                    toolPanel: 'agColumnsToolPanel',
+                },
+                {
+                    id: 'filters',
+                    labelDefault: 'Filters',
+                    iconKey: 'filter',
+                    toolPanel: 'agFiltersToolPanel',
+                }
+            ],
+            defaultToolPanel: '' // Start with no panel open
+        },
         columnDefs: [
             {
                 headerComponent: 'customHeader',
-                headerComponentParams: {
-                    displayName: 'Country / Address',
-                    subtitle: 'Location'
-                },
+                headerComponentParams: { displayName: 'Country / Address', subtitle: 'Location' },
                 flex: 1,
                 valueGetter: () => 'Country Name / Address',
                 sortable: false,
+                filter: true, // Enable filtering on this column
             }
         ],
         autoGroupColumnDef: {
             headerComponent: 'customHeader',
-            headerComponentParams: {
-                displayName: 'Location Hierarchy',
-                subtitle: 'Location'
-            },
+            headerComponentParams: { displayName: 'Location Hierarchy', subtitle: 'Location' },
             field: 'name',
             flex: 2,
             minWidth: 350,
+            filter: true, // Enable filtering on the group column
             cellRendererParams: {
                 suppressCount: true,
                 innerRenderer: params => {
@@ -292,7 +312,24 @@ document.addEventListener('DOMContentLoaded', function () {
         new agGrid.Grid(gridDiv, gridOptions);
     }
     
+    // --- HOOK IN BUTTONS ---
+    columnsBtn.addEventListener('click', () => {
+        gridOptions.api.openToolPanel('columns');
+    });
+    filtersBtn.addEventListener('click', () => {
+        gridOptions.api.openToolPanel('filters');
+    });
+    groupByBtn.addEventListener('click', () => {
+        // Grouping is part of the filters tool panel
+        gridOptions.api.openToolPanel('filters');
+    });
+    sortBtn.addEventListener('click', () => {
+        // Reset sort on all columns
+        gridOptions.api.applyColumnState({ defaultState: { sort: null } });
+    });
+
     async function fetchAndDisplayLocations(tenantId) {
+        // ... (rest of the script is unchanged)
         gridOptions.api?.showLoadingOverlay();
         try {
             const response = await fetch(`/get-locations/${tenantId}`);
