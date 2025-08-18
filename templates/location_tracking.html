@@ -47,18 +47,11 @@
       padding: 40px;
   }
   
-  /* ADDED: Container for title, toolbar, and grid with a border */
-  .table-container {
-    border: 1px solid #E5E7EB;
-    border-radius: 8px;
-  }
-  
   .section-title {
     font-size: 24px;
     color: #383F45;
     font-weight: 600;
-    margin: 0;
-    padding: 24px 24px 0 24px; /* Padding inside the new container */
+    margin: 0 0 20px 0;
   }
   
   /* Grid Toolbar */
@@ -66,7 +59,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 20px 24px; /* Padding inside the new container */
+    padding-bottom: 20px;
   }
   .toolbar-left, .toolbar-right {
     display: flex;
@@ -132,16 +125,15 @@
   .ag-theme-alpine.ag-grid-clean {
     --ag-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     --ag-background-color: #fff;
-    --ag-header-background-color: #F9FAFB; /* This is the header grey color */
+    --ag-header-background-color: #F9FAFB;
     --ag-header-foreground-color: #374151;
     --ag-border-color: #E5E7EB;
     --ag-row-border-color: #E5E7EB;
   }
-  /* UPDATED: Grid border is now handled by the .table-container */
+  /* UPDATED: Border is now back on the grid wrapper itself */
   .ag-grid-clean .ag-root-wrapper {
-      border: none;
-      border-top: 1px solid #E5E7EB; /* Separator line from toolbar */
-      border-radius: 0 0 8px 8px; /* Match bottom corners of the container */
+      border: 1px solid #E5E7EB;
+      border-radius: 8px;
   }
   .ag-grid-clean .ag-root-wrapper,
   .ag-grid-clean .ag-center-cols-viewport {
@@ -197,38 +189,38 @@
     </div>
 
     <div class="main-content-area">
-        <div class="table-container">
-            <h2 class="section-title">Location Hierarchy</h2>
-            <div class="grid-toolbar">
-                <div class="toolbar-left">
-                    <div class="control-group">
-                        <button id="columns-btn" class="toolbar-btn"><i class="fas fa-columns"></i> Columns</button>
-                        <button id="filters-btn" class="toolbar-btn"><i class="fas fa-filter"></i> Filters</button>
-                        <button id="group-by-btn" class="toolbar-btn"><i class="fas fa-layer-group"></i> Group By (2)</button>
-                        <button id="sort-btn" class="toolbar-btn"><i class="fas fa-sort"></i> Sort</button>
-                    </div>
-                </div>
-                <div class="toolbar-right">
-                    {% if admin_mode %}
-                    <div class="admin-actions">
-                        <select id="tenantSelector" class="form-select form-select-sm d-inline-block" style="width: auto;">
-                            {% for tenant in tenants %}
-                            <option value="{{ tenant }}" {% if tenant == current_tenant %}selected{% endif %}>{{ tenant }}</option>
-                            {% endfor %}
-                        </select>
-                        <button id="refreshButton" class="btn btn-sm btn-outline-primary">
-                            <i class="fas fa-sync-alt"></i>
-                        </button>
-                    </div>
-                    {% endif %}
-                    <div class="search-box">
-                        <i class="fas fa-search search-icon"></i>
-                        <input type="text" id="grid-search-filter" class="form-control" placeholder="Search">
-                    </div>
+        <h2 class="section-title">Location Hierarchy</h2>
+
+        <div class="grid-toolbar">
+            <div class="toolbar-left">
+                <div class="control-group">
+                    <button id="columns-btn" class="toolbar-btn"><i class="fas fa-columns"></i> Columns</button>
+                    <button id="filters-btn" class="toolbar-btn"><i class="fas fa-filter"></i> Filters</button>
+                    <button id="group-by-btn" class="toolbar-btn"><i class="fas fa-layer-group"></i> Group By (2)</button>
+                    <button id="sort-btn" class="toolbar-btn"><i class="fas fa-sort"></i> Sort</button>
                 </div>
             </div>
-            <div id="locationGrid" class="ag-theme-alpine ag-grid-clean"></div>
+            <div class="toolbar-right">
+                {% if admin_mode %}
+                <div class="admin-actions">
+                    <select id="tenantSelector" class="form-select form-select-sm d-inline-block" style="width: auto;">
+                        {% for tenant in tenants %}
+                        <option value="{{ tenant }}" {% if tenant == current_tenant %}selected{% endif %}>{{ tenant }}</option>
+                        {% endfor %}
+                    </select>
+                    <button id="refreshButton" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+                {% endif %}
+                <div class="search-box">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" id="grid-search-filter" class="form-control" placeholder="Search">
+                </div>
+            </div>
         </div>
+
+        <div id="locationGrid" class="ag-theme-alpine ag-grid-clean"></div>
     </div>
 </div>
 {% endblock %}
